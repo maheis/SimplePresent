@@ -27,12 +27,14 @@ jobs:
                   echo "Listing build directories for diagnostics"
                   ls -la build || true
                   ls -la build/linux || true
-                  ls -la build/linux/runner/release || true
-                  if [ -d build/linux/runner/release/bundle ]; then
-                    tar -czf release_dist/simplepresent-linux.tar.gz -C build/linux/runner/release/bundle .
+                  # try to find the release bundle under any architecture folder
+                  bundle_dir=$(find build/linux -type d -path '*/release/bundle' | head -n 1 || true)
+                  echo "Found bundle dir: ${bundle_dir}"
+                  if [ -n "${bundle_dir}" ] && [ -d "${bundle_dir}" ]; then
+                    tar -czf release_dist/simplepresent-linux.tar.gz -C "${bundle_dir}" .
                   else
-                    echo "ERROR: build output not found: build/linux/runner/release/bundle"
-                    ls -la build/linux/runner/release || true
+                    echo "ERROR: build output not found: expected build/linux/**/release/bundle"
+                    find build/linux -maxdepth 3 -type d -printf '%p\n' || true
                     exit 1
                   fi
             - name: Upload Linux artifact
@@ -65,15 +67,19 @@ jobs:
               shell: pwsh
               run: |
                   New-Item -ItemType Directory -Force -Path release_dist | Out-Null
-                  $src = 'build/windows/runner/Release'
                   Write-Host "Listing build directories for diagnostics"
                   Get-ChildItem -Force build -ErrorAction SilentlyContinue | Select-Object -First 50
-                  if (Test-Path $src) {
-                    Compress-Archive -Path "${src}\*" -DestinationPath "release_dist\simplepresent-windows.zip" -Force
+                  # find the first runner\Release directory under build/windows (e.g. build/windows/x64/runner/Release)
+                  $found = Get-ChildItem -Path build/windows -Directory -Recurse -ErrorAction SilentlyContinue |
+                           Where-Object { $_.FullName -match "\\runner\\Release$" } | Select-Object -First 1
+                  if ($found) {
+                      $src = $found.FullName
+                      Write-Host "Found runner release dir: $src"
+                      Compress-Archive -Path "$src\*" -DestinationPath "release_dist\simplepresent-windows.zip" -Force
                   } else {
-                    Write-Host "ERROR: build output not found: $src"
-                    Get-ChildItem -Path build -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200
-                    exit 1
+                      Write-Host "ERROR: build output not found: expected build/windows/**/runner/Release"
+                      Get-ChildItem -Path build -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200
+                      exit 1
                   }
             - name: Upload Windows artifact
               uses: actions/upload-artifact@v4

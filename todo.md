@@ -37,7 +37,8 @@
 - [ ] Worklog an Aufgaben...
 - [x] Json formatiert ablegen
 - [x] Editieren
-- [ ] makefile
+- [x] makefile
+- [ ] Build-Pipeline über Github
 
 ## notes
 
@@ -48,9 +49,4 @@
 - [ ] Export/Import: Möglichkeit, Aufgabenlisten zu exportieren und zu importieren, z.B. als JSON oder CSV, um Backups zu erstellen oder Daten zwischen verschiedenen Apps zu übertragen.
 - [ ] Widgets: Unterstützung für Widgets auf dem Startbildschirm (Mobile) oder Desktop, um schnellen Zugriff auf die wichtigsten Aufgaben zu ermöglichen.
 - [ ] Integration mit Kalendern: Möglichkeit, Aufgaben mit Kalenderereignissen zu verknüpfen, um eine bessere Übersicht über Termine und Aufgaben zu erhalten.
-- [ ] Build-Pipeline über Github (kann man hier Zertifizieren?)
 - [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)
-
-Ich baue Drag‑und‑Drop zwischen Backlog und Heute (komplizierter, ich implementiere ReorderableDragTargets).
-Ich füge visuelle Verbesserungen (Icons, spacing) und einfache Tests hinzu.
-Ich sorge für Undo/Confirm bei Löschungen oder füge eine kleine Animation beim Verschieben hinzu.
