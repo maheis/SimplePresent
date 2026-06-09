@@ -125,12 +125,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadToday() async {
-    await _loadList('tasks_today.json', _today);
+    await _loadList('simplepresent_today.json', _today);
     setState(() {});
   }
 
   Future<void> _saveToday() async {
-    await _saveList('tasks_today.json', _today);
+    await _saveList('simplepresent_today.json', _today);
   }
 
   @override

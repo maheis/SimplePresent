@@ -11,7 +11,7 @@
 - [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild
 - [x] Layout soll auf für Hochformat und Schlichtheit optimiert sein!
 - [ ] "heute" soll jeden Tag leer starten
-- [ ] Erledigt nur als Filter auf die Listen
+- [x] Erledigt nur als Filter auf die Listen <- wird nicht umgesetzt!
 - [ ] Textfilter
 - [ ] 3 Flags für Aufgaben: Wichtig, Erledigt, in Arbeit
 - [ ] Unteraufgaben bzw. Schritte für Aufgaben
@@ -33,6 +33,8 @@
 - [x] 600x1000 statt 1280x720 (Desktop)
 - [ ] icon
 - [x] Sortierung
+- [ ] Timestamp für Aktionen
+- [ ] Worklog an Aufgaben...
 
 ## notes
 
