@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
@@ -37,16 +38,28 @@ class HomePage extends StatefulWidget {
 }
 
 class TaskItem {
-  TaskItem({required this.text, this.done = false});
+  TaskItem({required this.text, this.done = false, this.important = false, this.inProgress = false});
 
   final String text;
   final bool done;
+  final bool important;
+  final bool inProgress;
 
-  TaskItem copyWith({String? text, bool? done}) {
-    return TaskItem(text: text ?? this.text, done: done ?? this.done);
+  TaskItem copyWith({String? text, bool? done, bool? important, bool? inProgress}) {
+    return TaskItem(
+      text: text ?? this.text,
+      done: done ?? this.done,
+      important: important ?? this.important,
+      inProgress: inProgress ?? this.inProgress,
+    );
   }
 
-  Map<String, dynamic> toJson() => {'text': text, 'done': done};
+  Map<String, dynamic> toJson() => {
+        'text': text,
+        'done': done,
+        'important': important,
+        'inProgress': inProgress,
+      };
 
   static TaskItem fromJson(dynamic json) {
     // Backward compatible with old string-only storage.
@@ -54,7 +67,12 @@ class TaskItem {
       return TaskItem(text: json, done: false);
     }
     final map = json as Map<String, dynamic>;
-    return TaskItem(text: (map['text'] ?? '').toString(), done: map['done'] == true);
+    return TaskItem(
+      text: (map['text'] ?? '').toString(),
+      done: map['done'] == true,
+      important: map['important'] == true,
+      inProgress: map['inProgress'] == true,
+    );
   }
 }
 
@@ -188,7 +206,8 @@ class _HomePageState extends State<HomePage> {
   void _setDone(int index, bool value) {
     setState(() {
       final t = _today[index];
-      _today[index] = t.copyWith(done: value);
+      // When marking done, clear inProgress
+      _today[index] = t.copyWith(done: value, inProgress: value ? false : t.inProgress);
     });
     _saveToday();
   }
@@ -238,21 +257,35 @@ class _HomePageState extends State<HomePage> {
                         child: _today.isEmpty
                             ? const Center(child: Text('Keine Aufgaben für heute'))
                             : ListView.builder(
-                                itemCount: _today.length,
+                              itemCount: _today.length,
                                 itemBuilder: (ctx, i) => Dismissible(
                                   key: ValueKey('today_${i}_${_today[i].text}_${_today[i].done}'),
                                   background: Container(
-                                    color: Colors.green,
+                                    color: _today[i].inProgress ? Colors.green : Colors.green,
                                     alignment: Alignment.centerLeft,
                                     padding: const EdgeInsets.only(left: 20),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.check_circle, color: Colors.white),
-                                        SizedBox(width: 8),
-                                        Text('Fertig', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
+                                    child: _today[i].inProgress
+                                        ? Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.check_circle, color: Colors.white),
+                                              const SizedBox(width: 8),
+                                              const Text('Fertig', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                            ],
+                                          )
+                                        : Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SvgPicture.asset(
+                                                'assets/icons/shovel.svg',
+                                                width: 18,
+                                                height: 18,
+                                                color: Colors.white,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text('In Arbeit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                            ],
+                                          ),
                                   ),
                                   secondaryBackground: Container(
                                     color: Colors.red,
@@ -262,8 +295,15 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   confirmDismiss: (direction) async {
                                     if (direction == DismissDirection.startToEnd) {
-                                      _setDone(i, true);
-                                      _showTopToast('Aufgabe als fertig markiert');
+                                      final t = _today[i];
+                                      if (!t.inProgress && !t.done) {
+                                        setState(() => _today[i] = t.copyWith(inProgress: true));
+                                        _saveToday();
+                                        _showTopToast('Aufgabe als "In Arbeit" markiert');
+                                      } else if (t.inProgress && !t.done) {
+                                        _setDone(i, true);
+                                        _showTopToast('Aufgabe als fertig markiert');
+                                      }
                                       return false;
                                     }
                                     final shouldDelete = await showDialog<bool>(
@@ -285,23 +325,56 @@ class _HomePageState extends State<HomePage> {
                                     );
                                     return shouldDelete == true;
                                   },
-                                  direction: DismissDirection.horizontal,
+                                  direction: !_today[i].done ? DismissDirection.horizontal : DismissDirection.endToStart,
                                   onDismissed: (_) => _removeFromToday(i),
                                   child: Card(
+                                    color: _today[i].inProgress ? Colors.green.withOpacity(0.10) : null,
                                     child: ListTile(
                                       leading: IconButton(
                                         tooltip: 'Fertig',
                                         icon: Icon(_today[i].done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
                                         onPressed: () => _setDone(i, !_today[i].done),
                                       ),
-                                      title: Text(
-                                        _today[i].text,
-                                        style: TextStyle(
-                                          decoration: _today[i].done ? TextDecoration.lineThrough : TextDecoration.none,
-                                          color: _today[i].done
-                                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
-                                              : Theme.of(context).colorScheme.onSurface,
-                                        ),
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _today[i].text,
+                                              style: TextStyle(
+                                                decoration: _today[i].done ? TextDecoration.lineThrough : TextDecoration.none,
+                                                color: _today[i].done
+                                                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
+                                                    : Theme.of(context).colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          // In-progress shovel icon
+                                          if (_today[i].inProgress && !_today[i].done)
+                                            Padding(
+                                              padding: const EdgeInsets.only(right: 6.0),
+                                              child: SvgPicture.asset(
+                                                'assets/icons/shovel.svg',
+                                                width: 18,
+                                                height: 18,
+                                                color: Colors.greenAccent.shade200,
+                                              ),
+                                            ),
+                                          // Important star toggle
+                                          IconButton(
+                                            tooltip: 'Wichtig',
+                                            icon: SvgPicture.asset(
+                                              'assets/icons/star.svg',
+                                              width: 20,
+                                              height: 20,
+                                              color: _today[i].important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant,
+                                            ),
+                                            onPressed: () {
+                                              setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important));
+                                              _saveToday();
+                                            },
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),

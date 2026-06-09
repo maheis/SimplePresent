@@ -9,7 +9,7 @@
 - [x] Hauptansicht heute, unten eine bzw. Textfeld für neue Aufgaben
 - [ ] 2 Listen: heute, Backlog (Json-Filesystem)
 - [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild
-- [ ] Layout soll auf für Hochformat und Schlichtheit optimiert sein!
+- [x] Layout soll auf für Hochformat und Schlichtheit optimiert sein!
 - [ ] "heute" soll jeden Tag leer starten
 - [ ] Erledigt nur als Filter auf die Listen
 - [ ] Textfilter
@@ -32,6 +32,7 @@
 - [ ] Zoom
 - [x] 600x1000 statt 1280x720 (Desktop)
 - [ ] icon
+- [ ] Sortierung
 
 ## notes
 
