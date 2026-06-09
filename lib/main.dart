@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -61,6 +62,8 @@ class _HomePageState extends State<HomePage> {
   final List<TaskItem> _today = [];
   final TextEditingController _controller = TextEditingController();
   final FocusNode _inputFocus = FocusNode();
+  OverlayEntry? _toastEntry;
+  Timer? _toastTimer;
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -116,7 +119,60 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _controller.dispose();
     _inputFocus.dispose();
+    _toastTimer?.cancel();
+    _toastEntry?.remove();
     super.dispose();
+  }
+
+  void _showTopToast(String message) {
+    _toastTimer?.cancel();
+    _toastEntry?.remove();
+
+    final overlay = Overlay.of(context, rootOverlay: true);
+    if (overlay == null) return;
+
+    _toastEntry = OverlayEntry(
+      builder: (ctx) => SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 10, left: 12, right: 12),
+            child: TweenAnimationBuilder<Offset>(
+              duration: const Duration(milliseconds: 260),
+              tween: Tween(begin: const Offset(0, -1), end: Offset.zero),
+              curve: Curves.easeOutCubic,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                ),
+              ),
+              builder: (context, offset, child) {
+                return Transform.translate(
+                  offset: Offset(0, offset.dy * 60),
+                  child: child,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(_toastEntry!);
+    _toastTimer = Timer(const Duration(milliseconds: 1650), () {
+      _toastEntry?.remove();
+      _toastEntry = null;
+    });
   }
 
   void _addToToday(String text) {
@@ -207,11 +263,7 @@ class _HomePageState extends State<HomePage> {
                                   confirmDismiss: (direction) async {
                                     if (direction == DismissDirection.startToEnd) {
                                       _setDone(i, true);
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Aufgabe als fertig markiert')),
-                                        );
-                                      }
+                                      _showTopToast('Aufgabe als fertig markiert');
                                       return false;
                                     }
                                     final shouldDelete = await showDialog<bool>(

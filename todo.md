@@ -25,7 +25,7 @@
 - [ ] Erinnerungsfunktion an die Nutzung der App (Ton, Flackern, Aufpoppen, Benachrichtung etc.)
 - [x] Text eingabe soll immer in die Textbox geschubst werden
 - [x] Löschen bestätigen
-- [ ] "Toast" soll oben rein
+- [ ] "Toast" soll oben rein fahren
 - [x] heute mit Datum und Tag
 - [x] Kein Header
 - [x] Darkmode
