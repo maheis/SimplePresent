@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="100mm"
-   height="100mm"
-   viewBox="0 0 100 100"
+   width="100"
+   height="100"
+   viewBox="0 0 26.458333 26.458333"
    version="1.1"
    id="svg1"
    inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
@@ -25,9 +25,9 @@
      inkscape:deskcolor="#2f2f2f"
      inkscape:document-units="px"
      showgrid="true"
-     inkscape:zoom="2.0489618"
-     inkscape:cx="361.40253"
-     inkscape:cy="165.44964"
+     inkscape:zoom="4.0979237"
+     inkscape:cx="209.74036"
+     inkscape:cy="64.422869"
      inkscape:window-width="3440"
      inkscape:window-height="1359"
      inkscape:window-x="0"
@@ -51,7 +51,8 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     sodipodi:insensitive="true"><image
+     sodipodi:insensitive="true"
+     style="display:none"><image
        width="90.547829"
        height="118.84906"
        preserveAspectRatio="none"
@@ -81,15 +82,15 @@
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Symbol"><path
-       style="opacity:1;fill:none;stroke:#071a18;stroke-width:5.60972;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
+       style="opacity:1;fill:none;stroke:#071a18;stroke-width:1.5379;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
        id="path1"
        sodipodi:type="arc"
-       sodipodi:cx="50.097649"
-       sodipodi:cy="52.43784"
-       sodipodi:rx="36.841904"
-       sodipodi:ry="34.698097"
+       sodipodi:cx="13.203734"
+       sodipodi:cy="13.229901"
+       sodipodi:rx="9.7888889"
+       sodipodi:ry="9.8149853"
        sodipodi:start="0"
        sodipodi:end="6.2253624"
        sodipodi:open="true"
        sodipodi:arc-type="arc"
-       d="M 86.939552,52.43784 A 36.841904,34.698097 0 0 1 50.630207,87.132311 36.841904,34.698097 0 0 1 13.271141,53.440872 36.841904,34.698097 0 0 1 48.50042,17.772366 36.841904,34.698097 0 0 1 86.877979,50.432612" /></g></svg>
+       d="M 22.992623,13.229901 A 9.7888889,9.8149853 0 0 1 13.345235,23.043861 9.7888889,9.8149853 0 0 1 3.4189363,13.513627 9.7888889,9.8149853 0 0 1 12.779351,3.4241442 9.7888889,9.8149853 0 0 1 22.976263,12.662687" /></g></svg>

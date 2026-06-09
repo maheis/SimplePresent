@@ -60,8 +60,19 @@ class TaskItem {
 class _HomePageState extends State<HomePage> {
   final List<TaskItem> _today = [];
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _inputFocus = FocusNode();
 
   late final Future<void> _initFuture = _loadToday();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _inputFocus.requestFocus();
+      }
+    });
+  }
 
   Future<Directory> get _appDir async {
     final dir = await getApplicationDocumentsDirectory();
@@ -104,6 +115,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _controller.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
 
@@ -114,6 +126,7 @@ class _HomePageState extends State<HomePage> {
       _controller.clear();
     });
     _saveToday();
+    _inputFocus.requestFocus();
   }
 
   void _setDone(int index, bool value) {
@@ -139,8 +152,11 @@ class _HomePageState extends State<HomePage> {
       future: _initFuture,
       builder: (context, snap) {
         return Scaffold(
-          body: Column(
-            children: [
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => _inputFocus.requestFocus(),
+            child: Column(
+              children: [
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 22, 12, 8),
@@ -227,33 +243,37 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(
-                            hintText: 'Neue Aufgabe für heute',
-                            border: OutlineInputBorder(),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _inputFocus,
+                            autofocus: true,
+                            textInputAction: TextInputAction.done,
+                            decoration: const InputDecoration(
+                              hintText: 'Neue Aufgabe für heute',
+                              border: OutlineInputBorder(),
+                            ),
+                            onSubmitted: _addToToday,
+                            onTapOutside: (_) => _inputFocus.requestFocus(),
                           ),
-                          onSubmitted: _addToToday,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => _addToToday(_controller.text),
-                        child: const Icon(Icons.add),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () => _addToToday(_controller.text),
+                          child: const Icon(Icons.add),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
