@@ -15,7 +15,7 @@
 - [ ] Textfilter
 - [x] 3 Flags für Aufgaben: Wichtig, Erledigt, in Arbeit
 - [ ] Unteraufgaben bzw. Schritte für Aufgaben
-- [ ] Freitextfeld für Notizen/Lösung
+- [x] Freitextfeld für Notizen/Lösung
 - [ ] Optional Terminierung Tag+Uhrzeit
 - [ ] Backlog sortieren nach Wichtigkeit und Reihenfolge des Einfügens (Berücksichtigung Aufgaben die aus heute rausfallen)
 - [ ] Stopuhr: Start, Stopp, Rücksetzten

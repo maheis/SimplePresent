@@ -47,6 +47,7 @@ class TaskItem {
     this.inProgressAt,
     this.importantAt,
     this.createdAt,
+    this.notes,
   });
 
   final String text;
@@ -57,6 +58,7 @@ class TaskItem {
   final DateTime? inProgressAt; // timestamp when marked in progress
   final DateTime? importantAt; // timestamp when marked important
   final DateTime? createdAt; // timestamp when created
+  final String? notes;
 
   TaskItem copyWith({
     String? text,
@@ -67,6 +69,7 @@ class TaskItem {
     DateTime? inProgressAt,
     DateTime? importantAt,
     DateTime? createdAt,
+    String? notes,
   }) {
     return TaskItem(
       text: text ?? this.text,
@@ -77,6 +80,7 @@ class TaskItem {
       inProgressAt: inProgressAt ?? this.inProgressAt,
       importantAt: importantAt ?? this.importantAt,
       createdAt: createdAt ?? this.createdAt,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -90,6 +94,7 @@ class TaskItem {
         'completed_at': completedAt?.toIso8601String(),
         'in_progress_at': inProgressAt?.toIso8601String(),
         'important_at': importantAt?.toIso8601String(),
+        'notes': notes,
       };
 
   static DateTime? _parseDate(dynamic v) {
@@ -117,6 +122,7 @@ class TaskItem {
       completedAt: _parseDate(map['completed_at'] ?? map['erledigt_am'] ?? map['done_at'] ?? map['doneAt']),
       inProgressAt: _parseDate(map['in_progress_at'] ?? map['in_arbeit_am'] ?? map['inArbeitAt'] ?? map['in_progress_at']),
       importantAt: _parseDate(map['important_at'] ?? map['wichtig_am'] ?? map['important_at']),
+      notes: (map['notes'] ?? map['note'] ?? '').toString(),
     );
   }
 }
@@ -129,6 +135,7 @@ class _HomePageState extends State<HomePage> {
   Timer? _toastTimer;
   final Set<int> _expanded = <int>{};
   final Map<int, TextEditingController> _editControllers = {};
+  final Map<int, TextEditingController> _notesControllers = {};
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -188,6 +195,9 @@ class _HomePageState extends State<HomePage> {
     for (final c in _editControllers.values) {
       c.dispose();
     }
+    for (final c in _notesControllers.values) {
+      c.dispose();
+    }
     _toastTimer?.cancel();
     _toastEntry?.remove();
     super.dispose();
@@ -206,17 +216,26 @@ class _HomePageState extends State<HomePage> {
           });
           return c;
         });
+        _notesControllers.putIfAbsent(index, () {
+          final n = TextEditingController(text: _today[index].notes ?? '');
+          n.addListener(() {
+            if (mounted) setState(() {});
+          });
+          return n;
+        });
       }
     });
   }
 
   void _saveEditedTitle(int index) {
-    final ctrl = _editControllers[index];
-    if (ctrl == null) return;
-    final newText = ctrl.text.trim();
+    final titleCtrl = _editControllers[index];
+    final notesCtrl = _notesControllers[index];
+    if (titleCtrl == null || notesCtrl == null) return;
+    final newText = titleCtrl.text.trim();
+    final newNotes = notesCtrl.text;
     if (newText.isEmpty) return;
     setState(() {
-      _today[index] = _today[index].copyWith(text: newText);
+      _today[index] = _today[index].copyWith(text: newText, notes: newNotes);
     });
     _saveToday();
     _showTopToast('Task updated');
@@ -276,7 +295,7 @@ class _HomePageState extends State<HomePage> {
   void _addToToday(String text) {
     if (text.trim().isEmpty) return;
     setState(() {
-      _today.insert(0, TaskItem(text: text.trim(), done: false, createdAt: DateTime.now()));
+      _today.insert(0, TaskItem(text: text.trim(), done: false, createdAt: DateTime.now(), notes: ''));
       _controller.clear();
     });
     _saveToday();
@@ -492,8 +511,10 @@ class _HomePageState extends State<HomePage> {
                                                   ),
                                                   if (_expanded.contains(i))
                                                     Builder(builder: (_) {
-                                                      final ctrl = _editControllers[i];
-                                                      final isDirty = ctrl != null && ctrl.text.trim() != task.text.trim();
+                                                      final titleCtrl = _editControllers[i];
+                                                      final notesCtrl = _notesControllers[i];
+                                                      final isDirty = (titleCtrl != null && titleCtrl.text.trim() != task.text.trim())
+                                                          || (notesCtrl != null && notesCtrl.text != (task.notes ?? ''));
                                                       return IconButton(
                                                         tooltip: 'Save',
                                                         icon: Icon(Icons.check, color: isDirty ? Colors.red : Colors.white),
@@ -510,13 +531,31 @@ class _HomePageState extends State<HomePage> {
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
+                                                  // Notes field (moved above timestamps)
+                                                  TextField(
+                                                    controller: _notesControllers.putIfAbsent(i, () {
+                                                      final n = TextEditingController(text: task.notes ?? '');
+                                                      n.addListener(() {
+                                                        if (mounted) setState(() {});
+                                                      });
+                                                      return n;
+                                                    }),
+                                                    keyboardType: TextInputType.multiline,
+                                                    minLines: 3,
+                                                    maxLines: null,
+                                                    decoration: const InputDecoration(
+                                                      border: OutlineInputBorder(),
+                                                      hintText: 'Notes',
+                                                    ),
+                                                    onSubmitted: (_) => _saveEditedTitle(i),
+                                                  ),
+                                                  const SizedBox(height: 10),
                                                   Text('Created: ${task.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.createdAt!) : '-'}'),
                                                   const SizedBox(height: 6),
                                                   Text('In Progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
                                                   const SizedBox(height: 6),
                                                   Text('Completed: ${task.completedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.completedAt!) : '-'}'),
-                                                  const SizedBox(height: 6),
-                                                  Text('Important: ${task.importantAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.importantAt!) : '-'}'),
+                                                  
                                                 ],
                                               ),
                                             ),
