@@ -37,6 +37,7 @@
 - [ ] Worklog an Aufgaben...
 - [x] Json formatiert ablegen
 - [x] Editieren
+- [ ] makefile
 
 ## notes
 
