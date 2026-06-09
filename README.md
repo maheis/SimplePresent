@@ -4,8 +4,8 @@ Eine einfache (Simple) Aufgabenverwaltung mit dem Fokus auf aktuelle Aufgaben (G
 
 ## Ideensammlung
 
-- [ ] 2 Listen: heute, Backlog
-- [ ] Hauptansicht heute
+- [ ] 2 Listen: heute, Backlog (Json-Filesystem)
+- [ ] Hauptansicht heute, unten eine bzw. Textfeld für neue Aufgaben
 - [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild
 - [ ] Erledigt nur als Filter auf die Listen
 - [ ] Textfilter
@@ -30,3 +30,5 @@ Eine einfache (Simple) Aufgabenverwaltung mit dem Fokus auf aktuelle Aufgaben (G
 - [ ] Export/Import: Möglichkeit, Aufgabenlisten zu exportieren und zu importieren, z.B. als JSON oder CSV, um Backups zu erstellen oder Daten zwischen verschiedenen Apps zu übertragen.
 - [ ] Widgets: Unterstützung für Widgets auf dem Startbildschirm (Mobile) oder Desktop, um schnellen Zugriff auf die wichtigsten Aufgaben zu ermöglichen.
 - [ ] Integration mit Kalendern: Möglichkeit, Aufgaben mit Kalenderereignissen zu verknüpfen, um eine bessere Übersicht über Termine und Aufgaben zu erhalten.
+- [ ] Build-Pipeline über Github (kann man hier Zertifizieren?)
+- [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)
