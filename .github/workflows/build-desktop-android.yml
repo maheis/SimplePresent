@@ -5,6 +5,9 @@ on:
         types: [published]
     workflow_dispatch: {}
 
+permissions:
+    contents: write
+
 jobs:
     linux:
         name: Build Linux
@@ -44,6 +47,8 @@ jobs:
                   path: release_dist/simplepresent-linux.tar.gz
             - name: Upload Linux artifact to Release
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ github.event.release.upload_url }}
                   asset_path: release_dist/simplepresent-linux.tar.gz
@@ -88,6 +93,8 @@ jobs:
                   path: release_dist/simplepresent-windows.zip
             - name: Upload Windows artifact to Release
               uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                   upload_url: ${{ github.event.release.upload_url }}
                   asset_path: release_dist/simplepresent-windows.zip
