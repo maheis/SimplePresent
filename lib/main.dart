@@ -2,9 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
 
-void main() => runApp(const SimplePresentApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('de_DE');
+  runApp(const SimplePresentApp());
+}
 
 class SimplePresentApp extends StatelessWidget {
   const SimplePresentApp({super.key});
@@ -12,7 +18,12 @@ class SimplePresentApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SimplePresent',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      locale: const Locale('de', 'DE'),
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark),
+      ),
       home: const HomePage(),
     );
   }
@@ -122,20 +133,34 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final dateLabel = DateFormat('EEEE, dd. MMMM yyyy', 'de_DE').format(DateTime.now());
+
     return FutureBuilder<void>(
       future: _initFuture,
       builder: (context, snap) {
         return Scaffold(
-          appBar: AppBar(title: const Text('SimplePresent')),
           body: Column(
             children: [
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(12, 22, 12, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Heute', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'heute',
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                            ),
+                            TextSpan(
+                              text: ', $dateLabel',
+                              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: _today.isEmpty
@@ -188,7 +213,9 @@ class _HomePageState extends State<HomePage> {
                                         _today[i].text,
                                         style: TextStyle(
                                           decoration: _today[i].done ? TextDecoration.lineThrough : TextDecoration.none,
-                                          color: _today[i].done ? Colors.black54 : Colors.black87,
+                                          color: _today[i].done
+                                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
+                                              : Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
                                     ),

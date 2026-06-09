@@ -7,11 +7,13 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:simple_present/main.dart';
 
 void main() {
   testWidgets('Adds a task to today list', (WidgetTester tester) async {
+    await initializeDateFormatting('de_DE');
     await tester.pumpWidget(const SimplePresentApp());
     await tester.pumpAndSettle();
 

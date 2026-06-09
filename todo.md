@@ -26,9 +26,9 @@
 - [ ] Text eingabe soll immer in die Textbox geschubst werden
 - [ ] Löschen bestätigen
 - [ ] "Toast" soll oben rein
-- [ ] heute mit Datum und Tag
-- [ ] Kein Header
-- [ ] Darkmode
+- [x] heute mit Datum und Tag
+- [x] Kein Header
+- [x] Darkmode
 
 
 - [ ] LLM-Integration: Automatisches Generieren von Unteraufgaben/Schritten aus der Hauptaufgabe, Vorschläge für Notizen/Lösungen basierend auf der Aufgabe, intelligente Sortierung des Backlogs basierend auf Wichtigkeit und Dringlichkeit.
