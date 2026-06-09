@@ -24,7 +24,17 @@ jobs:
             - name: Package Linux bundle
               run: |
                   mkdir -p release_dist
-                  tar -czf release_dist/simplepresent-linux.tar.gz -C build/linux/runner/release/bundle .
+                  echo "Listing build directories for diagnostics"
+                  ls -la build || true
+                  ls -la build/linux || true
+                  ls -la build/linux/runner/release || true
+                  if [ -d build/linux/runner/release/bundle ]; then
+                    tar -czf release_dist/simplepresent-linux.tar.gz -C build/linux/runner/release/bundle .
+                  else
+                    echo "ERROR: build output not found: build/linux/runner/release/bundle"
+                    ls -la build/linux/runner/release || true
+                    exit 1
+                  fi
             - name: Upload Linux artifact
               uses: actions/upload-artifact@v4
               with:
@@ -56,7 +66,15 @@ jobs:
               run: |
                   New-Item -ItemType Directory -Force -Path release_dist | Out-Null
                   $src = 'build/windows/runner/Release'
-                  Compress-Archive -Path "${src}\*" -DestinationPath "release_dist\simplepresent-windows.zip" -Force
+                  Write-Host "Listing build directories for diagnostics"
+                  Get-ChildItem -Force build -ErrorAction SilentlyContinue | Select-Object -First 50
+                  if (Test-Path $src) {
+                    Compress-Archive -Path "${src}\*" -DestinationPath "release_dist\simplepresent-windows.zip" -Force
+                  } else {
+                    Write-Host "ERROR: build output not found: $src"
+                    Get-ChildItem -Path build -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200
+                    exit 1
+                  }
             - name: Upload Windows artifact
               uses: actions/upload-artifact@v4
               with:
