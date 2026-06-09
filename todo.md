@@ -13,7 +13,7 @@
 - [ ] "heute" soll jeden Tag leer starten
 - [x] Erledigt nur als Filter auf die Listen <- wird nicht umgesetzt!
 - [ ] Textfilter
-- [ ] 3 Flags für Aufgaben: Wichtig, Erledigt, in Arbeit
+- [x] 3 Flags für Aufgaben: Wichtig, Erledigt, in Arbeit
 - [ ] Unteraufgaben bzw. Schritte für Aufgaben
 - [ ] Freitextfeld für Notizen/Lösung
 - [ ] Optional Terminierung Tag+Uhrzeit
@@ -36,7 +36,7 @@
 - [x] Timestamp für Aktionen "Erlödigt", Wichtig", "In Arbeit", "Angelegt"
 - [ ] Worklog an Aufgaben...
 - [x] Json formatiert ablegen
-- [ ] Editieren
+- [x] Editieren
 
 ## notes
 

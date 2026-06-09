@@ -127,6 +127,8 @@ class _HomePageState extends State<HomePage> {
   final FocusNode _inputFocus = FocusNode();
   OverlayEntry? _toastEntry;
   Timer? _toastTimer;
+  final Set<int> _expanded = <int>{};
+  final Map<int, TextEditingController> _editControllers = {};
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -183,9 +185,41 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _controller.dispose();
     _inputFocus.dispose();
+    for (final c in _editControllers.values) {
+      c.dispose();
+    }
     _toastTimer?.cancel();
     _toastEntry?.remove();
     super.dispose();
+  }
+
+  void _toggleExpanded(int index) {
+    setState(() {
+      if (_expanded.contains(index)) {
+        _expanded.remove(index);
+      } else {
+        _expanded.add(index);
+        _editControllers.putIfAbsent(index, () {
+          final c = TextEditingController(text: _today[index].text);
+          c.addListener(() {
+            if (mounted) setState(() {});
+          });
+          return c;
+        });
+      }
+    });
+  }
+
+  void _saveEditedTitle(int index) {
+    final ctrl = _editControllers[index];
+    if (ctrl == null) return;
+    final newText = ctrl.text.trim();
+    if (newText.isEmpty) return;
+    setState(() {
+      _today[index] = _today[index].copyWith(text: newText);
+    });
+    _saveToday();
+    _showTopToast('Task updated');
   }
 
   void _showTopToast(String message) {
@@ -403,50 +437,90 @@ class _HomePageState extends State<HomePage> {
                                       },
                                       direction: !task.done ? DismissDirection.horizontal : DismissDirection.endToStart,
                                       onDismissed: (_) => _removeFromToday(i),
-                                      child: Card(
-                                        color: task.inProgress ? Colors.green.withOpacity(0.10) : null,
-                                        child: ListTile(
-                                          leading: IconButton(
-                                            tooltip: 'Done',
-                                            icon: Icon(task.done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                                            onPressed: () => _setDone(i, !task.done),
-                                          ),
-                                          title: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  task.text,
-                                                  style: TextStyle(
-                                                    decoration: task.done ? TextDecoration.lineThrough : TextDecoration.none,
-                                                    color: task.done
-                                                        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
-                                                        : Theme.of(context).colorScheme.onSurface,
-                                                  ),
-                                                ),
+                                      child: Column(
+                                        children: [
+                                          Card(
+                                            color: task.inProgress ? Colors.green.withOpacity(0.10) : null,
+                                            child: ListTile(
+                                              onTap: () => _toggleExpanded(i),
+                                              leading: IconButton(
+                                                tooltip: 'Done',
+                                                icon: Icon(task.done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                                                onPressed: () => _setDone(i, !task.done),
                                               ),
-                                              const SizedBox(width: 8),
-                                              // In-progress shovel icon
-                                              if (task.inProgress && !task.done)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(right: 6.0),
-                                                  child: Icon(Icons.construction, color: Colors.greenAccent.shade200, size: 18),
-                                                ),
-                                              // Important star toggle
-                                              IconButton(
-                                                tooltip: 'Important',
-                                                icon: Icon(
-                                                    task.important ? Icons.star : Icons.star_border,
-                                                    color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant,
+                                              title: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: _expanded.contains(i)
+                                                        ? TextField(
+                                                            controller: _editControllers.putIfAbsent(i, () {
+                                                              final c = TextEditingController(text: task.text);
+                                                              c.addListener(() {
+                                                                if (mounted) setState(() {});
+                                                              });
+                                                              return c;
+                                                            }),
+                                                            autofocus: true,
+                                                            decoration: const InputDecoration(border: InputBorder.none),
+                                                            onSubmitted: (_) => _saveEditedTitle(i),
+                                                          )
+                                                        : Text(
+                                                            task.text,
+                                                            style: TextStyle(
+                                                              decoration: task.done ? TextDecoration.lineThrough : TextDecoration.none,
+                                                              color: task.done
+                                                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
+                                                                  : Theme.of(context).colorScheme.onSurface,
+                                                            ),
+                                                          ),
                                                   ),
-                                                onPressed: () {
-                                                  final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
-                                                  setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
-                                                  _saveToday();
-                                                },
+                                                  const SizedBox(width: 8),
+                                                  if (task.inProgress && !task.done)
+                                                    Padding(
+                                                      padding: const EdgeInsets.only(right: 6.0),
+                                                      child: Icon(Icons.construction, color: Colors.greenAccent.shade200, size: 18),
+                                                    ),
+                                                  IconButton(
+                                                    tooltip: 'Important',
+                                                    icon: Icon(task.important ? Icons.star : Icons.star_border,
+                                                        color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant),
+                                                    onPressed: () {
+                                                      final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
+                                                      setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
+                                                      _saveToday();
+                                                    },
+                                                  ),
+                                                  if (_expanded.contains(i))
+                                                    Builder(builder: (_) {
+                                                      final ctrl = _editControllers[i];
+                                                      final isDirty = ctrl != null && ctrl.text.trim() != task.text.trim();
+                                                      return IconButton(
+                                                        tooltip: 'Save',
+                                                        icon: Icon(Icons.check, color: isDirty ? Colors.red : Colors.white),
+                                                        onPressed: () => _saveEditedTitle(i),
+                                                      );
+                                                    }),
+                                                ],
                                               ),
-                                            ],
+                                            ),
                                           ),
-                                        ),
+                                          if (_expanded.contains(i))
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Created: ${task.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.createdAt!) : '-'}'),
+                                                  const SizedBox(height: 6),
+                                                  Text('In Progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
+                                                  const SizedBox(height: 6),
+                                                  Text('Completed: ${task.completedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.completedAt!) : '-'}'),
+                                                  const SizedBox(height: 6),
+                                                  Text('Important: ${task.importantAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.importantAt!) : '-'}'),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     );
                                   },
