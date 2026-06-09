@@ -24,8 +24,30 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+class TaskItem {
+  TaskItem({required this.text, this.done = false});
+
+  final String text;
+  final bool done;
+
+  TaskItem copyWith({String? text, bool? done}) {
+    return TaskItem(text: text ?? this.text, done: done ?? this.done);
+  }
+
+  Map<String, dynamic> toJson() => {'text': text, 'done': done};
+
+  static TaskItem fromJson(dynamic json) {
+    // Backward compatible with old string-only storage.
+    if (json is String) {
+      return TaskItem(text: json, done: false);
+    }
+    final map = json as Map<String, dynamic>;
+    return TaskItem(text: (map['text'] ?? '').toString(), done: map['done'] == true);
+  }
+}
+
 class _HomePageState extends State<HomePage> {
-  final List<String> _today = [];
+  final List<TaskItem> _today = [];
   final TextEditingController _controller = TextEditingController();
 
   late final Future<void> _initFuture = _loadToday();
@@ -40,22 +62,22 @@ class _HomePageState extends State<HomePage> {
     return File('${dir.path}/$name');
   }
 
-  Future<void> _loadList(String filename, List<String> target) async {
+  Future<void> _loadList(String filename, List<TaskItem> target) async {
     try {
       final f = await _fileFor(filename);
       if (await f.exists()) {
         final text = await f.readAsString();
         final data = jsonDecode(text) as List<dynamic>;
         target.clear();
-        target.addAll(data.cast<String>());
+        target.addAll(data.map(TaskItem.fromJson));
       }
     } catch (_) {}
   }
 
-  Future<void> _saveList(String filename, List<String> source) async {
+  Future<void> _saveList(String filename, List<TaskItem> source) async {
     try {
       final f = await _fileFor(filename);
-      await f.writeAsString(jsonEncode(source));
+      await f.writeAsString(jsonEncode(source.map((e) => e.toJson()).toList()));
     } catch (_) {}
   }
 
@@ -77,8 +99,16 @@ class _HomePageState extends State<HomePage> {
   void _addToToday(String text) {
     if (text.trim().isEmpty) return;
     setState(() {
-      _today.insert(0, text.trim());
+      _today.insert(0, TaskItem(text: text.trim(), done: false));
       _controller.clear();
+    });
+    _saveToday();
+  }
+
+  void _setDone(int index, bool value) {
+    setState(() {
+      final t = _today[index];
+      _today[index] = t.copyWith(done: value);
     });
     _saveToday();
   }
@@ -113,16 +143,56 @@ class _HomePageState extends State<HomePage> {
                             : ListView.builder(
                                 itemCount: _today.length,
                                 itemBuilder: (ctx, i) => Dismissible(
-                                  key: ValueKey('today_${i}_${_today[i]}'),
+                                  key: ValueKey('today_${i}_${_today[i].text}_${_today[i].done}'),
                                   background: Container(
+                                    color: Colors.green,
+                                    alignment: Alignment.centerLeft,
+                                    padding: const EdgeInsets.only(left: 20),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.check_circle, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('Fertig', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                  secondaryBackground: Container(
                                     color: Colors.red,
                                     alignment: Alignment.centerRight,
                                     padding: const EdgeInsets.only(right: 20),
                                     child: const Icon(Icons.delete, color: Colors.white),
                                   ),
-                                  direction: DismissDirection.endToStart,
+                                  confirmDismiss: (direction) async {
+                                    if (direction == DismissDirection.startToEnd) {
+                                      _setDone(i, true);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Aufgabe als fertig markiert')),
+                                        );
+                                      }
+                                      return false;
+                                    }
+                                    return true;
+                                  },
+                                  direction: DismissDirection.horizontal,
                                   onDismissed: (_) => _removeFromToday(i),
-                                  child: Card(child: ListTile(title: Text(_today[i]))),
+                                  child: Card(
+                                    child: ListTile(
+                                      leading: IconButton(
+                                        tooltip: 'Fertig',
+                                        icon: Icon(_today[i].done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                                        onPressed: () => _setDone(i, !_today[i].done),
+                                      ),
+                                      title: Text(
+                                        _today[i].text,
+                                        style: TextStyle(
+                                          decoration: _today[i].done ? TextDecoration.lineThrough : TextDecoration.none,
+                                          color: _today[i].done ? Colors.black54 : Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                       ),

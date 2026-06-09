@@ -23,6 +23,14 @@
 - [ ] App optimiert auf Hochformat
 - [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
 - [ ] Erinnerungsfunktion an die Nutzung der App (Ton, Flackern, Aufpoppen, Benachrichtung etc.)
+- [ ] Text eingabe soll immer in die Textbox geschubst werden
+- [ ] Löschen bestätigen
+- [ ] "Toast" soll oben rein
+- [ ] heute mit Datum und Tag
+- [ ] Kein Header
+- [ ] Darkmode
+
+
 - [ ] LLM-Integration: Automatisches Generieren von Unteraufgaben/Schritten aus der Hauptaufgabe, Vorschläge für Notizen/Lösungen basierend auf der Aufgabe, intelligente Sortierung des Backlogs basierend auf Wichtigkeit und Dringlichkeit.
 - [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.
 - [ ] Dark Mode: Unterstützung für dunkle und helle Designs, um die Benutzererfahrung zu verbessern und die Augenbelastung zu reduzieren.
