@@ -54,6 +54,30 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 600, 1000);
 
+  // Attempt to set a custom application icon (used by taskbar/launcher).
+  // Check several likely locations where the build/install process may place
+  // the Flutter assets so the icon file can be found both in development and
+  // in the installed bundle.
+  const char* icon_candidates[] = {
+    "data/flutter_assets/assets/icons/icon.svg",
+    "../data/flutter_assets/assets/icons/icon.svg",
+    "flutter_assets/assets/icons/icon.svg",
+    "/usr/share/icons/hicolor/scalable/apps/simple_present.svg",
+    NULL
+  };
+  for (int i = 0; icon_candidates[i] != NULL; ++i) {
+    const char* path = icon_candidates[i];
+    if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+      g_autoptr(GError) err = NULL;
+      if (gtk_window_set_default_icon_from_file(path, &err)) {
+        g_message("Set application icon from %s", path);
+      } else {
+        g_warning("Failed to set icon from %s: %s", path, err ? err->message : "unknown");
+      }
+      break;
+    }
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

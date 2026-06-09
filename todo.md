@@ -7,38 +7,38 @@
     Andere Optionen: React Native / Capacitor (Web → Mobile, Desktop per Electron/Proton), Kotlin Multiplatform/Compose Multiplatform (gute native Mobile-Optionen), .NET MAUI (C#, mobile + desktop aber Linux-Ökosystem schwächer).
 - [x] Testprojekt mit Flutter aufsetzen, um die Entwicklungsumgebung zu evaluieren und erste UI-Elemente zu erstellen.
 - [x] Hauptansicht heute, unten eine bzw. Textfeld für neue Aufgaben
-- [ ] 2 Listen: heute, Backlog (Json-Filesystem)
-- [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild
 - [x] Layout soll auf für Hochformat und Schlichtheit optimiert sein!
-- [ ] "heute" soll jeden Tag leer starten
 - [x] Erledigt nur als Filter auf die Listen <- wird nicht umgesetzt!
-- [ ] Textfilter
 - [x] 3 Flags für Aufgaben: Wichtig, Erledigt, in Arbeit
-- [ ] Unteraufgaben bzw. Schritte für Aufgaben
 - [x] Freitextfeld für Notizen/Lösung
-- [ ] Optional Terminierung Tag+Uhrzeit
-- [ ] Backlog sortieren nach Wichtigkeit und Reihenfolge des Einfügens (Berücksichtigung Aufgaben die aus heute rausfallen)
-- [ ] Stopuhr: Start, Stopp, Rücksetzten
-- [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [x] App optimiert auf Hochformat
-- [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
-- [ ] Erinnerungsfunktion an die Nutzung der App (Ton, Flackern, Aufpoppen, Benachrichtung etc.)
 - [x] Text eingabe soll immer in die Textbox geschubst werden
 - [x] Löschen bestätigen
 - [x] "Toast" soll oben rein fahren
 - [x] heute mit Datum und Tag
 - [x] Kein Header
 - [x] Darkmode
-- [ ] Zoom
 - [x] 600x1000 statt 1280x720 (Desktop)
-- [ ] icon
 - [x] Sortierung
 - [x] Timestamp für Aktionen "Erlödigt", Wichtig", "In Arbeit", "Angelegt"
-- [ ] Worklog an Aufgaben...
 - [x] Json formatiert ablegen
 - [x] Editieren
 - [x] makefile
-- [ ] Build-Pipeline über Github
+- [x] Build-Pipeline über Github
+- [ ] 2 Listen: heute, Backlog (Json-Filesystem)
+- [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild
+- [ ] "heute" soll jeden Tag leer starten
+- [ ] Textfilter
+- [ ] Unteraufgaben bzw. Schritte für Aufgaben
+- [ ] Optional Terminierung Tag+Uhrzeit
+- [ ] Backlog sortieren nach Wichtigkeit und Reihenfolge des Einfügens (Berücksichtigung Aufgaben die aus heute rausfallen)
+- [ ] Stopuhr: Start, Stopp, Rücksetzten
+- [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
+- [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
+- [ ] Erinnerungsfunktion an die Nutzung der App (Ton, Flackern, Aufpoppen, Benachrichtung etc.)
+- [ ] Zoom
+- [ ] icon
+- [ ] Worklog an Aufgaben...
 
 ## notes
 
