@@ -46,24 +46,24 @@ jobs:
                   name: simplepresent-windows
                   path: build/windows/runner/Release/**
 
-    android:
-        name: Build Android APK
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - name: Setup Flutter
-              uses: subosito/flutter-action@v2
-              with:
-                  channel: "stable"
-            - name: Accept Android licenses
-              run: |
-                  yes | flutter doctor --android-licenses || true
-            - name: Flutter pub get
-              run: flutter pub get
-            - name: Build Android release APK
-              run: flutter build apk --release
-            - name: Upload APK artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: simplepresent-android-apk
-                  path: build/app/outputs/flutter-apk/app-release.apk
+    # android:
+    #     name: Build Android APK
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #         - uses: actions/checkout@v4
+    #         - name: Setup Flutter
+    #           uses: subosito/flutter-action@v2
+    #           with:
+    #               channel: "stable"
+    #         - name: Accept Android licenses
+    #           run: |
+    #               yes | flutter doctor --android-licenses || true
+    #         - name: Flutter pub get
+    #           run: flutter pub get
+    #         - name: Build Android release APK
+    #           run: flutter build apk --release
+    #         - name: Upload APK artifact
+    #           uses: actions/upload-artifact@v4
+    #           with:
+    #               name: simplepresent-android-apk
+    #               path: build/app/outputs/flutter-apk/app-release.apk
