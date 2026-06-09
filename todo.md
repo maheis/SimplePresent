@@ -35,6 +35,7 @@
 - [x] Sortierung
 - [ ] Timestamp für Aktionen
 - [ ] Worklog an Aufgaben...
+- [ ] Json formatiert ablegen
 
 ## notes
 

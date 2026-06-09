@@ -38,19 +38,41 @@ class HomePage extends StatefulWidget {
 }
 
 class TaskItem {
-  TaskItem({required this.text, this.done = false, this.important = false, this.inProgress = false});
+  TaskItem({
+    required this.text,
+    this.done = false,
+    this.important = false,
+    this.inProgress = false,
+    this.completedAt,
+    this.inProgressAt,
+    this.importantAt,
+  });
 
   final String text;
   final bool done;
   final bool important;
   final bool inProgress;
+  final DateTime? completedAt; // timestamp when marked done
+  final DateTime? inProgressAt; // timestamp when marked in progress
+  final DateTime? importantAt; // timestamp when marked important
 
-  TaskItem copyWith({String? text, bool? done, bool? important, bool? inProgress}) {
+  TaskItem copyWith({
+    String? text,
+    bool? done,
+    bool? important,
+    bool? inProgress,
+    DateTime? completedAt,
+    DateTime? inProgressAt,
+    DateTime? importantAt,
+  }) {
     return TaskItem(
       text: text ?? this.text,
       done: done ?? this.done,
       important: important ?? this.important,
       inProgress: inProgress ?? this.inProgress,
+      completedAt: completedAt ?? this.completedAt,
+      inProgressAt: inProgressAt ?? this.inProgressAt,
+      importantAt: importantAt ?? this.importantAt,
     );
   }
 
@@ -59,7 +81,20 @@ class TaskItem {
         'done': done,
         'important': important,
         'inProgress': inProgress,
+        // English field names
+        'completed_at': completedAt?.toIso8601String(),
+        'in_progress_at': inProgressAt?.toIso8601String(),
+        'important_at': importantAt?.toIso8601String(),
       };
+
+  static DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    try {
+      return DateTime.parse(v.toString());
+    } catch (_) {
+      return null;
+    }
+  }
 
   static TaskItem fromJson(dynamic json) {
     // Backward compatible with old string-only storage.
@@ -71,7 +106,11 @@ class TaskItem {
       text: (map['text'] ?? '').toString(),
       done: map['done'] == true,
       important: map['important'] == true,
-      inProgress: map['inProgress'] == true,
+      inProgress: map['inProgress'] == true || map['in_arbeit'] == true,
+      // support both new english keys and older german/variant keys
+      completedAt: _parseDate(map['completed_at'] ?? map['erledigt_am'] ?? map['done_at'] ?? map['doneAt']),
+      inProgressAt: _parseDate(map['in_progress_at'] ?? map['in_arbeit_am'] ?? map['inArbeitAt'] ?? map['in_progress_at']),
+      importantAt: _parseDate(map['important_at'] ?? map['wichtig_am'] ?? map['important_at']),
     );
   }
 }
@@ -207,7 +246,11 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       final t = _today[index];
       // When marking done, clear inProgress
-      _today[index] = t.copyWith(done: value, inProgress: value ? false : t.inProgress);
+      _today[index] = t.copyWith(
+        done: value,
+        inProgress: value ? false : t.inProgress,
+        completedAt: value ? DateTime.now() : t.completedAt,
+      );
     });
     _saveToday();
   }
@@ -242,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                         TextSpan(
                           children: [
                             const TextSpan(
-                              text: 'heute',
+                              text: 'Today',
                               style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                             ),
                             TextSpan(
@@ -255,7 +298,7 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 8),
                       Expanded(
                         child: _today.isEmpty
-                            ? const Center(child: Text('Keine Aufgaben für heute'))
+                          ? const Center(child: Text('No tasks for today'))
                             : Builder(builder: (ctx) {
                                 // Build grouped list preserving insertion order within groups
                                 final bucketA = <MapEntry<int, TaskItem>>[]; // inProgress & important
@@ -301,7 +344,7 @@ class _HomePageState extends State<HomePage> {
                                             children: [
                                               const Icon(Icons.check_circle, color: Colors.white),
                                               const SizedBox(width: 8),
-                                              const Text('Fertig', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                              const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                             ],
                                           )
                                         : Row(
@@ -309,7 +352,7 @@ class _HomePageState extends State<HomePage> {
                                             children: [
                                               const Icon(Icons.construction, color: Colors.white, size: 18),
                                               const SizedBox(width: 8),
-                                              const Text('In Arbeit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                              const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                             ],
                                           ),
                                   ),
@@ -323,28 +366,28 @@ class _HomePageState extends State<HomePage> {
                                         if (direction == DismissDirection.startToEnd) {
                                           final t = _today[i];
                                           if (!t.inProgress && !t.done) {
-                                            setState(() => _today[i] = t.copyWith(inProgress: true));
-                                            _saveToday();
-                                            _showTopToast('Aufgabe als "In Arbeit" markiert');
-                                          } else if (t.inProgress && !t.done) {
-                                            _setDone(i, true);
-                                            _showTopToast('Aufgabe als fertig markiert');
-                                          }
+                                              setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
+                                              _saveToday();
+                                              _showTopToast('Task marked In Progress');
+                                            } else if (t.inProgress && !t.done) {
+                                              _setDone(i, true);
+                                              _showTopToast('Task marked done');
+                                            }
                                           return false;
                                         }
                                         final shouldDelete = await showDialog<bool>(
                                           context: context,
                                           builder: (dialogContext) => AlertDialog(
-                                            title: const Text('Aufgabe löschen?'),
-                                            content: Text('"${_today[i].text}" wirklich löschen?'),
+                                            title: const Text('Delete task?'),
+                                            content: Text('Delete "${_today[i].text}"?'),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                                                child: const Text('Abbrechen'),
+                                                child: const Text('Cancel'),
                                               ),
                                               FilledButton(
                                                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                                                child: const Text('Löschen'),
+                                                child: const Text('Delete'),
                                               ),
                                             ],
                                           ),
@@ -357,7 +400,7 @@ class _HomePageState extends State<HomePage> {
                                         color: task.inProgress ? Colors.green.withOpacity(0.10) : null,
                                         child: ListTile(
                                           leading: IconButton(
-                                            tooltip: 'Fertig',
+                                            tooltip: 'Done',
                                             icon: Icon(task.done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
                                             onPressed: () => _setDone(i, !task.done),
                                           ),
@@ -383,13 +426,14 @@ class _HomePageState extends State<HomePage> {
                                                 ),
                                               // Important star toggle
                                               IconButton(
-                                                tooltip: 'Wichtig',
+                                                tooltip: 'Important',
                                                 icon: Icon(
                                                     task.important ? Icons.star : Icons.star_border,
                                                     color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant,
                                                   ),
                                                 onPressed: () {
-                                                  setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important));
+                                                  final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
+                                                  setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
                                                   _saveToday();
                                                 },
                                               ),
@@ -419,7 +463,7 @@ class _HomePageState extends State<HomePage> {
                             autofocus: true,
                             textInputAction: TextInputAction.done,
                             decoration: const InputDecoration(
-                              hintText: 'Neue Aufgabe für heute',
+                              hintText: 'New task for today',
                               border: OutlineInputBorder(),
                             ),
                             onSubmitted: _addToToday,
