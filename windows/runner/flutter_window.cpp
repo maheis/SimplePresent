@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <shellapi.h>
+#include <wchar.h>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -82,7 +83,7 @@ bool FlutterWindow::OnCreate() {
           nidAdd.uID = 2001;
           nidAdd.uFlags = NIF_ICON | NIF_TIP;
           nidAdd.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-          wcsncpy(nidAdd.szTip, L"SimplePresent", sizeof(nidAdd.szTip) / sizeof(wchar_t) - 1);
+          wcscpy_s(nidAdd.szTip, sizeof(nidAdd.szTip) / sizeof(wchar_t), L"SimplePresent");
           Shell_NotifyIconW(NIM_ADD, &nidAdd);
 
           NOTIFYICONDATAW nid = {};
@@ -90,8 +91,8 @@ bool FlutterWindow::OnCreate() {
           nid.hWnd = GetHandle();
           nid.uID = 2001;
           nid.uFlags = NIF_INFO;
-          wcsncpy(nid.szInfo, wbody.c_str(), sizeof(nid.szInfo) / sizeof(wchar_t) - 1);
-          wcsncpy(nid.szInfoTitle, wtitle.c_str(), sizeof(nid.szInfoTitle) / sizeof(wchar_t) - 1);
+          wcscpy_s(nid.szInfo, sizeof(nid.szInfo) / sizeof(wchar_t), wbody.c_str());
+          wcscpy_s(nid.szInfoTitle, sizeof(nid.szInfoTitle) / sizeof(wchar_t), wtitle.c_str());
           nid.dwInfoFlags = NIIF_INFO;
           Shell_NotifyIconW(NIM_MODIFY, &nid);
 
