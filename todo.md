@@ -18,7 +18,7 @@
 - [x] heute mit Datum und Tag
 - [x] Kein Header
 - [x] Darkmode
-- [x] 600x1000 statt 1280x720 (Desktop)
+- [x] 600x900 statt 1280x720 (Desktop)
 - [x] Sortierung
 - [x] Timestamp für Aktionen "Erlödigt", Wichtig", "In Arbeit", "Angelegt"
 - [x] Json formatiert ablegen
@@ -45,6 +45,11 @@
 - [?] icon
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
+- [ ] Sounds unter Windows gehen nicht
+- [ ] Sortierung per D&D in der Liste
+- [ ] Editieren vom Titel per Button?
+- [ ] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
+- [ ] 600x900 statt 600x1000 (Desktop)
 
 ## notes
 

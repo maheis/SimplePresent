@@ -280,9 +280,13 @@ class _HomePageState extends State<HomePage> {
       lastDate: DateTime(now.year + 5),
     );
     if (date == null) return;
+    final TimeOfDay suggestedNextHour = TimeOfDay(hour: (now.hour + 1) % 24, minute: 0);
+    final TimeOfDay initialTime = _today[index].scheduledAt != null
+        ? TimeOfDay.fromDateTime(initial)
+        : suggestedNextHour;
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
+      initialTime: initialTime,
     );
     if (time == null) return;
     final scheduled = DateTime(date.year, date.month, date.day, time.hour, time.minute);

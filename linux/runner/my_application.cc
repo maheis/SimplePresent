@@ -117,7 +117,7 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "SimplePresent - today");
   }
 
-  gtk_window_set_default_size(window, 600, 1000);
+  gtk_window_set_default_size(window, 600, 900);
 
   // Attempt to set a custom application icon (used by taskbar/launcher).
   // Check several likely locations where the build/install process may place
