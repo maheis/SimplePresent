@@ -55,15 +55,21 @@ bool FlutterWindow::OnCreate() {
         if (call.method_name().compare("notify") == 0) {
           std::string title = "SimplePresent";
           std::string body = "";
-          const auto& args = call.arguments();
-          if (std::holds_alternative<flutter::EncodableMap>(args)) {
-            auto map = std::get<flutter::EncodableMap>(args);
-            auto it = map.find(flutter::EncodableValue("title"));
-            if (it != map.end() && std::holds_alternative<std::string>(it->second))
-              title = std::get<std::string>(it->second);
-            it = map.find(flutter::EncodableValue("body"));
-            if (it != map.end() && std::holds_alternative<std::string>(it->second))
-              body = std::get<std::string>(it->second);
+          const flutter::EncodableValue* args = call.arguments();
+          if (args) {
+            const flutter::EncodableMap* map = std::get_if<flutter::EncodableMap>(args);
+            if (map) {
+              auto it = map->find(flutter::EncodableValue("title"));
+              if (it != map->end() && !it->second.IsNull()) {
+                if (std::holds_alternative<std::string>(it->second))
+                  title = std::get<std::string>(it->second);
+              }
+              it = map->find(flutter::EncodableValue("body"));
+              if (it != map->end() && !it->second.IsNull()) {
+                if (std::holds_alternative<std::string>(it->second))
+                  body = std::get<std::string>(it->second);
+              }
+            }
           }
           // Convert to wide strings
           std::wstring wtitle(title.begin(), title.end());
