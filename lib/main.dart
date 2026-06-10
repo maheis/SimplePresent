@@ -427,7 +427,7 @@ class _HomePageState extends State<HomePage> {
           if (!diff.isNegative && diff.inMinutes <= 15 && !_notified15.contains(key)) {
           _notified15.add(key);
           try {
-            await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
+            await _audioPlayer.play(AssetSource('sounds/pop.mp3'));
           } catch (_) {}
           try {
             await _nativeWindowChannel.invokeMethod('notify', <String, String>{
@@ -445,7 +445,7 @@ class _HomePageState extends State<HomePage> {
         if (diff.inSeconds <= 0 && !_notifiedDue.contains(key)) {
           _notifiedDue.add(key);
           try {
-            await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
+            await _audioPlayer.play(AssetSource('sounds/pop.mp3'));
           } catch (_) {}
           try {
             await _nativeWindowChannel.invokeMethod('notify', <String, String>{
