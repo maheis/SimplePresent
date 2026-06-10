@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
@@ -174,6 +175,8 @@ class _HomePageState extends State<HomePage> {
   final MethodChannel _nativeWindowChannel =
       const MethodChannel('simple_present/window');
   Timer? _scheduledCheckTimer;
+  Timer? _windowWatcherTimer;
+  Map<String, int>? _lastSavedWindowGeom;
   final Set<String> _notified15 = <String>{};
   final Set<String> _notifiedDue = <String>{};
   final Set<int> _swiping = <int>{};
@@ -194,6 +197,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadSettings();
+    // Start watching window geometry after startup
+    _startWindowWatcher();
     _startIdleTimer();
     _startAttentionTimer();
     _startReminderTimer();
@@ -267,20 +272,72 @@ class _HomePageState extends State<HomePage> {
         try {
           final w = data['window'];
           if (w is Map) {
-            await _nativeWindowChannel.invokeMethod('setWindowGeometry', Map<String, int>.from(w.cast<String, dynamic>().map((k, v) => MapEntry(k, (v as num).toInt()))));
+            final wm = Map<String, int>.from(w.cast<String, dynamic>().map((k, v) => MapEntry(k, (v as num).toInt())));
+            await _validateAndApplyWindow(wm);
           }
         } catch (_) {}
       }
     } catch (_) {}
   }
 
+  Future<void> _validateAndApplyWindow(Map<String, int> w) async {
+    try {
+      final screen = await _nativeWindowChannel.invokeMethod('getScreenSize');
+      int sw = 0, sh = 0;
+      if (screen is Map) {
+        sw = (screen['width'] is int) ? screen['width'] as int : (screen['width'] is double ? (screen['width'] as double).toInt() : int.parse(screen['width'].toString()));
+        sh = (screen['height'] is int) ? screen['height'] as int : (screen['height'] is double ? (screen['height'] as double).toInt() : int.parse(screen['height'].toString()));
+      }
+      int x = w['x'] ?? 0;
+      int y = w['y'] ?? 0;
+      int width = w['width'] ?? 800;
+      int height = w['height'] ?? 600;
+      final maximized = (w['maximized'] ?? 0) == 1 || w['maximized'] == true;
+
+      bool valid = true;
+      if (sw > 0 && sh > 0) {
+        // Consider it invalid if window is entirely off-screen or absurdly large
+        if (x < -sw || y < -sh || x > sw || y > sh) valid = false;
+        if (width <= 0 || height <= 0 || width > sw * 4 || height > sh * 4) valid = false;
+      }
+      if (!valid) {
+        // center it on primary screen
+        if (sw > 0 && sh > 0) {
+          x = ((sw - width) / 2).toInt();
+          y = ((sh - height) / 2).toInt();
+        } else {
+          x = 100;
+          y = 100;
+        }
+      }
+
+      final payload = <String, dynamic>{'x': x, 'y': y, 'width': width, 'height': height, 'maximized': maximized};
+      await _nativeWindowChannel.invokeMethod('setWindowGeometry', payload);
+    } catch (_) {
+      // fallback: try to set geometry directly
+      try {
+        await _nativeWindowChannel.invokeMethod('setWindowGeometry', w);
+      } catch (_) {}
+    }
+  }
+
   Future<void> _saveSettings() async {
+    await _saveSettingsWithGeom(null);
+  }
+
+  Future<void> _saveSettingsWithGeom(Map<String, dynamic>? geom) async {
     try {
       final f = await _fileFor('simplepresent_settings.json');
       final out = <String, dynamic>{'tileHeight': _tileHeight, 'fontScale': _fontScale};
       try {
-        final geom = await _nativeWindowChannel.invokeMethod('getWindowGeometry');
-        if (geom is Map) out['window'] = geom;
+        Map<String, dynamic>? useGeom;
+        if (geom != null) {
+          useGeom = geom.cast<String, dynamic>();
+        } else {
+          final g = await _nativeWindowChannel.invokeMethod('getWindowGeometry');
+          if (g is Map) useGeom = Map<String, dynamic>.from(g.cast<String, dynamic>());
+        }
+        if (useGeom != null) out['window'] = useGeom;
       } catch (_) {}
       final encoder = const JsonEncoder.withIndent('  ');
       await f.writeAsString(encoder.convert(out));
@@ -289,6 +346,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _windowWatcherTimer?.cancel();
     _saveSettings();
     _controller.dispose();
     _inputFocus.dispose();
@@ -353,6 +411,30 @@ class _HomePageState extends State<HomePage> {
           } catch (_) {}
         }
       }
+    });
+  }
+
+  void _startWindowWatcher() {
+    _windowWatcherTimer?.cancel();
+    _windowWatcherTimer = Timer.periodic(const Duration(seconds: 1), (t) async {
+      try {
+        final geom = await _nativeWindowChannel.invokeMethod('getWindowGeometry');
+        if (geom is Map) {
+          // normalize ints
+          final norm = <String, int>{};
+          for (final e in geom.entries) {
+            final k = e.key.toString();
+            final v = e.value;
+            if (v is int) norm[k] = v;
+            else if (v is double) norm[k] = v.toInt();
+            else norm[k] = int.tryParse(v.toString()) ?? 0;
+          }
+          if (_lastSavedWindowGeom == null || !mapEquals(_lastSavedWindowGeom, norm)) {
+            _lastSavedWindowGeom = Map<String, int>.from(norm);
+            await _saveSettingsWithGeom(_lastSavedWindowGeom);
+          }
+        }
+      } catch (_) {}
     });
   }
 

@@ -132,7 +132,19 @@ bool FlutterWindow::OnCreate() {
               int h = getInt("height");
               HWND hwnd = GetHandle();
               if (hwnd) {
-                SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+                // Honor maximized flag if present
+                auto itMax = map->find(flutter::EncodableValue("maximized"));
+                bool maximized = false;
+                if (itMax != map->end() && std::holds_alternative<bool>(itMax->second)) {
+                  maximized = std::get<bool>(itMax->second);
+                }
+                if (maximized) {
+                  ShowWindow(hwnd, SW_MAXIMIZE);
+                } else {
+                  // Ensure not maximized before setting geometry
+                  ShowWindow(hwnd, SW_RESTORE);
+                  SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+                }
                 result->Success(flutter::EncodableValue(true));
                 return;
               }
@@ -151,6 +163,9 @@ bool FlutterWindow::OnCreate() {
               out[flutter::EncodableValue("y")] = flutter::EncodableValue(static_cast<int>(r.top));
               out[flutter::EncodableValue("width")] = flutter::EncodableValue(static_cast<int>(r.right - r.left));
               out[flutter::EncodableValue("height")] = flutter::EncodableValue(static_cast<int>(r.bottom - r.top));
+              // Report maximized state
+              bool isMax = IsZoomed(hwnd) != 0;
+              out[flutter::EncodableValue("maximized")] = flutter::EncodableValue(isMax);
               result->Success(flutter::EncodableValue(out));
               return;
             }
@@ -158,6 +173,15 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(flutter::EncodableMap()));
           return;
         }
+          if (call.method_name().compare("getScreenSize") == 0) {
+            int sw = GetSystemMetrics(SM_CXSCREEN);
+            int sh = GetSystemMetrics(SM_CYSCREEN);
+            flutter::EncodableMap out;
+            out[flutter::EncodableValue("width")] = flutter::EncodableValue(sw);
+            out[flutter::EncodableValue("height")] = flutter::EncodableValue(sh);
+            result->Success(flutter::EncodableValue(out));
+            return;
+          }
         result->NotImplemented();
       });
 

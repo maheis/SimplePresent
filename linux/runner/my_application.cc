@@ -92,8 +92,16 @@ static void window_method_call(FlMethodChannel* channel,
         const int y = fl_value_get_int(vy);
         const int w = fl_value_get_int(vw);
         const int h = fl_value_get_int(vh);
-        gtk_window_move(g_main_window, x, y);
-        gtk_window_resize(g_main_window, w, h);
+        // If caller requested maximized, apply that instead of manual geometry
+        FlValue* vmax = fl_value_lookup_string(args, "maximized");
+        if (vmax && fl_value_get_type(vmax) == FL_VALUE_TYPE_BOOL && fl_value_get_bool(vmax)) {
+          gtk_window_maximize(g_main_window);
+        } else {
+          // Ensure we unmaximize before setting geometry
+          gtk_window_unmaximize(g_main_window);
+          gtk_window_move(g_main_window, x, y);
+          gtk_window_resize(g_main_window, w, h);
+        }
         response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(TRUE)));
         fl_method_call_respond(method_call, response, nullptr);
         return;
@@ -114,6 +122,45 @@ static void window_method_call(FlMethodChannel* channel,
       fl_value_set_string_take(map, "y", fl_value_new_int(y));
       fl_value_set_string_take(map, "width", fl_value_new_int(w));
       fl_value_set_string_take(map, "height", fl_value_new_int(h));
+      // Report maximized state
+      gboolean is_max = gtk_window_is_maximized(g_main_window);
+      fl_value_set_string_take(map, "maximized", fl_value_new_bool(is_max));
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_map()));
+    fl_method_call_respond(method_call, response, nullptr);
+    return;
+  }
+
+  if (g_str_equal(method, "getScreenSize")) {
+    // Return primary monitor size as map {width, height}
+    GdkDisplay* display = gdk_display_get_default();
+    if (display) {
+      GdkMonitor* mon = gdk_display_get_primary_monitor(display);
+      int sw = 0, sh = 0;
+      if (mon) {
+        GdkRectangle rect;
+        gdk_monitor_get_geometry(mon, &rect);
+        sw = rect.width;
+        sh = rect.height;
+      } else {
+        // Fallback: try to get monitor 0 geometry (avoids deprecated gdk_screen_* APIs)
+        int n = gdk_display_get_n_monitors(display);
+        if (n > 0) {
+          GdkMonitor* m0 = gdk_display_get_monitor(display, 0);
+          if (m0) {
+            GdkRectangle rect0;
+            gdk_monitor_get_geometry(m0, &rect0);
+            sw = rect0.width;
+            sh = rect0.height;
+          }
+        }
+      }
+      FlValue* map = fl_value_new_map();
+      fl_value_set_string_take(map, "width", fl_value_new_int(sw));
+      fl_value_set_string_take(map, "height", fl_value_new_int(sh));
       response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
       fl_method_call_respond(method_call, response, nullptr);
       return;
