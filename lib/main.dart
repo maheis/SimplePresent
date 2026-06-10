@@ -285,10 +285,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _toggleExpanded(int index) {
-    setState(() {
-      if (_expanded.contains(index)) {
+    if (_expanded.contains(index)) {
+      // collapsing: save edited title/notes before collapsing
+      _saveEditedTitle(index);
+      setState(() {
         _expanded.remove(index);
-      } else {
+      });
+    } else {
+      setState(() {
         _expanded.add(index);
         _editControllers.putIfAbsent(index, () {
           final c = TextEditingController(text: _today[index].text);
@@ -304,8 +308,8 @@ class _HomePageState extends State<HomePage> {
           });
           return n;
         });
-      }
-    });
+      });
+    }
     _registerActivity();
   }
 
@@ -819,18 +823,7 @@ class _HomePageState extends State<HomePage> {
                                                 children: [
                                                   Expanded(
                                                     child: _expanded.contains(i)
-                                                        ? TextField(
-                                                            controller: _editControllers.putIfAbsent(i, () {
-                                                              final c = TextEditingController(text: task.text);
-                                                              c.addListener(() {
-                                                                if (mounted) setState(() {});
-                                                              });
-                                                              return c;
-                                                            }),
-                                                            autofocus: true,
-                                                            decoration: const InputDecoration(border: InputBorder.none),
-                                                            onSubmitted: (_) => _saveEditedTitle(i),
-                                                          )
+                                                        ? const SizedBox.shrink()
                                                         : Text(
                                                             task.text,
                                                             style: TextStyle(
@@ -904,6 +897,23 @@ class _HomePageState extends State<HomePage> {
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
+                                                  // Editable title in expanded area
+                                                  TextField(
+                                                    controller: _editControllers.putIfAbsent(i, () {
+                                                      final c = TextEditingController(text: task.text);
+                                                      c.addListener(() {
+                                                        if (mounted) setState(() {});
+                                                      });
+                                                      return c;
+                                                    }),
+                                                    autofocus: true,
+                                                    decoration: const InputDecoration(
+                                                      border: InputBorder.none,
+                                                      hintText: 'Titel',
+                                                    ),
+                                                    onSubmitted: (_) => _saveEditedTitle(i),
+                                                  ),
+                                                  const SizedBox(height: 8),
                                                   // Notes field (moved above timestamps)
                                                   TextField(
                                                     controller: _notesControllers.putIfAbsent(i, () {

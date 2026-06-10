@@ -46,8 +46,8 @@
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [ ] Sounds unter Windows gehen nicht
-- [ ] Sortierung per D&D in der Liste
-- [ ] Editieren vom Titel per Button?
+- [x] Sortierung per D&D in der Liste
+- [x] Editieren vom Titel per Button?
 - [ ] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
 - [ ] 600x900 statt 600x1000 (Desktop)
 
