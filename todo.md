@@ -41,7 +41,7 @@
 - [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
 - [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
-- [ ] Zoom (Pinch, Strg+Scrollen)
+- [x] Zoom (Pinch, Strg+Scrollen)
 - [?] icon
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)

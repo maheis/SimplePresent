@@ -124,9 +124,19 @@ static void my_application_activate(GApplication* application) {
   // the Flutter assets so the icon file can be found both in development and
   // in the installed bundle.
   const char* icon_candidates[] = {
+    // SVG (original)
     "data/flutter_assets/assets/icons/icon.svg",
     "../data/flutter_assets/assets/icons/icon.svg",
     "flutter_assets/assets/icons/icon.svg",
+    // PNG fallback (added by user)
+    "data/flutter_assets/assets/icons/icon.png",
+    "../data/flutter_assets/assets/icons/icon.png",
+    "flutter_assets/assets/icons/icon.png",
+    // ICO fallback
+    "data/flutter_assets/assets/icons/icon.ico",
+    "../data/flutter_assets/assets/icons/icon.ico",
+    "flutter_assets/assets/icons/icon.ico",
+    // System install location
     "/usr/share/icons/hicolor/scalable/apps/simple_present.svg",
     NULL
   };
