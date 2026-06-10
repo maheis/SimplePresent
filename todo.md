@@ -50,7 +50,7 @@
 - [x] Sortierung per D&D in der Liste
 - [x] Editieren vom Titel per Button?
 - [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
-- [ ] position und größe beim schließen merken und beim start wieder laden
+- [ ] position, größe und zoom beim schließen merken und beim start wieder laden
 
 ## notes
 

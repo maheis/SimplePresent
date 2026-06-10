@@ -799,6 +799,7 @@ class _HomePageState extends State<HomePage> {
                                   ];
 
                                   return ReorderableListView(
+                                    buildDefaultDragHandles: false,
                                     onReorder: (oldIndex, newIndex) {
                                       // Normalize indices as in ReorderableListView behavior
                                       if (newIndex > oldIndex) newIndex -= 1;
@@ -1095,8 +1096,7 @@ class _HomePageState extends State<HomePage> {
                                                                 ),
                                                         ),
                                                         const SizedBox(
-                                                            width: 8),
-                                                        const Spacer(),
+                                                          width: 4),
                                                         // Right aligned icons: scheduled+time, in-progress, save (when expanded), star (far right)
                                                         Opacity(
                                                           opacity: _swiping
@@ -1194,42 +1194,66 @@ class _HomePageState extends State<HomePage> {
                                                                             i),
                                                                   );
                                                                 }),
-                                                              IconButton(
+                                                                IconButton(
                                                                 tooltip:
-                                                                    'Important',
+                                                                  'Important',
                                                                 icon: Icon(
-                                                                    task.important
-                                                                        ? Icons
-                                                                            .star
-                                                                        : Icons
-                                                                            .star_border,
-                                                                    color: task
-                                                                            .important
-                                                                        ? Colors
-                                                                            .amber
-                                                                        : Theme.of(context)
-                                                                            .colorScheme
-                                                                            .onSurfaceVariant),
+                                                                  task.important
+                                                                    ? Icons
+                                                                      .star
+                                                                    : Icons
+                                                                      .star_border,
+                                                                  color: task
+                                                                      .important
+                                                                    ? Colors
+                                                                      .amber
+                                                                    : Theme.of(context)
+                                                                      .colorScheme
+                                                                      .onSurfaceVariant),
                                                                 onPressed: () {
                                                                   final now = !_today[
-                                                                              i]
-                                                                          .important
-                                                                      ? DateTime
-                                                                          .now()
-                                                                      : _today[
-                                                                              i]
-                                                                          .importantAt;
+                                                                        i]
+                                                                      .important
+                                                                    ? DateTime
+                                                                      .now()
+                                                                    : _today[
+                                                                        i]
+                                                                      .importantAt;
                                                                   setState(() => _today[
-                                                                      i] = _today[
-                                                                          i]
-                                                                      .copyWith(
-                                                                          important: !_today[i]
-                                                                              .important,
-                                                                          importantAt:
-                                                                              now));
+                                                                    i] = _today[
+                                                                      i]
+                                                                    .copyWith(
+                                                                      important: !_today[i]
+                                                                        .important,
+                                                                      importantAt:
+                                                                        now));
                                                                   _saveToday();
                                                                 },
-                                                              ),
+                                                                ),
+                                                                // Custom D&D handle (5px shifted to the right)
+                                                                Padding(
+                                                                padding:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                    left:
+                                                                      5.0),
+                                                                child: Opacity(
+                                                                  opacity: _swiping
+                                                                      .contains(
+                                                                        i)
+                                                                    ? 0.0
+                                                                    : 1.0,
+                                                                  child:
+                                                                    ReorderableDragStartListener(
+                                                                  index: vi,
+                                                                  child: const Icon(
+                                                                    Icons
+                                                                      .drag_handle,
+                                                                    size:
+                                                                      18),
+                                                                  ),
+                                                                ),
+                                                                ),
                                                             ],
                                                           ),
                                                         ),
