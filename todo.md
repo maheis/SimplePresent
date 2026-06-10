@@ -56,6 +56,7 @@
 - [x] Titelleiste Windows
 - [x] Icon Redesign
 - [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
+- [ ] Popup hat kein Symbol und der Title ist noch noch falsch
   
 ## notes
 
