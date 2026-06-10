@@ -27,7 +27,8 @@ class SimplePresentApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal, brightness: Brightness.dark),
       ),
       home: const HomePage(),
     );
@@ -127,10 +128,20 @@ class TaskItem {
       inProgress: map['inProgress'] == true || map['in_arbeit'] == true,
       // support both new english keys and older german/variant keys
       createdAt: _parseDate(map['created_at'] ?? map['createdAt']),
-      scheduledAt: _parseDate(map['scheduled_at'] ?? map['scheduledAt'] ?? map['termin'] ?? map['due_at']),
-      completedAt: _parseDate(map['completed_at'] ?? map['erledigt_am'] ?? map['done_at'] ?? map['doneAt']),
-      inProgressAt: _parseDate(map['in_progress_at'] ?? map['in_arbeit_am'] ?? map['inArbeitAt'] ?? map['in_progress_at']),
-      importantAt: _parseDate(map['important_at'] ?? map['wichtig_am'] ?? map['important_at']),
+      scheduledAt: _parseDate(map['scheduled_at'] ??
+          map['scheduledAt'] ??
+          map['termin'] ??
+          map['due_at']),
+      completedAt: _parseDate(map['completed_at'] ??
+          map['erledigt_am'] ??
+          map['done_at'] ??
+          map['doneAt']),
+      inProgressAt: _parseDate(map['in_progress_at'] ??
+          map['in_arbeit_am'] ??
+          map['inArbeitAt'] ??
+          map['in_progress_at']),
+      importantAt: _parseDate(
+          map['important_at'] ?? map['wichtig_am'] ?? map['important_at']),
       notes: (map['notes'] ?? map['note'] ?? '').toString(),
     );
   }
@@ -154,10 +165,12 @@ class _HomePageState extends State<HomePage> {
   final Duration _reminderDuration = const Duration(minutes: 75);
   Timer? _urgentTimer;
   final Duration _urgentDuration = const Duration(minutes: 90);
-  final MethodChannel _nativeWindowChannel = const MethodChannel('simple_present/window');
+  final MethodChannel _nativeWindowChannel =
+      const MethodChannel('simple_present/window');
   Timer? _scheduledCheckTimer;
   final Set<String> _notified15 = <String>{};
   final Set<String> _notifiedDue = <String>{};
+  final Set<int> _swiping = <int>{};
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -202,7 +215,8 @@ class _HomePageState extends State<HomePage> {
     try {
       final f = await _fileFor(filename);
       final encoder = const JsonEncoder.withIndent('  ');
-      await f.writeAsString(encoder.convert(source.map((e) => e.toJson()).toList()));
+      await f.writeAsString(
+          encoder.convert(source.map((e) => e.toJson()).toList()));
     } catch (_) {}
   }
 
@@ -244,7 +258,8 @@ class _HomePageState extends State<HomePage> {
 
   void _startScheduledChecker() {
     _scheduledCheckTimer?.cancel();
-    _scheduledCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+    _scheduledCheckTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) async {
       final now = DateTime.now();
       for (final t in _today) {
         if (t.scheduledAt == null) continue;
@@ -252,7 +267,9 @@ class _HomePageState extends State<HomePage> {
         final key = _taskNotifyKey(t);
         final diff = t.scheduledAt!.difference(now);
         // 15 minutes before
-        if (diff.inSeconds <= 15 * 60 && diff.isNegative == false && !_notified15.contains(key)) {
+        if (diff.inSeconds <= 15 * 60 &&
+            diff.isNegative == false &&
+            !_notified15.contains(key)) {
           _notified15.add(key);
           try {
             await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
@@ -338,7 +355,8 @@ class _HomePageState extends State<HomePage> {
       lastDate: DateTime(now.year + 5),
     );
     if (date == null) return;
-    final TimeOfDay suggestedNextHour = TimeOfDay(hour: (now.hour + 1) % 24, minute: 0);
+    final TimeOfDay suggestedNextHour =
+        TimeOfDay(hour: (now.hour + 1) % 24, minute: 0);
     final TimeOfDay initialTime = _today[index].scheduledAt != null
         ? TimeOfDay.fromDateTime(initial)
         : suggestedNextHour;
@@ -347,8 +365,10 @@ class _HomePageState extends State<HomePage> {
       initialTime: initialTime,
     );
     if (time == null) return;
-    final scheduled = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    setState(() => _today[index] = _today[index].copyWith(scheduledAt: scheduled));
+    final scheduled =
+        DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    setState(
+        () => _today[index] = _today[index].copyWith(scheduledAt: scheduled));
     await _saveToday();
     _showTopToast('Termin gesetzt');
     // clear any prior notifications for this task so reminders can be re-scheduled
@@ -386,15 +406,19 @@ class _HomePageState extends State<HomePage> {
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Text(
                     message,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
               ),
@@ -420,7 +444,13 @@ class _HomePageState extends State<HomePage> {
   void _addToToday(String text) {
     if (text.trim().isEmpty) return;
     setState(() {
-      _today.insert(0, TaskItem(text: text.trim(), done: false, createdAt: DateTime.now(), notes: ''));
+      _today.insert(
+          0,
+          TaskItem(
+              text: text.trim(),
+              done: false,
+              createdAt: DateTime.now(),
+              notes: ''));
       _controller.clear();
     });
     _saveToday();
@@ -565,7 +595,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = DateFormat('EEEE, dd. MMMM yyyy', 'de_DE').format(DateTime.now());
+    final dateLabel =
+        DateFormat('EEEE, dd. MMMM yyyy', 'de_DE').format(DateTime.now());
 
     return FutureBuilder<void>(
       future: _initFuture,
@@ -579,399 +610,669 @@ class _HomePageState extends State<HomePage> {
             },
             child: Column(
               children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 22, 12, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            const TextSpan(
-                              text: 'Today',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                            ),
-                            TextSpan(
-                              text: ', $dateLabel',
-                              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ],
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 22, 12, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              const TextSpan(
+                                text: 'Today',
+                                style: TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.w700),
+                              ),
+                              TextSpan(
+                                text: ', $dateLabel',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: _today.isEmpty
-                          ? const Center(child: Text('No tasks for today'))
-                            : Builder(builder: (ctx) {
-                                // Build grouped list preserving insertion order within groups
-                                final bucketOverdue = <MapEntry<int, TaskItem>>[]; // tasks past their scheduled time
-                                final bucketImportantInProgress = <MapEntry<int, TaskItem>>[];
-                                final bucketInProgress = <MapEntry<int, TaskItem>>[];
-                                final bucketImportant = <MapEntry<int, TaskItem>>[];
-                                final bucketDueIn1h = <MapEntry<int, TaskItem>>[];
-                                final bucketRest = <MapEntry<int, TaskItem>>[]; // rest (insertion order)
-                                final bucketDone = <MapEntry<int, TaskItem>>[]; // done tasks (always bottom)
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: _today.isEmpty
+                              ? const Center(child: Text('No tasks for today'))
+                              : Builder(builder: (ctx) {
+                                  // Build grouped list preserving insertion order within groups
+                                  final bucketOverdue = <MapEntry<int,
+                                      TaskItem>>[]; // tasks past their scheduled time
+                                  final bucketImportantInProgress =
+                                      <MapEntry<int, TaskItem>>[];
+                                  final bucketInProgress =
+                                      <MapEntry<int, TaskItem>>[];
+                                  final bucketImportant =
+                                      <MapEntry<int, TaskItem>>[];
+                                  final bucketDueIn1h =
+                                      <MapEntry<int, TaskItem>>[];
+                                  final bucketRest = <MapEntry<int,
+                                      TaskItem>>[]; // rest (insertion order)
+                                  final bucketDone = <MapEntry<int,
+                                      TaskItem>>[]; // done tasks (always bottom)
 
-                                final now = DateTime.now();
-                                final entries = _today.asMap().entries;
-                                for (final e in entries) {
-                                  final t = e.value;
-                                  if (t.done) {
-                                    bucketDone.add(e);
-                                    continue;
-                                  }
-                                  final hasSchedule = t.scheduledAt != null;
-                                  final diff = hasSchedule ? t.scheduledAt!.difference(now) : null;
-                                  final isOverdue = hasSchedule && diff!.isNegative;
-                                  final dueWithin1h = hasSchedule && !diff!.isNegative && diff.inMinutes <= 60;
-
-                                  if (isOverdue) {
-                                    bucketOverdue.add(e);
-                                    continue;
-                                  }
-                                  if (t.important && t.inProgress) {
-                                    bucketImportantInProgress.add(e);
-                                    continue;
-                                  }
-                                  if (t.inProgress) {
-                                    bucketInProgress.add(e);
-                                    continue;
-                                  }
-                                  if (t.important) {
-                                    bucketImportant.add(e);
-                                    continue;
-                                  }
-                                  if (dueWithin1h) {
-                                    bucketDueIn1h.add(e);
-                                    continue;
-                                  }
-                                  bucketRest.add(e);
-                                }
-
-                                final sorted = [
-                                  ...bucketOverdue,
-                                  ...bucketImportantInProgress,
-                                  ...bucketInProgress,
-                                  ...bucketImportant,
-                                  ...bucketDueIn1h,
-                                  ...bucketRest,
-                                  ...bucketDone,
-                                ];
-
-                                return ReorderableListView(
-                                  onReorder: (oldIndex, newIndex) {
-                                    // Normalize indices as in ReorderableListView behavior
-                                    if (newIndex > oldIndex) newIndex -= 1;
-                                    final srcEntry = sorted[oldIndex];
-                                    final dstEntry = sorted[newIndex];
-                                    // Determine bucket membership for src and dst
-                                    int bucketOf(MapEntry<int, TaskItem> e) {
-                                      if (bucketOverdue.contains(e)) return 0;
-                                      if (bucketImportantInProgress.contains(e)) return 1;
-                                      if (bucketInProgress.contains(e)) return 2;
-                                      if (bucketImportant.contains(e)) return 3;
-                                      if (bucketDueIn1h.contains(e)) return 4;
-                                      if (bucketRest.contains(e)) return 5;
-                                      return 6; // done
+                                  final now = DateTime.now();
+                                  final entries = _today.asMap().entries;
+                                  for (final e in entries) {
+                                    final t = e.value;
+                                    if (t.done) {
+                                      bucketDone.add(e);
+                                      continue;
                                     }
+                                    final hasSchedule = t.scheduledAt != null;
+                                    final diff = hasSchedule
+                                        ? t.scheduledAt!.difference(now)
+                                        : null;
+                                    final isOverdue =
+                                        hasSchedule && diff!.isNegative;
+                                    final dueWithin1h = hasSchedule &&
+                                        !diff!.isNegative &&
+                                        diff.inMinutes <= 60;
 
-                                    final srcBucket = bucketOf(srcEntry);
-                                    final dstBucket = bucketOf(dstEntry);
-                                    if (srcBucket != dstBucket) {
-                                      _showTopToast('Reorder allowed only within the same group');
-                                      return;
+                                    if (isOverdue) {
+                                      bucketOverdue.add(e);
+                                      continue;
                                     }
-
-                                    // Work on the specific bucket list
-                                    List<MapEntry<int, TaskItem>> targetBucket;
-                                    switch (srcBucket) {
-                                      case 0:
-                                        targetBucket = bucketOverdue;
-                                        break;
-                                      case 1:
-                                        targetBucket = bucketImportantInProgress;
-                                        break;
-                                      case 2:
-                                        targetBucket = bucketInProgress;
-                                        break;
-                                      case 3:
-                                        targetBucket = bucketImportant;
-                                        break;
-                                      case 4:
-                                        targetBucket = bucketDueIn1h;
-                                        break;
-                                      case 5:
-                                        targetBucket = bucketRest;
-                                        break;
-                                      default:
-                                        targetBucket = bucketDone;
+                                    if (t.important && t.inProgress) {
+                                      bucketImportantInProgress.add(e);
+                                      continue;
                                     }
-
-                                    final srcPos = targetBucket.indexWhere((e) => e.key == srcEntry.key && e.value.text == srcEntry.value.text);
-                                    if (srcPos == -1) return;
-
-                                    // Compute destination position within the bucket by counting how many entries from start of sorted up to newIndex belong to this bucket
-                                    int dstPos = 0;
-                                    for (int i = 0; i < newIndex; i++) {
-                                      if (bucketOf(sorted[i]) == srcBucket) dstPos++;
+                                    if (t.inProgress) {
+                                      bucketInProgress.add(e);
+                                      continue;
                                     }
+                                    if (t.important) {
+                                      bucketImportant.add(e);
+                                      continue;
+                                    }
+                                    if (dueWithin1h) {
+                                      bucketDueIn1h.add(e);
+                                      continue;
+                                    }
+                                    bucketRest.add(e);
+                                  }
 
-                                    // Adjust if moving forward within bucket
-                                    if (dstPos > srcPos) dstPos -= 1;
+                                  final sorted = [
+                                    ...bucketOverdue,
+                                    ...bucketImportantInProgress,
+                                    ...bucketInProgress,
+                                    ...bucketImportant,
+                                    ...bucketDueIn1h,
+                                    ...bucketRest,
+                                    ...bucketDone,
+                                  ];
 
-                                    setState(() {
-                                      // reorder within the targetBucket
-                                      final moved = targetBucket.removeAt(srcPos);
-                                      targetBucket.insert(dstPos.clamp(0, targetBucket.length), moved);
+                                  return ReorderableListView(
+                                    onReorder: (oldIndex, newIndex) {
+                                      // Normalize indices as in ReorderableListView behavior
+                                      if (newIndex > oldIndex) newIndex -= 1;
+                                      final srcEntry = sorted[oldIndex];
+                                      final dstEntry = sorted[newIndex];
+                                      // Determine bucket membership for src and dst
+                                      int bucketOf(MapEntry<int, TaskItem> e) {
+                                        if (bucketOverdue.contains(e)) return 0;
+                                        if (bucketImportantInProgress
+                                            .contains(e)) return 1;
+                                        if (bucketInProgress.contains(e))
+                                          return 2;
+                                        if (bucketImportant.contains(e))
+                                          return 3;
+                                        if (bucketDueIn1h.contains(e)) return 4;
+                                        if (bucketRest.contains(e)) return 5;
+                                        return 6; // done
+                                      }
 
-                                      // rebuild _today preserving bucket concatenation order
-                                      final newOrder = <TaskItem>[];
-                                      void appendBucket(List<MapEntry<int, TaskItem>> b) => newOrder.addAll(b.map((e) => e.value));
-                                      appendBucket(bucketOverdue);
-                                      appendBucket(bucketImportantInProgress);
-                                      appendBucket(bucketInProgress);
-                                      appendBucket(bucketImportant);
-                                      appendBucket(bucketDueIn1h);
-                                      appendBucket(bucketRest);
-                                      appendBucket(bucketDone);
-                                      _today.clear();
-                                      _today.addAll(newOrder);
-                                      _saveToday();
-                                    });
-                                  },
-                                  children: List.generate(sorted.length, (vi) {
-                                    final originalIndex = sorted[vi].key;
-                                    final task = sorted[vi].value;
-                                    final i = originalIndex;
-                                    return Dismissible(
-                                      key: ValueKey('today_${i}_${task.text}_${task.done}'),
-                                      background: Container(
-                                        color: _today[i].inProgress ? Colors.green : Colors.green,
-                                        alignment: Alignment.centerLeft,
-                                        padding: const EdgeInsets.only(left: 20),
-                                        child: _today[i].inProgress
-                                            ? Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.check_circle, color: Colors.white),
-                                                  const SizedBox(width: 8),
-                                                  const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                                ],
-                                              )
-                                            : Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.construction, color: Colors.white, size: 18),
-                                                  const SizedBox(width: 8),
-                                                  const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                                ],
-                                              ),
-                                      ),
-                                      secondaryBackground: Container(
-                                        color: Colors.red,
-                                        alignment: Alignment.centerRight,
-                                        padding: const EdgeInsets.only(right: 20),
-                                        child: const Icon(Icons.delete, color: Colors.white),
-                                      ),
-                                      confirmDismiss: (direction) async {
-                                        if (direction == DismissDirection.startToEnd) {
-                                          final t = _today[i];
-                                          if (!t.inProgress && !t.done) {
-                                            setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
-                                            _saveToday();
-                                            _showTopToast('Task marked In Progress');
-                                          } else if (t.inProgress && !t.done) {
-                                            _setDone(i, true);
-                                            _showTopToast('Task marked done');
-                                          }
-                                          return false;
-                                        }
-                                        final shouldDelete = await showDialog<bool>(
-                                          context: context,
-                                          builder: (dialogContext) => AlertDialog(
-                                            title: const Text('Delete task?'),
-                                            content: Text('Delete "${_today[i].text}"?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.of(dialogContext).pop(false),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              FilledButton(
-                                                onPressed: () => Navigator.of(dialogContext).pop(true),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                        return shouldDelete == true;
-                                      },
-                                      direction: !task.done ? DismissDirection.horizontal : DismissDirection.endToStart,
-                                      onDismissed: (_) => _removeFromToday(i),
-                                      child: Column(
-                                        children: [
-                                          Card(
-                                            color: task.inProgress ? Colors.green.withOpacity(0.10) : null,
-                                            child: ListTile(
-                                              onTap: () => _toggleExpanded(i),
-                                              leading: IconButton(
-                                                tooltip: 'Done',
-                                                icon: Icon(task.done ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                                                onPressed: () => _setDone(i, !task.done),
-                                              ),
-                                              title: Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: _expanded.contains(i)
-                                                        ? const SizedBox.shrink()
-                                                        : Text(
-                                                            task.text,
-                                                            style: TextStyle(
-                                                              decoration: task.done ? TextDecoration.lineThrough : TextDecoration.none,
-                                                              color: task.done
-                                                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
-                                                                  : Theme.of(context).colorScheme.onSurface,
-                                                            ),
-                                                          ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  const Spacer(),
-                                                  // Right aligned icons: scheduled+time, in-progress, save (when expanded), star (far right)
-                                                  Row(
-                                                    mainAxisSize: MainAxisSize.min,
+                                      final srcBucket = bucketOf(srcEntry);
+                                      final dstBucket = bucketOf(dstEntry);
+                                      if (srcBucket != dstBucket) {
+                                        _showTopToast(
+                                            'Reorder allowed only within the same group');
+                                        return;
+                                      }
+
+                                      // Work on the specific bucket list
+                                      List<MapEntry<int, TaskItem>>
+                                          targetBucket;
+                                      switch (srcBucket) {
+                                        case 0:
+                                          targetBucket = bucketOverdue;
+                                          break;
+                                        case 1:
+                                          targetBucket =
+                                              bucketImportantInProgress;
+                                          break;
+                                        case 2:
+                                          targetBucket = bucketInProgress;
+                                          break;
+                                        case 3:
+                                          targetBucket = bucketImportant;
+                                          break;
+                                        case 4:
+                                          targetBucket = bucketDueIn1h;
+                                          break;
+                                        case 5:
+                                          targetBucket = bucketRest;
+                                          break;
+                                        default:
+                                          targetBucket = bucketDone;
+                                      }
+
+                                      final srcPos = targetBucket.indexWhere(
+                                          (e) =>
+                                              e.key == srcEntry.key &&
+                                              e.value.text ==
+                                                  srcEntry.value.text);
+                                      if (srcPos == -1) return;
+
+                                      // Compute destination position within the bucket by counting how many entries from start of sorted up to newIndex belong to this bucket
+                                      int dstPos = 0;
+                                      for (int i = 0; i < newIndex; i++) {
+                                        if (bucketOf(sorted[i]) == srcBucket)
+                                          dstPos++;
+                                      }
+
+                                      // Adjust if moving forward within bucket
+                                      if (dstPos > srcPos) dstPos -= 1;
+
+                                      setState(() {
+                                        // reorder within the targetBucket
+                                        final moved =
+                                            targetBucket.removeAt(srcPos);
+                                        targetBucket.insert(
+                                            dstPos.clamp(
+                                                0, targetBucket.length),
+                                            moved);
+
+                                        // rebuild _today preserving bucket concatenation order
+                                        final newOrder = <TaskItem>[];
+                                        void appendBucket(
+                                                List<MapEntry<int, TaskItem>>
+                                                    b) =>
+                                            newOrder
+                                                .addAll(b.map((e) => e.value));
+                                        appendBucket(bucketOverdue);
+                                        appendBucket(bucketImportantInProgress);
+                                        appendBucket(bucketInProgress);
+                                        appendBucket(bucketImportant);
+                                        appendBucket(bucketDueIn1h);
+                                        appendBucket(bucketRest);
+                                        appendBucket(bucketDone);
+                                        _today.clear();
+                                        _today.addAll(newOrder);
+                                        _saveToday();
+                                      });
+                                    },
+                                    children:
+                                        List.generate(sorted.length, (vi) {
+                                      final originalIndex = sorted[vi].key;
+                                      final task = sorted[vi].value;
+                                      final i = originalIndex;
+                                      return Dismissible(
+                                          key: ValueKey(
+                                              'today_${i}_${task.text}_${task.done}'),
+                                          background: Container(
+                                            color: Colors.green,
+                                            alignment: Alignment.centerLeft,
+                                            padding:
+                                                const EdgeInsets.only(left: 20),
+                                            child: _today[i].inProgress
+                                                ? Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
-                                                      if (task.scheduledAt != null)
-                                                        Tooltip(
-                                                          message: DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!),
-                                                          child: InkWell(
-                                                            onTap: () => _pickSchedule(i),
-                                                            child: Row(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                Icon(Icons.event, color: _scheduleIconColor(task.scheduledAt!), size: 16),
-                                                                const SizedBox(width: 4),
-                                                                Text(
-                                                                  DateFormat('HH:mm').format(task.scheduledAt!),
-                                                                  style: TextStyle(fontSize: 11, color: _scheduleIconColor(task.scheduledAt!)),
+                                                      const Icon(
+                                                          Icons.check_circle,
+                                                          color: Colors.white),
+                                                      const SizedBox(width: 8),
+                                                      const Text('Done',
+                                                          style: TextStyle(
+                                                              color:
+                                                                  Colors.white,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600)),
+                                                    ],
+                                                  )
+                                                : Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.construction,
+                                                          color: Colors.white,
+                                                          size: 18),
+                                                      const SizedBox(width: 8),
+                                                      const Text('In Progress',
+                                                          style: TextStyle(
+                                                              color:
+                                                                  Colors.white,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600)),
+                                                    ],
+                                                  ),
+                                          ),
+                                          secondaryBackground: Container(
+                                            color: (_today[i].inProgress &&
+                                                    !_today[i].done)
+                                                ? Colors.transparent
+                                                : Colors.red,
+                                            alignment: Alignment.centerRight,
+                                            // align delete icon where the star sits (far right)
+                                            padding: const EdgeInsets.only(
+                                                right: 12),
+                                            child: (_today[i].inProgress &&
+                                                    !_today[i].done)
+                                                ? Text(
+                                                    'open',
+                                                    style: TextStyle(
+                                                      decoration: TextDecoration
+                                                          .lineThrough,
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurface,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.delete,
+                                                    color: Colors.white),
+                                          ),
+                                          confirmDismiss: (direction) async {
+                                            final t = _today[i];
+                                            if (direction ==
+                                                DismissDirection.startToEnd) {
+                                              // Right swipe: 1st -> set inProgress, 2nd -> set done
+                                              if (!t.inProgress && !t.done) {
+                                                setState(() => _today[i] =
+                                                    t.copyWith(
+                                                        inProgress: true,
+                                                        inProgressAt:
+                                                            DateTime.now()));
+                                                _saveToday();
+                                                _showTopToast(
+                                                    'Task marked In Progress');
+                                              } else if (t.inProgress &&
+                                                  !t.done) {
+                                                _setDone(i, true);
+                                                _showTopToast(
+                                                    'Task marked done');
+                                              }
+                                              return false;
+                                            }
+                                            // Left swipe: if task is inProgress -> unset inProgress, do not delete
+                                            if (t.inProgress && !t.done) {
+                                              setState(() => _today[i] =
+                                                  t.copyWith(
+                                                      inProgress: false,
+                                                      inProgressAt: null));
+                                              _saveToday();
+                                              _showTopToast(
+                                                  'Task marked not In Progress');
+                                              return false;
+                                            }
+                                            // Otherwise ask for delete confirmation
+                                            final shouldDelete =
+                                                await showDialog<bool>(
+                                              context: context,
+                                              builder: (dialogContext) =>
+                                                  AlertDialog(
+                                                title:
+                                                    const Text('Delete task?'),
+                                                content: Text(
+                                                    'Delete "${_today[i].text}"?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                                dialogContext)
+                                                            .pop(false),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  FilledButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                                dialogContext)
+                                                            .pop(true),
+                                                    child: const Text('Delete'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            return shouldDelete == true;
+                                          },
+                                          direction: !task.done
+                                              ? DismissDirection.horizontal
+                                              : DismissDirection.endToStart,
+                                          onDismissed: (_) =>
+                                              _removeFromToday(i),
+                                          child: Column(
+                                            children: [
+                                                Card(
+                                                  color: task.inProgress
+                                                      ? Colors.green
+                                                          .withOpacity(0.10)
+                                                      : null,
+                                                  child: ListTile(
+                                                    onTap: () =>
+                                                        _toggleExpanded(i),
+                                                    leading: IconButton(
+                                                      tooltip: 'Done',
+                                                      icon: Icon(task.done
+                                                          ? Icons
+                                                              .radio_button_checked
+                                                          : Icons
+                                                              .radio_button_unchecked),
+                                                      onPressed: () => _setDone(
+                                                          i, !task.done),
+                                                    ),
+                                                    title: Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: _expanded
+                                                                  .contains(i)
+                                                              ? const SizedBox
+                                                                  .shrink()
+                                                              : Text(
+                                                                  task.text,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    decoration: task.done
+                                                                        ? TextDecoration
+                                                                            .lineThrough
+                                                                        : TextDecoration
+                                                                            .none,
+                                                                    color: task
+                                                                            .done
+                                                                        ? Theme.of(context)
+                                                                            .colorScheme
+                                                                            .onSurface
+                                                                            .withValues(
+                                                                                alpha:
+                                                                                    0.65)
+                                                                        : Theme.of(context)
+                                                                            .colorScheme
+                                                                            .onSurface,
+                                                                  ),
                                                                 ),
-                                                              ],
-                                                            ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 8),
+                                                        const Spacer(),
+                                                        // Right aligned icons: scheduled+time, in-progress, save (when expanded), star (far right)
+                                                        Opacity(
+                                                          opacity: _swiping
+                                                                  .contains(i)
+                                                              ? 0.0
+                                                              : 1.0,
+                                                          child: Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              if (task.scheduledAt !=
+                                                                  null)
+                                                                Tooltip(
+                                                                  message: DateFormat(
+                                                                          'yyyy-MM-dd HH:mm')
+                                                                      .format(task
+                                                                          .scheduledAt!),
+                                                                  child:
+                                                                      InkWell(
+                                                                    onTap: () =>
+                                                                        _pickSchedule(
+                                                                            i),
+                                                                    child: Row(
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        Icon(
+                                                                            Icons
+                                                                                .event,
+                                                                            color:
+                                                                                _scheduleIconColor(task.scheduledAt!),
+                                                                            size: 16),
+                                                                        const SizedBox(
+                                                                            width:
+                                                                                4),
+                                                                        Text(
+                                                                          DateFormat('HH:mm')
+                                                                              .format(task.scheduledAt!),
+                                                                          style: TextStyle(
+                                                                              fontSize: 11,
+                                                                              color: _scheduleIconColor(task.scheduledAt!)),
+                                                                        ),
+                                                                    ],
+                                                                  ),
+                                                                  ),
+                                                                ),
+                                                              if (task.inProgress &&
+                                                                  !task.done)
+                                                                Padding(
+                                                                  padding: const EdgeInsets
+                                                                      .only(
+                                                                      left: 8.0,
+                                                                      right:
+                                                                          6.0),
+                                                                  child: Icon(
+                                                                      Icons
+                                                                          .construction,
+                                                                      color: Colors
+                                                                          .greenAccent
+                                                                          .shade200,
+                                                                      size: 18),
+                                                                ),
+                                                              if (_expanded
+                                                                  .contains(i))
+                                                                Builder(builder:
+                                                                    (_) {
+                                                                  final titleCtrl =
+                                                                      _editControllers[
+                                                                          i];
+                                                                  final notesCtrl =
+                                                                      _notesControllers[
+                                                                          i];
+                                                                  final isDirty = (titleCtrl !=
+                                                                              null &&
+                                                                          titleCtrl.text.trim() !=
+                                                                              task.text
+                                                                                  .trim()) ||
+                                                                      (notesCtrl !=
+                                                                              null &&
+                                                                          notesCtrl.text !=
+                                                                              (task.notes ?? ''));
+                                                                  return IconButton(
+                                                                    tooltip:
+                                                                        'Save',
+                                                                    icon: Icon(
+                                                                        Icons
+                                                                            .check,
+                                                                        color: isDirty
+                                                                            ? Colors.red
+                                                                            : Colors.white),
+                                                                    onPressed: () =>
+                                                                        _saveEditedTitle(
+                                                                            i),
+                                                                  );
+                                                                }),
+                                                              IconButton(
+                                                                tooltip:
+                                                                    'Important',
+                                                                icon: Icon(
+                                                                    task.important
+                                                                        ? Icons
+                                                                            .star
+                                                                        : Icons
+                                                                            .star_border,
+                                                                    color: task
+                                                                            .important
+                                                                        ? Colors
+                                                                            .amber
+                                                                        : Theme.of(context)
+                                                                            .colorScheme
+                                                                            .onSurfaceVariant),
+                                                                onPressed: () {
+                                                                  final now = !_today[
+                                                                              i]
+                                                                          .important
+                                                                      ? DateTime
+                                                                          .now()
+                                                                      : _today[
+                                                                              i]
+                                                                          .importantAt;
+                                                                  setState(() => _today[
+                                                                      i] = _today[
+                                                                          i]
+                                                                      .copyWith(
+                                                                          important: !_today[i]
+                                                                              .important,
+                                                                          importantAt:
+                                                                              now));
+                                                                  _saveToday();
+                                                                },
+                                                              ),
+                                                            ],
                                                           ),
                                                         ),
-                                                      if (task.inProgress && !task.done)
-                                                        Padding(
-                                                          padding: const EdgeInsets.only(left: 8.0, right: 6.0),
-                                                          child: Icon(Icons.construction, color: Colors.greenAccent.shade200, size: 18),
-                                                        ),
-                                                      if (_expanded.contains(i))
-                                                        Builder(builder: (_) {
-                                                          final titleCtrl = _editControllers[i];
-                                                          final notesCtrl = _notesControllers[i];
-                                                          final isDirty = (titleCtrl != null && titleCtrl.text.trim() != task.text.trim())
-                                                              || (notesCtrl != null && notesCtrl.text != (task.notes ?? ''));
-                                                          return IconButton(
-                                                            tooltip: 'Save',
-                                                            icon: Icon(Icons.check, color: isDirty ? Colors.red : Colors.white),
-                                                            onPressed: () => _saveEditedTitle(i),
-                                                          );
-                                                        }),
-                                                      IconButton(
-                                                        tooltip: 'Important',
-                                                        icon: Icon(task.important ? Icons.star : Icons.star_border,
-                                                            color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant),
-                                                        onPressed: () {
-                                                          final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
-                                                          setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
-                                                          _saveToday();
-                                                        },
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                          if (_expanded.contains(i))
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  // Editable title in expanded area
-                                                  TextField(
-                                                    controller: _editControllers.putIfAbsent(i, () {
-                                                      final c = TextEditingController(text: task.text);
-                                                      c.addListener(() {
-                                                        if (mounted) setState(() {});
-                                                      });
-                                                      return c;
-                                                    }),
-                                                    autofocus: true,
-                                                    decoration: const InputDecoration(
-                                                      border: InputBorder.none,
-                                                      hintText: 'Titel',
+                                                      ],
                                                     ),
-                                                    onSubmitted: (_) => _saveEditedTitle(i),
                                                   ),
-                                                  const SizedBox(height: 8),
-                                                  // Notes field (moved above timestamps)
-                                                  TextField(
-                                                    controller: _notesControllers.putIfAbsent(i, () {
-                                                      final n = TextEditingController(text: task.notes ?? '');
-                                                      n.addListener(() {
-                                                        if (mounted) setState(() {});
-                                                      });
-                                                      return n;
-                                                    }),
-                                                    keyboardType: TextInputType.multiline,
-                                                    minLines: 3,
-                                                    maxLines: null,
-                                                    decoration: const InputDecoration(
-                                                      border: OutlineInputBorder(),
-                                                      hintText: 'Notes',
-                                                    ),
-                                                    onSubmitted: (_) => _saveEditedTitle(i),
-                                                  ),
-                                                  const SizedBox(height: 10),
-                                                  Text('Created: ${task.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.createdAt!) : '-'}'),
-                                                  const SizedBox(height: 6),
-                                                  Text('In Progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
-                                                  const SizedBox(height: 6),
-                                                  Text('Completed: ${task.completedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.completedAt!) : '-'}'),
-                                                  const SizedBox(height: 6),
-                                                  Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: Text('Scheduled: ${task.scheduledAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!) : '-'}'),
-                                                      ),
-                                                      IconButton(
-                                                        tooltip: 'Set schedule',
-                                                        icon: const Icon(Icons.calendar_today),
-                                                        onPressed: () => _pickSchedule(i),
-                                                      ),
-                                                      if (task.scheduledAt != null)
-                                                        IconButton(
-                                                          tooltip: 'Clear schedule',
-                                                          icon: const Icon(Icons.clear),
-                                                          onPressed: () => _clearSchedule(i),
+                                                ),
+                                                if (_expanded.contains(i))
+                                                  Padding(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 14.0,
+                                                        vertical: 8.0),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        // Editable title in expanded area
+                                                        TextField(
+                                                          controller:
+                                                              _editControllers
+                                                                  .putIfAbsent(
+                                                                      i, () {
+                                                            final c =
+                                                                TextEditingController(
+                                                                    text: task
+                                                                        .text);
+                                                            c.addListener(() {
+                                                              if (mounted)
+                                                                setState(() {});
+                                                            });
+                                                            return c;
+                                                          }),
+                                                          autofocus: true,
+                                                          decoration:
+                                                              const InputDecoration(
+                                                            border: InputBorder
+                                                                .none,
+                                                            hintText: 'Titel',
+                                                          ),
+                                                          onSubmitted: (_) =>
+                                                              _saveEditedTitle(
+                                                                  i),
                                                         ),
-                                                    ],
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        // Notes field (moved above timestamps)
+                                                        TextField(
+                                                          controller:
+                                                              _notesControllers
+                                                                  .putIfAbsent(
+                                                                      i, () {
+                                                            final n =
+                                                                TextEditingController(
+                                                                    text:
+                                                                        task.notes ??
+                                                                            '');
+                                                            n.addListener(() {
+                                                              if (mounted)
+                                                                setState(() {});
+                                                            });
+                                                            return n;
+                                                          }),
+                                                          keyboardType:
+                                                              TextInputType
+                                                                  .multiline,
+                                                          minLines: 3,
+                                                          maxLines: null,
+                                                          decoration:
+                                                              const InputDecoration(
+                                                            border:
+                                                                OutlineInputBorder(),
+                                                            hintText: 'Notes',
+                                                          ),
+                                                          onSubmitted: (_) =>
+                                                              _saveEditedTitle(
+                                                                  i),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 10),
+                                                        Text(
+                                                            'Created: ${task.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.createdAt!) : '-'}'),
+                                                        const SizedBox(
+                                                            height: 6),
+                                                        Text(
+                                                            'In Progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
+                                                        const SizedBox(
+                                                            height: 6),
+                                                        Text(
+                                                            'Completed: ${task.completedAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.completedAt!) : '-'}'),
+                                                        const SizedBox(
+                                                            height: 6),
+                                                        Row(
+                                                          children: [
+                                                            Expanded(
+                                                              child: Text(
+                                                                  'Scheduled: ${task.scheduledAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!) : '-'}'),
+                                                            ),
+                                                            IconButton(
+                                                              tooltip:
+                                                                  'Set schedule',
+                                                              icon: const Icon(Icons
+                                                                  .calendar_today),
+                                                              onPressed: () =>
+                                                                  _pickSchedule(
+                                                                      i),
+                                                            ),
+                                                            if (task.scheduledAt !=
+                                                                null)
+                                                              IconButton(
+                                                                tooltip:
+                                                                    'Clear schedule',
+                                                                icon: const Icon(
+                                                                    Icons
+                                                                        .clear),
+                                                                onPressed: () =>
+                                                                    _clearSchedule(
+                                                                        i),
+                                                              ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                 
-                                                ],
-                                              ),
+                                              ],
                                             ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                );
-                              }),
-                      ),
-                    ],
+                                          );
+                                    }),
+                                  );
+                                }),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
                 SafeArea(
                   top: false,
                   child: Padding(

@@ -49,7 +49,6 @@
 - [x] Sortierung per D&D in der Liste
 - [x] Editieren vom Titel per Button?
 - [ ] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
-- [ ] 600x900 statt 600x1000 (Desktop)
 
 ## notes
 
