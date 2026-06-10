@@ -246,6 +246,20 @@ class _HomePageState extends State<HomePage> {
     } catch (_) {}
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _appendDone(List<TaskItem> items) async {
+    if (items.isEmpty) return;
+    try {
+      final List<TaskItem> existing = [];
+      await _loadList('simplepresent_done.json', existing);
+      existing.addAll(items);
+      await _saveList('simplepresent_done.json', existing);
+    } catch (_) {}
+  }
+
   Future<void> _saveList(String filename, List<TaskItem> source) async {
     try {
       final f = await _fileFor(filename);
@@ -257,6 +271,28 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadToday() async {
     await _loadList('simplepresent_today.json', _today);
+    try {
+      // On startup, move any already-done tasks that do NOT have today's
+      // completed_at date into the archive file `simplepresent_done.json`.
+      final now = DateTime.now();
+      final toArchive = <TaskItem>[];
+      for (final t in _today) {
+        if (t.done) {
+          if (t.completedAt == null || !_isSameDay(t.completedAt!, now)) {
+            toArchive.add(t);
+          }
+        }
+      }
+      if (toArchive.isNotEmpty) {
+        // Remove archived items from today's list
+        final ids = toArchive.map((e) => e.id).toSet();
+        _today.removeWhere((t) => ids.contains(t.id));
+        // Append to done file
+        await _appendDone(toArchive);
+        // Persist changes
+        await _saveToday();
+      }
+    } catch (_) {}
     setState(() {});
   }
 
