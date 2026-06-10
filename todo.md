@@ -41,14 +41,16 @@
 - [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
 - [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
-- [ ] Zoom
+- [ ] Zoom (Pinch, Strg+Scrollen)
 - [?] icon
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [ ] Sounds unter Windows gehen nicht
+- [x] Fertig Sounds geht nicht
+- [ ] Erinnerung kommt x-fach, soll aber nur einmalig je Erinnerungstyp kommen
 - [x] Sortierung per D&D in der Liste
 - [x] Editieren vom Titel per Button?
-- [ ] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
+- [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
+- [ ] position und größe beim schließen merken und beim start wieder laden
 
 ## notes
 

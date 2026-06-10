@@ -272,7 +272,7 @@ class _HomePageState extends State<HomePage> {
             !_notified15.contains(key)) {
           _notified15.add(key);
           try {
-            await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
+            await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
           } catch (_) {}
           try {
             await _nativeWindowChannel.invokeMethod('notify', <String, String>{
@@ -285,7 +285,7 @@ class _HomePageState extends State<HomePage> {
         if ((diff.inSeconds <= 0) && !_notifiedDue.contains(key)) {
           _notifiedDue.add(key);
           try {
-            await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
+            await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
           } catch (_) {}
           try {
             await _nativeWindowChannel.invokeMethod('notify', <String, String>{
@@ -481,8 +481,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _playDading() async {
     try {
-      // Try to play bundled asset: assets/sounds/dading.mp3
-      await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
+      // Try to play bundled asset: assets/sounds/ding.mp3
+      await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
     } catch (e) {
       // Fallback to system click if asset missing or playback fails
       SystemSound.play(SystemSoundType.click);
