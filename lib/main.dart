@@ -655,36 +655,115 @@ class _HomePageState extends State<HomePage> {
                                   ...bucketDone,
                                 ];
 
-                                return ListView.builder(
-                                  itemCount: sorted.length,
-                                  itemBuilder: (ctx, vi) {
+                                return ReorderableListView(
+                                  onReorder: (oldIndex, newIndex) {
+                                    // Normalize indices as in ReorderableListView behavior
+                                    if (newIndex > oldIndex) newIndex -= 1;
+                                    final srcEntry = sorted[oldIndex];
+                                    final dstEntry = sorted[newIndex];
+                                    // Determine bucket membership for src and dst
+                                    int bucketOf(MapEntry<int, TaskItem> e) {
+                                      if (bucketOverdue.contains(e)) return 0;
+                                      if (bucketImportantInProgress.contains(e)) return 1;
+                                      if (bucketInProgress.contains(e)) return 2;
+                                      if (bucketImportant.contains(e)) return 3;
+                                      if (bucketDueIn1h.contains(e)) return 4;
+                                      if (bucketRest.contains(e)) return 5;
+                                      return 6; // done
+                                    }
+
+                                    final srcBucket = bucketOf(srcEntry);
+                                    final dstBucket = bucketOf(dstEntry);
+                                    if (srcBucket != dstBucket) {
+                                      _showTopToast('Reorder allowed only within the same group');
+                                      return;
+                                    }
+
+                                    // Work on the specific bucket list
+                                    List<MapEntry<int, TaskItem>> targetBucket;
+                                    switch (srcBucket) {
+                                      case 0:
+                                        targetBucket = bucketOverdue;
+                                        break;
+                                      case 1:
+                                        targetBucket = bucketImportantInProgress;
+                                        break;
+                                      case 2:
+                                        targetBucket = bucketInProgress;
+                                        break;
+                                      case 3:
+                                        targetBucket = bucketImportant;
+                                        break;
+                                      case 4:
+                                        targetBucket = bucketDueIn1h;
+                                        break;
+                                      case 5:
+                                        targetBucket = bucketRest;
+                                        break;
+                                      default:
+                                        targetBucket = bucketDone;
+                                    }
+
+                                    final srcPos = targetBucket.indexWhere((e) => e.key == srcEntry.key && e.value.text == srcEntry.value.text);
+                                    if (srcPos == -1) return;
+
+                                    // Compute destination position within the bucket by counting how many entries from start of sorted up to newIndex belong to this bucket
+                                    int dstPos = 0;
+                                    for (int i = 0; i < newIndex; i++) {
+                                      if (bucketOf(sorted[i]) == srcBucket) dstPos++;
+                                    }
+
+                                    // Adjust if moving forward within bucket
+                                    if (dstPos > srcPos) dstPos -= 1;
+
+                                    setState(() {
+                                      // reorder within the targetBucket
+                                      final moved = targetBucket.removeAt(srcPos);
+                                      targetBucket.insert(dstPos.clamp(0, targetBucket.length), moved);
+
+                                      // rebuild _today preserving bucket concatenation order
+                                      final newOrder = <TaskItem>[];
+                                      void appendBucket(List<MapEntry<int, TaskItem>> b) => newOrder.addAll(b.map((e) => e.value));
+                                      appendBucket(bucketOverdue);
+                                      appendBucket(bucketImportantInProgress);
+                                      appendBucket(bucketInProgress);
+                                      appendBucket(bucketImportant);
+                                      appendBucket(bucketDueIn1h);
+                                      appendBucket(bucketRest);
+                                      appendBucket(bucketDone);
+                                      _today.clear();
+                                      _today.addAll(newOrder);
+                                      _saveToday();
+                                    });
+                                  },
+                                  children: List.generate(sorted.length, (vi) {
                                     final originalIndex = sorted[vi].key;
                                     final task = sorted[vi].value;
                                     final i = originalIndex;
                                     return Dismissible(
                                       key: ValueKey('today_${i}_${task.text}_${task.done}'),
-                                  background: Container(
-                                    color: _today[i].inProgress ? Colors.green : Colors.green,
-                                    alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.only(left: 20),
-                                    child: _today[i].inProgress
-                                        ? Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.check_circle, color: Colors.white),
-                                              const SizedBox(width: 8),
-                                              const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                            ],
-                                          )
-                                        : Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.construction, color: Colors.white, size: 18),
-                                              const SizedBox(width: 8),
-                                              const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                            ],
-                                          ),
-                                  ),
+                                      background: Container(
+                                        color: _today[i].inProgress ? Colors.green : Colors.green,
+                                        alignment: Alignment.centerLeft,
+                                        padding: const EdgeInsets.only(left: 20),
+                                        child: _today[i].inProgress
+                                            ? Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.check_circle, color: Colors.white),
+                                                  const SizedBox(width: 8),
+                                                  const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                ],
+                                              )
+                                            : Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.construction, color: Colors.white, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                      ),
                                       secondaryBackground: Container(
                                         color: Colors.red,
                                         alignment: Alignment.centerRight,
@@ -695,13 +774,13 @@ class _HomePageState extends State<HomePage> {
                                         if (direction == DismissDirection.startToEnd) {
                                           final t = _today[i];
                                           if (!t.inProgress && !t.done) {
-                                              setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
-                                              _saveToday();
-                                              _showTopToast('Task marked In Progress');
-                                            } else if (t.inProgress && !t.done) {
-                                              _setDone(i, true);
-                                              _showTopToast('Task marked done');
-                                            }
+                                            setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
+                                            _saveToday();
+                                            _showTopToast('Task marked In Progress');
+                                          } else if (t.inProgress && !t.done) {
+                                            _setDone(i, true);
+                                            _showTopToast('Task marked done');
+                                          }
                                           return false;
                                         }
                                         final shouldDelete = await showDialog<bool>(
@@ -868,14 +947,14 @@ class _HomePageState extends State<HomePage> {
                                                         ),
                                                     ],
                                                   ),
-                                                  
+                                                 
                                                 ],
                                               ),
                                             ),
                                         ],
                                       ),
                                     );
-                                  },
+                                  }),
                                 );
                               }),
                       ),
