@@ -755,6 +755,25 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    // If we're in the Backlog view and the user marks a task done, move it to Done list
+    if (value && _currentFile == 'simplepresent_backlog.json') {
+      try {
+        final moved = original.copyWith(done: true, completedAt: DateTime.now());
+        setState(() {
+          _today.removeAt(index);
+          _expanded.clear();
+        });
+        await _saveToday(); // persist removal from backlog
+        await _appendDone([moved]);
+        _showTopToast('Task moved to Done');
+        _playDading();
+      } catch (_) {
+        _showTopToast('Failed to move task to Done');
+      }
+      _registerActivity();
+      return;
+    }
+
     setState(() {
       final t = _today[index];
       // When marking done, clear inProgress

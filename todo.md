@@ -40,7 +40,6 @@
 - [?] icon
 - [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
 - [x] 3 Listen: heute, Done, Backlog (Json-Filesystem)
-- [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild <- nope, liste soll einfach wechselbar sein und dann per swipe von heute nach backlog und umgekehrt geschoben werden können
 - [ ] "heute" soll jeden Tag leer starten
   - [x] erledigt von nicht heute in done-json
   - [x] erledigt laden können
@@ -59,11 +58,11 @@
 - [x] Popup hat kein Symbol und der Title ist noch noch falsch
 - [x] Fertige Tasks sollen nicht mehr erinnert werden.
 - [x] Erinnerung auch nicht nach neustart der Anwendung.
+- [x] in der Done-Liste soll die Uhrzeit der Erledigung angezeigt werden
+- [x] in der Done-Liste sollen keine Aufgaben angelegt werden können
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
-- [x] in der Done-Liste soll die Uhrzeit der Erledigung angezeigt werden
-- [x] in der Done-Liste sollen keine Aufgaben angelegt werden können
   
 ## notes
 
