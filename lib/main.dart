@@ -45,6 +45,7 @@ class HomePage extends StatefulWidget {
 
 class TaskItem {
   TaskItem({
+    required this.id,
     required this.text,
     this.done = false,
     this.important = false,
@@ -56,6 +57,8 @@ class TaskItem {
     this.scheduledAt,
     this.notes,
   });
+
+  final String id;
 
   final String text;
   final bool done;
@@ -69,6 +72,7 @@ class TaskItem {
   final String? notes;
 
   TaskItem copyWith({
+    String? id,
     String? text,
     bool? done,
     bool? important,
@@ -81,6 +85,7 @@ class TaskItem {
     String? notes,
   }) {
     return TaskItem(
+      id: id ?? this.id,
       text: text ?? this.text,
       done: done ?? this.done,
       important: important ?? this.important,
@@ -95,6 +100,7 @@ class TaskItem {
   }
 
   Map<String, dynamic> toJson() => {
+      'id': id,
         'text': text,
         'done': done,
         'important': important,
@@ -120,10 +126,15 @@ class TaskItem {
   static TaskItem fromJson(dynamic json) {
     // Backward compatible with old string-only storage.
     if (json is String) {
-      return TaskItem(text: json, done: false);
+      // generate id for legacy entries
+      final genId = '${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(1<<32)}';
+      return TaskItem(id: genId, text: json, done: false);
     }
     final map = json as Map<String, dynamic>;
+    final String id = (map['id'] ?? map['uid'] ?? '').toString();
+    final String useId = id.isNotEmpty ? id : '${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(1<<32)}';
     return TaskItem(
+      id: useId,
       text: (map['text'] ?? '').toString(),
       done: map['done'] == true,
       important: map['important'] == true,
@@ -282,6 +293,27 @@ class _HomePageState extends State<HomePage> {
           }
         } catch (_) {}
       }
+        // Load persisted notified sets so reminders don't fire again after restart
+        try {
+          if (data.containsKey('notified15')) {
+            final list = data['notified15'];
+            if (list is List) {
+              _notified15.clear();
+              for (final e in list) {
+                _notified15.add(e.toString());
+              }
+            }
+          }
+          if (data.containsKey('notifiedDue')) {
+            final list = data['notifiedDue'];
+            if (list is List) {
+              _notifiedDue.clear();
+              for (final e in list) {
+                _notifiedDue.add(e.toString());
+              }
+            }
+          }
+        } catch (_) {}
     } catch (_) {}
   }
 
@@ -344,6 +376,9 @@ class _HomePageState extends State<HomePage> {
         }
         if (useGeom != null) out['window'] = useGeom;
       } catch (_) {}
+      // Persist current notification flags as lists so restarts don't re-notify
+      out['notified15'] = _notified15.toList();
+      out['notifiedDue'] = _notifiedDue.toList();
       final encoder = const JsonEncoder.withIndent('  ');
       await f.writeAsString(encoder.convert(out));
     } catch (_) {}
@@ -373,9 +408,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _taskNotifyKey(TaskItem t) {
-    final created = t.createdAt?.toIso8601String() ?? '';
     final sched = t.scheduledAt?.toIso8601String() ?? '';
-    return '${t.text}|$created|$sched';
+    return '${t.id}|$sched';
   }
 
   void _startScheduledChecker() {
@@ -383,7 +417,9 @@ class _HomePageState extends State<HomePage> {
     _scheduledCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
       final now = DateTime.now();
       for (final t in _today) {
+        // Do not remind for tasks without schedule or already completed
         if (t.scheduledAt == null) continue;
+        if (t.done) continue;
         final diff = t.scheduledAt!.difference(now);
         final key = _taskNotifyKey(t);
         // 15-minute warning
@@ -397,6 +433,10 @@ class _HomePageState extends State<HomePage> {
               'title': 'Termin in 15 Minuten',
               'body': t.text,
             });
+          } catch (_) {}
+          // Persist notified flags so restart doesn't re-notify
+          try {
+            await _saveSettingsWithGeom(_lastSavedWindowGeom);
           } catch (_) {}
         }
         // At due time or overdue (first time)
@@ -413,6 +453,10 @@ class _HomePageState extends State<HomePage> {
           } catch (_) {}
           try {
             await _nativeWindowChannel.invokeMethod('bringToFront');
+          } catch (_) {}
+          // Persist notified flags so restart doesn't re-notify
+          try {
+            await _saveSettingsWithGeom(_lastSavedWindowGeom);
           } catch (_) {}
         }
       }
@@ -514,18 +558,26 @@ class _HomePageState extends State<HomePage> {
     await _saveToday();
     _showTopToast('Termin gesetzt');
     // clear any prior notifications for this task so reminders can be re-scheduled
-    _notified15.removeWhere((k) => k.contains(_today[index].text));
-    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
+    final idPrefix = '${_today[index].id}|';
+    _notified15.removeWhere((k) => k.startsWith(idPrefix));
+    _notifiedDue.removeWhere((k) => k.startsWith(idPrefix));
     _registerActivity();
+    try {
+      await _saveSettingsWithGeom(_lastSavedWindowGeom);
+    } catch (_) {}
   }
 
   Future<void> _clearSchedule(int index) async {
     setState(() => _today[index] = _today[index].copyWith(scheduledAt: null));
     await _saveToday();
     _showTopToast('Termin entfernt');
-    _notified15.removeWhere((k) => k.contains(_today[index].text));
-    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
+    final idPrefix2 = '${_today[index].id}|';
+    _notified15.removeWhere((k) => k.startsWith(idPrefix2));
+    _notifiedDue.removeWhere((k) => k.startsWith(idPrefix2));
     _registerActivity();
+    try {
+      await _saveSettingsWithGeom(_lastSavedWindowGeom);
+    } catch (_) {}
   }
 
   void _showTopToast(String message) {
@@ -589,6 +641,7 @@ class _HomePageState extends State<HomePage> {
       _today.insert(
           0,
           TaskItem(
+              id: '${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(1<<32)}',
               text: text.trim(),
               done: false,
               createdAt: DateTime.now(),
@@ -600,7 +653,7 @@ class _HomePageState extends State<HomePage> {
     _registerActivity();
   }
 
-  void _setDone(int index, bool value) {
+  Future<void> _setDone(int index, bool value) async {
     setState(() {
       final t = _today[index];
       // When marking done, clear inProgress
@@ -611,14 +664,19 @@ class _HomePageState extends State<HomePage> {
       );
     });
     _saveToday();
-    // clear notification flags for this task
-    _notified15.removeWhere((k) => k.contains(_today[index].text));
-    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
+    // clear notification flags for this task (by id)
+    final t = _today[index];
+    final idPrefix = '${t.id}|';
+    _notified15.removeWhere((k) => k.startsWith(idPrefix));
+    _notifiedDue.removeWhere((k) => k.startsWith(idPrefix));
     // Play a friendly sound when a task is marked done
     if (value == true) {
       _playDading();
     }
     _registerActivity();
+    try {
+      await _saveSettingsWithGeom(_lastSavedWindowGeom);
+    } catch (_) {}
   }
 
   Future<void> _playDading() async {
@@ -631,12 +689,20 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _removeFromToday(int index) {
+  Future<void> _removeFromToday(int index) async {
+    final removedId = _today[index].id;
     setState(() {
       _today.removeAt(index);
     });
     _saveToday();
+    // Clear any pending notification flags for this task (use text match)
+    final idPrefix = '${removedId}|';
+    _notified15.removeWhere((k) => k.startsWith(idPrefix));
+    _notifiedDue.removeWhere((k) => k.startsWith(idPrefix));
     _registerActivity();
+    try {
+      await _saveSettingsWithGeom(_lastSavedWindowGeom);
+    } catch (_) {}
   }
 
   void _registerActivity() {
