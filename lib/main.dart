@@ -181,7 +181,7 @@ class _HomePageState extends State<HomePage> {
   // Zoom state: tile height and font scaling
   double _tileHeight = 72.0;
   final double _defaultTileHeight = 72.0;
-  final double _minTileHeight = 20.0; // allow thin tiles
+  final double _minTileHeight = 8.0; // allow very thin tiles
   double _fontScale = 1.0;
   final double _minFontScale = 0.6;
   final double _baseFontSize = 16.0; // used when scaling text down
@@ -633,7 +633,8 @@ class _HomePageState extends State<HomePage> {
                 if (!ctrl) return;
                 final delta = ps.scrollDelta.dy;
                 final step = delta.abs() * 0.08;
-                final textThreshold = _baseFontSize + 8.0;
+                // increase threshold so font only shrinks much later
+                final textThreshold = _baseFontSize + 24.0;
                 if (delta > 0) {
                   // zoom out
                   final candidate = (_tileHeight - step).clamp(_minTileHeight, _defaultTileHeight);
@@ -645,8 +646,8 @@ class _HomePageState extends State<HomePage> {
                   } else {
                     setState(() {
                       _tileHeight = candidate;
-                      final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
-                      _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                      // keep font unchanged (no resizing)
+                      _fontScale = 1.0;
                     });
                   }
                 } else {
@@ -660,8 +661,8 @@ class _HomePageState extends State<HomePage> {
                   } else {
                     setState(() {
                       _tileHeight = candidate;
-                      final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
-                      _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                      // keep font unchanged (no resizing)
+                      _fontScale = 1.0;
                     });
                   }
                 }
@@ -675,7 +676,8 @@ class _HomePageState extends State<HomePage> {
               onScaleUpdate: (d) {
                 if (d.scale == 0.0 || d.scale.isNaN) return;
                 final newHeight = (_tileHeightStart * d.scale).clamp(_minTileHeight, double.infinity);
-                final textThreshold = _baseFontSize + 8.0;
+                // increase threshold so font only shrinks much later
+                final textThreshold = _baseFontSize + 24.0;
                 if (newHeight > textThreshold + 1.0) {
                   setState(() {
                     _tileHeight = newHeight;
@@ -684,13 +686,13 @@ class _HomePageState extends State<HomePage> {
                 } else if (newHeight > _minTileHeight) {
                   setState(() {
                     _tileHeight = newHeight;
-                    final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
-                    _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                    // keep font unchanged (no resizing)
+                    _fontScale = 1.0;
                   });
                 } else {
                   setState(() {
                     _tileHeight = _minTileHeight;
-                    _fontScale = _minFontScale;
+                    _fontScale = 1.0;
                   });
                 }
               },
@@ -1052,7 +1054,7 @@ class _HomePageState extends State<HomePage> {
                                                       : null,
                                                   child: ListTile(
                                                     contentPadding: EdgeInsets.symmetric(
-                                                        vertical: ((_tileHeight - _baseFontSize) / 2).clamp(2.0, 40.0),
+                                                        vertical: ((_tileHeight - _baseFontSize) / 2).clamp(0.0, 40.0),
                                                         horizontal: 12),
                                                     onTap: () =>
                                                         _toggleExpanded(i),

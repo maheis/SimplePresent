@@ -31,6 +31,14 @@
   - [x] Icon für terminierte Aufgaben
   - [x] Sortierung terminierter Aufgaben nach Termin
   - [x] Benachrichtigung/Erinnerung für terminierte Aufgaben (Desktop: Benachrichtigung, Ton, Aufpoppen; Mobile: Benachrichtigung, Ton)
+- [x] Zoom (Pinch, Strg+Scrollen)
+- [x] Fertig Sounds geht nicht
+- [x] Erinnerung kommt x-fach, soll aber nur einmalig je Erinnerungstyp kommen
+- [x] Sortierung per D&D in der Liste
+- [x] Editieren vom Titel per Button?
+- [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
+- [?] icon
+- [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
 - [ ] 2 Listen: heute, Backlog (Json-Filesystem)
 - [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild <- nope, liste soll einfach wechselbar sein und dann per swipe von heute nach backlog und umgekehrt geschoben werden können
 - [ ] "heute" soll jeden Tag leer starten
@@ -40,18 +48,14 @@
 - [ ] Stopuhr: Start, Stopp, Rücksetzten
 - [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
-- [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
-- [x] Zoom (Pinch, Strg+Scrollen)
-- [?] icon
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [x] Fertig Sounds geht nicht
-- [x] Erinnerung kommt x-fach, soll aber nur einmalig je Erinnerungstyp kommen
-- [x] Sortierung per D&D in der Liste
-- [x] Editieren vom Titel per Button?
-- [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
 - [ ] position, größe und zoom beim schließen merken und beim start wieder laden
-
+- [x] Schrift viel später resizen!
+- [ ] Icon für in Arbeit immer sichtbar und als button zum setzen/entfernen der Flagge
+- [ ] titelleiste Windows
+- [x] Icon Redesign
+  
 ## notes
 
 - [ ] LLM-Integration: Automatisches Generieren von Unteraufgaben/Schritten aus der Hauptaufgabe, Vorschläge für Notizen/Lösungen basierend auf der Aufgabe, intelligente Sortierung des Backlogs basierend auf Wichtigkeit und Dringlichkeit.
