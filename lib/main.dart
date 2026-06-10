@@ -575,7 +575,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _expanded.add(index);
         _editControllers.putIfAbsent(index, () {
-          final c = TextEditingController(text: _today[index].text);
+          final c = TextEditingController(text: _today[index].text.trim());
           c.addListener(() {
             if (mounted) setState(() {});
           });
@@ -642,6 +642,27 @@ class _HomePageState extends State<HomePage> {
     try {
       await _saveSettingsWithGeom(_lastSavedWindowGeom);
     } catch (_) {}
+  }
+
+  Future<void> _moveFromBacklog(int index) async {
+    try {
+      final item = _today[index];
+      setState(() {
+        _today.removeAt(index);
+        _expanded.clear();
+      });
+      await _saveToday(); // persist removal from backlog file
+
+      final List<TaskItem> todayList = [];
+      await _loadList('simplepresent_today.json', todayList);
+      todayList.insert(0, item.copyWith(done: false, inProgress: false));
+      await _saveList('simplepresent_today.json', todayList);
+
+      _showTopToast('Task moved to Today');
+    } catch (_) {
+      _showTopToast('Failed to move task to Today');
+    }
+    _registerActivity();
   }
 
   Future<void> _clearSchedule(int index) async {
@@ -1264,42 +1285,32 @@ class _HomePageState extends State<HomePage> {
                                             alignment: Alignment.centerLeft,
                                             padding:
                                                 const EdgeInsets.only(left: 20),
-                                            child: _today[i].inProgress
+                                            child: (_showingBacklog || _currentFile == 'simplepresent_backlog.json')
                                                 ? Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
+                                                    mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      const Icon(
-                                                          Icons.check_circle,
-                                                          color: Colors.white),
+                                                      const Icon(Icons.arrow_forward, color: Colors.white),
                                                       const SizedBox(width: 8),
-                                                      const Text('Done',
-                                                          style: TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600)),
+                                                      const Text('Moved to Today', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                                     ],
                                                   )
-                                                : Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(
-                                                          Icons.construction,
-                                                          color: Colors.white,
-                                                          size: 18),
-                                                      const SizedBox(width: 8),
-                                                      const Text('In Progress',
-                                                          style: TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600)),
-                                                    ],
-                                                  ),
+                                                : (_today[i].inProgress
+                                                    ? Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(Icons.check_circle, color: Colors.white),
+                                                          const SizedBox(width: 8),
+                                                          const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                        ],
+                                                      )
+                                                    : Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(Icons.construction, color: Colors.white, size: 18),
+                                                          const SizedBox(width: 8),
+                                                          const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                        ],
+                                                      )),
                                           ),
                                           secondaryBackground: Container(
                                             color: (_today[i].inProgress &&
@@ -1329,23 +1340,20 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                           confirmDismiss: (direction) async {
                                             final t = _today[i];
-                                            if (direction ==
-                                                DismissDirection.startToEnd) {
-                                              // Right swipe: 1st -> set inProgress, 2nd -> set done
+                                            if (direction == DismissDirection.startToEnd) {
+                                              // In Backlog view: Right swipe -> move to Today
+                                              if (_currentFile == 'simplepresent_backlog.json' || _showingBacklog) {
+                                                await _moveFromBacklog(i);
+                                                return false;
+                                              }
+                                              // Right swipe (Today view): 1st -> set inProgress, 2nd -> set done
                                               if (!t.inProgress && !t.done) {
-                                                setState(() => _today[i] =
-                                                    t.copyWith(
-                                                        inProgress: true,
-                                                        inProgressAt:
-                                                            DateTime.now()));
+                                                setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
                                                 _saveToday();
-                                                _showTopToast(
-                                                    'Task marked In Progress');
-                                              } else if (t.inProgress &&
-                                                  !t.done) {
+                                                _showTopToast('Task marked In Progress');
+                                              } else if (t.inProgress && !t.done) {
                                                 _setDone(i, true);
-                                                _showTopToast(
-                                                    'Task marked done');
+                                                _showTopToast('Task marked done');
                                               }
                                               return false;
                                             }
