@@ -274,18 +274,14 @@ class _HomePageState extends State<HomePage> {
 
   void _startScheduledChecker() {
     _scheduledCheckTimer?.cancel();
-    _scheduledCheckTimer =
-        Timer.periodic(const Duration(seconds: 30), (_) async {
+    _scheduledCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
       final now = DateTime.now();
       for (final t in _today) {
         if (t.scheduledAt == null) continue;
-        if (t.done) continue;
-        final key = _taskNotifyKey(t);
         final diff = t.scheduledAt!.difference(now);
-        // 15 minutes before
-        if (diff.inSeconds <= 15 * 60 &&
-            diff.isNegative == false &&
-            !_notified15.contains(key)) {
+        final key = _taskNotifyKey(t);
+        // 15-minute warning
+        if (!diff.isNegative && diff.inMinutes <= 15 && !_notified15.contains(key)) {
           _notified15.add(key);
           try {
             await _audioPlayer.play(AssetSource('sounds/ding.mp3'));
@@ -298,7 +294,7 @@ class _HomePageState extends State<HomePage> {
           } catch (_) {}
         }
         // At due time or overdue (first time)
-        if ((diff.inSeconds <= 0) && !_notifiedDue.contains(key)) {
+        if (diff.inSeconds <= 0 && !_notifiedDue.contains(key)) {
           _notifiedDue.add(key);
           try {
             await _audioPlayer.play(AssetSource('sounds/ding.mp3'));

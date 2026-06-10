@@ -53,8 +53,9 @@
 - [ ] position, größe und zoom beim schließen merken und beim start wieder laden
 - [x] Schrift viel später resizen!
 - [ ] Icon für in Arbeit immer sichtbar und als button zum setzen/entfernen der Flagge
-- [ ] titelleiste Windows
+- [x] Titelleiste Windows
 - [x] Icon Redesign
+- [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
   
 ## notes
 

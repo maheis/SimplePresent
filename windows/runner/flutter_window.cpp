@@ -54,7 +54,7 @@ bool FlutterWindow::OnCreate() {
           return;
         }
         if (call.method_name().compare("notify") == 0) {
-          std::string title = "SimplePresent";
+          std::string title = "SimplePresent - today";
           std::string body = "";
           const flutter::EncodableValue* args = call.arguments();
           if (args) {
