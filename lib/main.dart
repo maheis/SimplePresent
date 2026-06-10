@@ -193,6 +193,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     _startIdleTimer();
     _startAttentionTimer();
     _startReminderTimer();
@@ -245,8 +246,50 @@ class _HomePageState extends State<HomePage> {
     await _saveList('simplepresent_today.json', _today);
   }
 
+  Future<void> _loadSettings() async {
+    try {
+      final f = await _fileFor('simplepresent_settings.json');
+      if (!await f.exists()) return;
+      final data = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
+      if (data.containsKey('tileHeight')) {
+        final v = data['tileHeight'];
+        if (v is num) {
+          setState(() => _tileHeight = v.toDouble());
+        }
+      }
+      if (data.containsKey('fontScale')) {
+        final v = data['fontScale'];
+        if (v is num) {
+          setState(() => _fontScale = v.toDouble());
+        }
+      }
+      if (data.containsKey('window')) {
+        try {
+          final w = data['window'];
+          if (w is Map) {
+            await _nativeWindowChannel.invokeMethod('setWindowGeometry', Map<String, int>.from(w.cast<String, dynamic>().map((k, v) => MapEntry(k, (v as num).toInt()))));
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final f = await _fileFor('simplepresent_settings.json');
+      final out = <String, dynamic>{'tileHeight': _tileHeight, 'fontScale': _fontScale};
+      try {
+        final geom = await _nativeWindowChannel.invokeMethod('getWindowGeometry');
+        if (geom is Map) out['window'] = geom;
+      } catch (_) {}
+      final encoder = const JsonEncoder.withIndent('  ');
+      await f.writeAsString(encoder.convert(out));
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
+    _saveSettings();
     _controller.dispose();
     _inputFocus.dispose();
     _audioPlayer.dispose();

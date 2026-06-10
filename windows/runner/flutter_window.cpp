@@ -115,6 +115,49 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(false));
           return;
         }
+        if (call.method_name().compare("setWindowGeometry") == 0) {
+          const flutter::EncodableValue* args = call.arguments();
+          if (args) {
+            const flutter::EncodableMap* map = std::get_if<flutter::EncodableMap>(args);
+            if (map) {
+              auto getInt = [&](const std::string& k) -> int {
+                auto it = map->find(flutter::EncodableValue(k));
+                if (it != map->end() && std::holds_alternative<int>(it->second))
+                  return std::get<int>(it->second);
+                return 0;
+              };
+              int x = getInt("x");
+              int y = getInt("y");
+              int w = getInt("width");
+              int h = getInt("height");
+              HWND hwnd = GetHandle();
+              if (hwnd) {
+                SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+                result->Success(flutter::EncodableValue(true));
+                return;
+              }
+            }
+          }
+          result->Success(flutter::EncodableValue(false));
+          return;
+        }
+        if (call.method_name().compare("getWindowGeometry") == 0) {
+          HWND hwnd = GetHandle();
+          if (hwnd) {
+            RECT r;
+            if (GetWindowRect(hwnd, &r)) {
+              flutter::EncodableMap out;
+              out[flutter::EncodableValue("x")] = flutter::EncodableValue(static_cast<int>(r.left));
+              out[flutter::EncodableValue("y")] = flutter::EncodableValue(static_cast<int>(r.top));
+              out[flutter::EncodableValue("width")] = flutter::EncodableValue(static_cast<int>(r.right - r.left));
+              out[flutter::EncodableValue("height")] = flutter::EncodableValue(static_cast<int>(r.bottom - r.top));
+              result->Success(flutter::EncodableValue(out));
+              return;
+            }
+          }
+          result->Success(flutter::EncodableValue(flutter::EncodableMap()));
+          return;
+        }
         result->NotImplemented();
       });
 

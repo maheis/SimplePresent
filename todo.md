@@ -50,7 +50,7 @@
 - [ ] Fenster soll sich Modal anpinnen lassen (Desktop)
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [ ] position, größe und zoom beim schließen merken und beim start wieder laden
+- [x] Position, Größe und Zoom beim schließen merken und beim start wieder laden
 - [x] Schrift viel später resizen!
 - [x] Icon für in Arbeit immer sichtbar und als button zum setzen/entfernen der Flagge
 - [x] Titelleiste Windows

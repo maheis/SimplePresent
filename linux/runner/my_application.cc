@@ -81,6 +81,48 @@ static void window_method_call(FlMethodChannel* channel,
     return;
   }
 
+  if (g_str_equal(method, "setWindowGeometry")) {
+    if (g_main_window && args && fl_value_get_type(args) == FL_VALUE_TYPE_MAP) {
+      FlValue* vx = fl_value_lookup_string(args, "x");
+      FlValue* vy = fl_value_lookup_string(args, "y");
+      FlValue* vw = fl_value_lookup_string(args, "width");
+      FlValue* vh = fl_value_lookup_string(args, "height");
+      if (vx && vy && vw && vh && fl_value_get_type(vx) == FL_VALUE_TYPE_INT && fl_value_get_type(vy) == FL_VALUE_TYPE_INT && fl_value_get_type(vw) == FL_VALUE_TYPE_INT && fl_value_get_type(vh) == FL_VALUE_TYPE_INT) {
+        const int x = fl_value_get_int(vx);
+        const int y = fl_value_get_int(vy);
+        const int w = fl_value_get_int(vw);
+        const int h = fl_value_get_int(vh);
+        gtk_window_move(g_main_window, x, y);
+        gtk_window_resize(g_main_window, w, h);
+        response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(TRUE)));
+        fl_method_call_respond(method_call, response, nullptr);
+        return;
+      }
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(FALSE)));
+    fl_method_call_respond(method_call, response, nullptr);
+    return;
+  }
+
+  if (g_str_equal(method, "getWindowGeometry")) {
+    if (g_main_window) {
+      int x, y, w, h;
+      gtk_window_get_position(g_main_window, &x, &y);
+      gtk_window_get_size(g_main_window, &w, &h);
+      FlValue* map = fl_value_new_map();
+      fl_value_set_string_take(map, "x", fl_value_new_int(x));
+      fl_value_set_string_take(map, "y", fl_value_new_int(y));
+      fl_value_set_string_take(map, "width", fl_value_new_int(w));
+      fl_value_set_string_take(map, "height", fl_value_new_int(h));
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_map()));
+    fl_method_call_respond(method_call, response, nullptr);
+    return;
+  }
+
   response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   fl_method_call_respond(method_call, response, nullptr);
 }
