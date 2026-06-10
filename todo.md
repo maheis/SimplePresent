@@ -27,8 +27,8 @@
 - [x] Build-Pipeline über Github
 - [x] Sounds
 - [ ] Optional Terminierung Tag+Uhrzeit
-  - [ ] Tag+Uhrzeit angaben können
-  - [ ] Icon für terminierte Aufgaben
+  - [x] Tag+Uhrzeit angaben können
+  - [x] Icon für terminierte Aufgaben
   - [ ] Sortierung terminierter Aufgaben nach Termin
   - [ ] Benachrichtigung/Erinnerung für terminierte Aufgaben (Desktop: Benachrichtigung, Ton, Aufpoppen; Mobile: Benachrichtigung, Ton)
 - [ ] 2 Listen: heute, Backlog (Json-Filesystem)

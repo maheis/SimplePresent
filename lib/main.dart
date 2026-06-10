@@ -8,6 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:math' as math;
 import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
@@ -414,6 +415,21 @@ class _HomePageState extends State<HomePage> {
     _startUrgentTimer();
   }
 
+  Color _scheduleIconColor(DateTime scheduledAt) {
+    final now = DateTime.now();
+    final diffSec = scheduledAt.difference(now).inSeconds.toDouble();
+    const threeHours = 3 * 3600.0;
+    if (diffSec >= threeHours) return Colors.green;
+    if (diffSec >= 0) {
+      final r = 1.0 - (diffSec / threeHours); // 0 at 3h, 1 at 0h
+      return Color.lerp(Colors.green, Colors.blue, r) ?? Colors.blue;
+    }
+    final overdueSec = diffSec.abs();
+    if (overdueSec >= threeHours) return Colors.red;
+    final r2 = math.min(1.0, overdueSec / threeHours);
+    return Color.lerp(Colors.blue, Colors.red, r2) ?? Colors.red;
+  }
+
   void _startIdleTimer() {
     _idleTimer = Timer(_idleDuration, () async {
       try {
@@ -657,33 +673,58 @@ class _HomePageState extends State<HomePage> {
                                                           ),
                                                   ),
                                                   const SizedBox(width: 8),
-                                                  if (task.inProgress && !task.done)
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(right: 6.0),
-                                                      child: Icon(Icons.construction, color: Colors.greenAccent.shade200, size: 18),
-                                                    ),
-                                                  IconButton(
-                                                    tooltip: 'Important',
-                                                    icon: Icon(task.important ? Icons.star : Icons.star_border,
-                                                        color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant),
-                                                    onPressed: () {
-                                                      final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
-                                                      setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
-                                                      _saveToday();
-                                                    },
+                                                  const Spacer(),
+                                                  // Right aligned icons: scheduled+time, in-progress, save (when expanded), star (far right)
+                                                  Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      if (task.scheduledAt != null)
+                                                        Tooltip(
+                                                          message: DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!),
+                                                          child: InkWell(
+                                                            onTap: () => _pickSchedule(i),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                Icon(Icons.event, color: _scheduleIconColor(task.scheduledAt!), size: 16),
+                                                                const SizedBox(width: 4),
+                                                                Text(
+                                                                  DateFormat('HH:mm').format(task.scheduledAt!),
+                                                                  style: TextStyle(fontSize: 11, color: _scheduleIconColor(task.scheduledAt!)),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      if (task.inProgress && !task.done)
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(left: 8.0, right: 6.0),
+                                                          child: Icon(Icons.construction, color: Colors.greenAccent.shade200, size: 18),
+                                                        ),
+                                                      if (_expanded.contains(i))
+                                                        Builder(builder: (_) {
+                                                          final titleCtrl = _editControllers[i];
+                                                          final notesCtrl = _notesControllers[i];
+                                                          final isDirty = (titleCtrl != null && titleCtrl.text.trim() != task.text.trim())
+                                                              || (notesCtrl != null && notesCtrl.text != (task.notes ?? ''));
+                                                          return IconButton(
+                                                            tooltip: 'Save',
+                                                            icon: Icon(Icons.check, color: isDirty ? Colors.red : Colors.white),
+                                                            onPressed: () => _saveEditedTitle(i),
+                                                          );
+                                                        }),
+                                                      IconButton(
+                                                        tooltip: 'Important',
+                                                        icon: Icon(task.important ? Icons.star : Icons.star_border,
+                                                            color: task.important ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant),
+                                                        onPressed: () {
+                                                          final now = !_today[i].important ? DateTime.now() : _today[i].importantAt;
+                                                          setState(() => _today[i] = _today[i].copyWith(important: !_today[i].important, importantAt: now));
+                                                          _saveToday();
+                                                        },
+                                                      ),
+                                                    ],
                                                   ),
-                                                  if (_expanded.contains(i))
-                                                    Builder(builder: (_) {
-                                                      final titleCtrl = _editControllers[i];
-                                                      final notesCtrl = _notesControllers[i];
-                                                      final isDirty = (titleCtrl != null && titleCtrl.text.trim() != task.text.trim())
-                                                          || (notesCtrl != null && notesCtrl.text != (task.notes ?? ''));
-                                                      return IconButton(
-                                                        tooltip: 'Save',
-                                                        icon: Icon(Icons.check, color: isDirty ? Colors.red : Colors.white),
-                                                        onPressed: () => _saveEditedTitle(i),
-                                                      );
-                                                    }),
                                                 ],
                                               ),
                                             ),
