@@ -165,6 +165,11 @@ class _HomePageState extends State<HomePage> {
   final Duration _reminderDuration = const Duration(minutes: 75);
   Timer? _urgentTimer;
   final Duration _urgentDuration = const Duration(minutes: 90);
+  // Fired flags to ensure each reminder type fires only once per inactivity period
+  bool _idleFired = false;
+  bool _attentionFired = false;
+  bool _reminderFired = false;
+  bool _urgentFired = false;
   final MethodChannel _nativeWindowChannel =
       const MethodChannel('simple_present/window');
   Timer? _scheduledCheckTimer;
@@ -504,6 +509,11 @@ class _HomePageState extends State<HomePage> {
       _attentionTimer?.cancel();
       _reminderTimer?.cancel();
     } catch (_) {}
+    // Reset fired flags so reminders can fire again after activity
+    _idleFired = false;
+    _attentionFired = false;
+    _reminderFired = false;
+    _urgentFired = false;
     _startIdleTimer();
     _startAttentionTimer();
     _startReminderTimer();
@@ -527,20 +537,20 @@ class _HomePageState extends State<HomePage> {
 
   void _startIdleTimer() {
     _idleTimer = Timer(_idleDuration, () async {
+      if (_idleFired) return;
       try {
         await _audioPlayer.play(AssetSource('sounds/there.mp3'));
-        // If configured for 60 minutes, request native flashing behavior
-        // idle timer is only for the 45-minute notification; flashing is handled by the attention timer
       } catch (_) {
         SystemSound.play(SystemSoundType.alert);
       }
-      // after playing, restart timer to play again after another idle period
-      _startIdleTimer();
+      _idleFired = true;
+      // do not auto-restart; wait for user activity to reset
     });
   }
 
   void _startAttentionTimer() {
     _attentionTimer = Timer(_attentionDuration, () async {
+      if (_attentionFired) return;
       try {
         await _audioPlayer.play(AssetSource('sounds/there.mp3'));
         try {
@@ -549,13 +559,14 @@ class _HomePageState extends State<HomePage> {
       } catch (_) {
         SystemSound.play(SystemSoundType.alert);
       }
-      // restart attention timer for next cycle
-      _startAttentionTimer();
+      _attentionFired = true;
+      // do not auto-restart; wait for user activity to reset
     });
   }
 
   void _startReminderTimer() {
     _reminderTimer = Timer(_reminderDuration, () async {
+      if (_reminderFired) return;
       try {
         await _audioPlayer.play(AssetSource('sounds/there.mp3'));
         try {
@@ -567,13 +578,14 @@ class _HomePageState extends State<HomePage> {
       } catch (_) {
         SystemSound.play(SystemSoundType.alert);
       }
-      // restart reminder timer
-      _startReminderTimer();
+      _reminderFired = true;
+      // do not auto-restart; wait for user activity to reset
     });
   }
 
   void _startUrgentTimer() {
     _urgentTimer = Timer(_urgentDuration, () async {
+      if (_urgentFired) return;
       try {
         await _audioPlayer.play(AssetSource('sounds/there.mp3'));
         try {
@@ -588,8 +600,8 @@ class _HomePageState extends State<HomePage> {
       } catch (_) {
         SystemSound.play(SystemSoundType.alert);
       }
-      // restart urgent timer
-      _startUrgentTimer();
+      _urgentFired = true;
+      // do not auto-restart; wait for user activity to reset
     });
   }
 
