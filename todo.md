@@ -62,7 +62,7 @@
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
-- [ ] in der Done-Liste soll die Uhrzeit der Erledigung angezeigt werden
+- [x] in der Done-Liste soll die Uhrzeit der Erledigung angezeigt werden
 - [x] in der Done-Liste sollen keine Aufgaben angelegt werden können
   
 ## notes

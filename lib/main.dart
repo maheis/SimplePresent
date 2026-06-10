@@ -1402,31 +1402,34 @@ class _HomePageState extends State<HomePage> {
                                                     title: Row(
                                                       children: [
                                                         Expanded(
-                                                          child: _expanded
-                                                                  .contains(i)
-                                                              ? const SizedBox
-                                                                  .shrink()
-                                                                : Text(
-                                                                  task.text,
-                                                                  style:
-                                                                    TextStyle(
-                                                                  fontSize: _fontScale < 1.0 ? _baseFontSize * _fontScale : null,
-                                                                  decoration: task.done
-                                                                    ? TextDecoration
-                                                                      .lineThrough
-                                                                    : TextDecoration
-                                                                      .none,
-                                                                  color: task
-                                                                      .done
-                                                                    ? Theme.of(context)
-                                                                      .colorScheme
-                                                                      .onSurface
-                                                                      .withValues(alpha: 0.65)
-                                                                    : Theme.of(context)
-                                                                      .colorScheme
-                                                                      .onSurface,
-                                                                  ),
-                                                                ),
+                                                          child: _expanded.contains(i)
+                                                                    ? const SizedBox.shrink()
+                                                                    : Column(
+                                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                                      children: [
+                                                                        Text(
+                                                                          task.text,
+                                                                          style: TextStyle(
+                                                                            fontSize: _fontScale < 1.0 ? _baseFontSize * _fontScale : null,
+                                                                            decoration: task.done ? TextDecoration.lineThrough : TextDecoration.none,
+                                                                            color: task.done
+                                                                                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
+                                                                                : Theme.of(context).colorScheme.onSurface,
+                                                                          ),
+                                                                        ),
+                                                                        if (_showingDone && task.completedAt != null)
+                                                                          Padding(
+                                                                            padding: const EdgeInsets.only(top: 4.0),
+                                                                            child: Text(
+                                                                              'Completed: ${DateFormat('yyyy-MM-dd HH:mm').format(task.completedAt!)}',
+                                                                              style: TextStyle(
+                                                                                fontSize: 12,
+                                                                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                      ],
+                                                                    ),
                                                         ),
                                                         const SizedBox(
                                                           width: 4),
