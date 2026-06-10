@@ -46,7 +46,7 @@
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [x] Fertig Sounds geht nicht
-- [ ] Erinnerung kommt x-fach, soll aber nur einmalig je Erinnerungstyp kommen
+- [x] Erinnerung kommt x-fach, soll aber nur einmalig je Erinnerungstyp kommen
 - [x] Sortierung per D&D in der Liste
 - [x] Editieren vom Titel per Button?
 - [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden

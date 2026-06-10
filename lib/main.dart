@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:math' as math;
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
@@ -176,6 +177,16 @@ class _HomePageState extends State<HomePage> {
   final Set<String> _notified15 = <String>{};
   final Set<String> _notifiedDue = <String>{};
   final Set<int> _swiping = <int>{};
+
+  // Zoom state: tile height and font scaling
+  double _tileHeight = 72.0;
+  final double _defaultTileHeight = 72.0;
+  final double _minTileHeight = 20.0; // allow thin tiles
+  double _fontScale = 1.0;
+  final double _minFontScale = 0.6;
+  final double _baseFontSize = 16.0; // used when scaling text down
+  double _tileHeightStart = 72.0;
+  double _fontScaleStart = 1.0;
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -614,12 +625,80 @@ class _HomePageState extends State<HomePage> {
       future: _initFuture,
       builder: (context, snap) {
         return Scaffold(
-          body: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: () {
-              _inputFocus.requestFocus();
-              _registerActivity();
+          body: Listener(
+            onPointerSignal: (ps) {
+              if (ps is PointerScrollEvent) {
+                final ctrl = RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.controlLeft) ||
+                    RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.controlRight);
+                if (!ctrl) return;
+                final delta = ps.scrollDelta.dy;
+                final step = delta.abs() * 0.08;
+                final textThreshold = _baseFontSize + 8.0;
+                if (delta > 0) {
+                  // zoom out
+                  final candidate = (_tileHeight - step).clamp(_minTileHeight, _defaultTileHeight);
+                  if (candidate > textThreshold + 1.0) {
+                    setState(() {
+                      _tileHeight = candidate;
+                      _fontScale = 1.0;
+                    });
+                  } else {
+                    setState(() {
+                      _tileHeight = candidate;
+                      final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
+                      _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                    });
+                  }
+                } else {
+                  // zoom in
+                  final candidate = (_tileHeight + step).clamp(_minTileHeight, _defaultTileHeight);
+                  if (candidate > textThreshold + 1.0) {
+                    setState(() {
+                      _tileHeight = candidate;
+                      _fontScale = 1.0;
+                    });
+                  } else {
+                    setState(() {
+                      _tileHeight = candidate;
+                      final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
+                      _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                    });
+                  }
+                }
+              }
             },
+            child: GestureDetector(
+              onScaleStart: (d) {
+                _tileHeightStart = _tileHeight;
+                _fontScaleStart = _fontScale;
+              },
+              onScaleUpdate: (d) {
+                if (d.scale == 0.0 || d.scale.isNaN) return;
+                final newHeight = (_tileHeightStart * d.scale).clamp(_minTileHeight, double.infinity);
+                final textThreshold = _baseFontSize + 8.0;
+                if (newHeight > textThreshold + 1.0) {
+                  setState(() {
+                    _tileHeight = newHeight;
+                    _fontScale = 1.0;
+                  });
+                } else if (newHeight > _minTileHeight) {
+                  setState(() {
+                    _tileHeight = newHeight;
+                    final frac = (_tileHeight - _minTileHeight) / (textThreshold + 1.0 - _minTileHeight);
+                    _fontScale = (frac.clamp(0.0, 1.0) * (1.0 - _minFontScale) + _minFontScale);
+                  });
+                } else {
+                  setState(() {
+                    _tileHeight = _minTileHeight;
+                    _fontScale = _minFontScale;
+                  });
+                }
+              },
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                _inputFocus.requestFocus();
+                _registerActivity();
+              },
             child: Column(
               children: [
                 Expanded(
@@ -971,6 +1050,9 @@ class _HomePageState extends State<HomePage> {
                                                           .withOpacity(0.10)
                                                       : null,
                                                   child: ListTile(
+                                                    contentPadding: EdgeInsets.symmetric(
+                                                        vertical: ((_tileHeight - _baseFontSize) / 2).clamp(2.0, 40.0),
+                                                        horizontal: 12),
                                                     onTap: () =>
                                                         _toggleExpanded(i),
                                                     leading: IconButton(
@@ -990,26 +1072,25 @@ class _HomePageState extends State<HomePage> {
                                                                   .contains(i)
                                                               ? const SizedBox
                                                                   .shrink()
-                                                              : Text(
+                                                                : Text(
                                                                   task.text,
                                                                   style:
-                                                                      TextStyle(
-                                                                    decoration: task.done
-                                                                        ? TextDecoration
-                                                                            .lineThrough
-                                                                        : TextDecoration
-                                                                            .none,
-                                                                    color: task
-                                                                            .done
-                                                                        ? Theme.of(context)
-                                                                            .colorScheme
-                                                                            .onSurface
-                                                                            .withValues(
-                                                                                alpha:
-                                                                                    0.65)
-                                                                        : Theme.of(context)
-                                                                            .colorScheme
-                                                                            .onSurface,
+                                                                    TextStyle(
+                                                                  fontSize: _fontScale < 1.0 ? _baseFontSize * _fontScale : null,
+                                                                  decoration: task.done
+                                                                    ? TextDecoration
+                                                                      .lineThrough
+                                                                    : TextDecoration
+                                                                      .none,
+                                                                  color: task
+                                                                      .done
+                                                                    ? Theme.of(context)
+                                                                      .colorScheme
+                                                                      .onSurface
+                                                                      .withValues(alpha: 0.65)
+                                                                    : Theme.of(context)
+                                                                      .colorScheme
+                                                                      .onSurface,
                                                                   ),
                                                                 ),
                                                         ),
@@ -1317,6 +1398,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+        ),
         );
       },
     );
