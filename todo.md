@@ -26,11 +26,11 @@
 - [x] makefile
 - [x] Build-Pipeline über Github
 - [x] Sounds
-- [ ] Optional Terminierung Tag+Uhrzeit
+- [x] Optional Terminierung Tag+Uhrzeit
   - [x] Tag+Uhrzeit angaben können
   - [x] Icon für terminierte Aufgaben
   - [x] Sortierung terminierter Aufgaben nach Termin
-  - [ ] Benachrichtigung/Erinnerung für terminierte Aufgaben (Desktop: Benachrichtigung, Ton, Aufpoppen; Mobile: Benachrichtigung, Ton)
+  - [x] Benachrichtigung/Erinnerung für terminierte Aufgaben (Desktop: Benachrichtigung, Ton, Aufpoppen; Mobile: Benachrichtigung, Ton)
 - [ ] 2 Listen: heute, Backlog (Json-Filesystem)
 - [ ] Backlog als Liste von unten reinschieben bis zum halben Bildschirm, nochmals raufziehen als Vollbild <- nope, liste soll einfach wechselbar sein und dann per swipe von heute nach backlog und umgekehrt geschoben werden können
 - [ ] "heute" soll jeden Tag leer starten

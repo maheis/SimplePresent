@@ -155,6 +155,9 @@ class _HomePageState extends State<HomePage> {
   Timer? _urgentTimer;
   final Duration _urgentDuration = const Duration(minutes: 90);
   final MethodChannel _nativeWindowChannel = const MethodChannel('simple_present/window');
+  Timer? _scheduledCheckTimer;
+  final Set<String> _notified15 = <String>{};
+  final Set<String> _notifiedDue = <String>{};
 
   late final Future<void> _initFuture = _loadToday();
 
@@ -165,6 +168,7 @@ class _HomePageState extends State<HomePage> {
     _startAttentionTimer();
     _startReminderTimer();
     _startUrgentTimer();
+    _startScheduledChecker();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _inputFocus.requestFocus();
@@ -220,6 +224,7 @@ class _HomePageState extends State<HomePage> {
     _attentionTimer?.cancel();
     _reminderTimer?.cancel();
     _urgentTimer?.cancel();
+    _scheduledCheckTimer?.cancel();
     for (final c in _editControllers.values) {
       c.dispose();
     }
@@ -229,6 +234,54 @@ class _HomePageState extends State<HomePage> {
     _toastTimer?.cancel();
     _toastEntry?.remove();
     super.dispose();
+  }
+
+  String _taskNotifyKey(TaskItem t) {
+    final created = t.createdAt?.toIso8601String() ?? '';
+    final sched = t.scheduledAt?.toIso8601String() ?? '';
+    return '${t.text}|$created|$sched';
+  }
+
+  void _startScheduledChecker() {
+    _scheduledCheckTimer?.cancel();
+    _scheduledCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      final now = DateTime.now();
+      for (final t in _today) {
+        if (t.scheduledAt == null) continue;
+        if (t.done) continue;
+        final key = _taskNotifyKey(t);
+        final diff = t.scheduledAt!.difference(now);
+        // 15 minutes before
+        if (diff.inSeconds <= 15 * 60 && diff.isNegative == false && !_notified15.contains(key)) {
+          _notified15.add(key);
+          try {
+            await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
+          } catch (_) {}
+          try {
+            await _nativeWindowChannel.invokeMethod('notify', <String, String>{
+              'title': 'Termin in 15 Minuten',
+              'body': t.text,
+            });
+          } catch (_) {}
+        }
+        // At due time or overdue (first time)
+        if ((diff.inSeconds <= 0) && !_notifiedDue.contains(key)) {
+          _notifiedDue.add(key);
+          try {
+            await _audioPlayer.play(AssetSource('sounds/dading.mp3'));
+          } catch (_) {}
+          try {
+            await _nativeWindowChannel.invokeMethod('notify', <String, String>{
+              'title': 'Termin fällig',
+              'body': t.text,
+            });
+          } catch (_) {}
+          try {
+            await _nativeWindowChannel.invokeMethod('bringToFront');
+          } catch (_) {}
+        }
+      }
+    });
   }
 
   void _toggleExpanded(int index) {
@@ -294,6 +347,9 @@ class _HomePageState extends State<HomePage> {
     setState(() => _today[index] = _today[index].copyWith(scheduledAt: scheduled));
     await _saveToday();
     _showTopToast('Termin gesetzt');
+    // clear any prior notifications for this task so reminders can be re-scheduled
+    _notified15.removeWhere((k) => k.contains(_today[index].text));
+    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
     _registerActivity();
   }
 
@@ -301,6 +357,8 @@ class _HomePageState extends State<HomePage> {
     setState(() => _today[index] = _today[index].copyWith(scheduledAt: null));
     await _saveToday();
     _showTopToast('Termin entfernt');
+    _notified15.removeWhere((k) => k.contains(_today[index].text));
+    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
     _registerActivity();
   }
 
@@ -377,6 +435,9 @@ class _HomePageState extends State<HomePage> {
       );
     });
     _saveToday();
+    // clear notification flags for this task
+    _notified15.removeWhere((k) => k.contains(_today[index].text));
+    _notifiedDue.removeWhere((k) => k.contains(_today[index].text));
     // Play a friendly sound when a task is marked done
     if (value == true) {
       _playDading();
