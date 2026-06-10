@@ -52,7 +52,7 @@
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [ ] position, größe und zoom beim schließen merken und beim start wieder laden
 - [x] Schrift viel später resizen!
-- [ ] Icon für in Arbeit immer sichtbar und als button zum setzen/entfernen der Flagge
+- [x] Icon für in Arbeit immer sichtbar und als button zum setzen/entfernen der Flagge
 - [x] Titelleiste Windows
 - [x] Icon Redesign
 - [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)

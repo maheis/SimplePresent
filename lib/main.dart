@@ -1143,21 +1143,33 @@ class _HomePageState extends State<HomePage> {
                                                                   ),
                                                                   ),
                                                                 ),
-                                                              if (task.inProgress &&
-                                                                  !task.done)
                                                                 Padding(
-                                                                  padding: const EdgeInsets
-                                                                      .only(
-                                                                      left: 8.0,
-                                                                      right:
-                                                                          6.0),
-                                                                  child: Icon(
-                                                                      Icons
-                                                                          .construction,
-                                                                      color: Colors
-                                                                          .greenAccent
-                                                                          .shade200,
-                                                                      size: 18),
+                                                                padding: const EdgeInsets
+                                                                  .only(
+                                                                    left:
+                                                                      8.0,
+                                                                    right:
+                                                                      6.0),
+                                                                child: IconButton(
+                                                                  tooltip: task.inProgress && !task.done
+                                                                    ? 'Remove In Progress'
+                                                                    : 'Mark In Progress',
+                                                                  icon: Icon(
+                                                                    Icons
+                                                                      .construction,
+                                                                    color: (task.inProgress && !task.done)
+                                                                      ? Colors.greenAccent.shade200
+                                                                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                                                                    size: 18),
+                                                                  onPressed: task.done
+                                                                    ? null
+                                                                    : () {
+                                                                      final now = !_today[i].inProgress ? DateTime.now() : null;
+                                                                      setState(() => _today[i] = _today[i].copyWith(inProgress: !_today[i].inProgress, inProgressAt: now));
+                                                                      _saveToday();
+                                                                      _registerActivity();
+                                                                    },
+                                                                ),
                                                                 ),
                                                               if (_expanded
                                                                   .contains(i))
