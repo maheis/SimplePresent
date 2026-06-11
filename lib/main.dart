@@ -1058,7 +1058,10 @@ class _HomePageState extends State<HomePage> {
     // If we're in the Backlog view and the user marks a task done, move it to Done list
     if (value && _currentFile == 'simplepresent_backlog.json') {
       try {
-        final moved = original.copyWith(done: true, completedAt: DateTime.now());
+        // stop running stopwatch for this task before moving to Done
+        await _stopStopwatch(index);
+        final finalTask = _today[index];
+        final moved = finalTask.copyWith(done: true, completedAt: DateTime.now());
         setState(() {
           _today.removeAt(index);
           _expanded.clear();
@@ -1083,6 +1086,10 @@ class _HomePageState extends State<HomePage> {
         completedAt: value ? DateTime.now() : t.completedAt,
       );
     });
+    // If marked done, stop the stopwatch and persist
+    if (value == true) {
+      await _stopStopwatch(index);
+    }
     _saveToday();
     // clear notification flags for this task (by id)
     final t = _today[index];
