@@ -1762,15 +1762,27 @@ class _HomePageState extends State<HomePage> {
                                                                     },
                                                                   ),
                                                                 ),
-                                                              if (task.stopwatchRunning)
+                                                              if (!_showingBacklog && !_showingDone)
                                                                 Padding(
                                                                   padding: const EdgeInsets.only(left: 6.0, right: 6.0),
                                                                   child: Tooltip(
-                                                                    message: 'stopwatch running',
-                                                                    child: Icon(
-                                                                      Icons.timer,
-                                                                      color: Colors.redAccent,
-                                                                      size: 18,
+                                                                    message: task.stopwatchRunning ? 'stopwatch running' : 'stopwatch',
+                                                                    child: IconButton(
+                                                                      padding: EdgeInsets.zero,
+                                                                      constraints: const BoxConstraints(),
+                                                                      iconSize: 18,
+                                                                      onPressed: () async {
+                                                                        if (task.stopwatchRunning) {
+                                                                          await _stopStopwatch(i);
+                                                                        } else {
+                                                                          await _startStopwatch(i);
+                                                                        }
+                                                                      },
+                                                                      icon: Icon(
+                                                                        Icons.timer,
+                                                                        color: task.stopwatchRunning ? Colors.redAccent : Theme.of(context).colorScheme.onSurfaceVariant,
+                                                                        size: 18,
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
