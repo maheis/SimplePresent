@@ -63,7 +63,7 @@
 - [x] Button für die Übernahme aus Backlog
 - [x] Stopuhr: Start, Stopp, Rücksetzten
 - [x] stopuhr stoppen wenn aufgabe erledigt wird
-- [ ] spent time in done anzeigen
+- [x] spent time in done anzeigen
 - [x] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [ ] Umlaute in der Benachrichtigung
 - [ ] verschieben von heute nach backlog

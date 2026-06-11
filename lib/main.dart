@@ -1725,6 +1725,26 @@ class _HomePageState extends State<HomePage> {
                                                                               ),
                                                                             ),
                                                                           ),
+                                                                        if (_showingDone)
+                                                                          Builder(builder: (ctx) {
+                                                                            final accumulatedMinutes = (task.stopwatchAccumulatedSeconds ~/ 60);
+                                                                            final manual = task.workMinutes;
+                                                                            final total = (accumulatedMinutes + (manual ?? 0));
+                                                                            if (total <= 0) return const SizedBox.shrink();
+                                                                            final hours = total ~/ 60;
+                                                                            final mins = total % 60;
+                                                                            final label = hours > 0 ? '${hours}h ${mins}m' : '${mins}m';
+                                                                            return Padding(
+                                                                              padding: const EdgeInsets.only(top: 4.0),
+                                                                              child: Text(
+                                                                                'Spent: $label',
+                                                                                style: TextStyle(
+                                                                                  fontSize: 12,
+                                                                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                                                ),
+                                                                              ),
+                                                                            );
+                                                                          }),
                                                                       ],
                                                                     ),
                                                         ),
