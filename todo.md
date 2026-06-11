@@ -40,7 +40,7 @@
 - [?] icon
 - [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
 - [x] 3 Listen: heute, Done, Backlog (Json-Filesystem)
-- [ ] "heute" soll jeden Tag leer starten
+- [x] "heute" soll jeden Tag leer starten
   - [x] erledigt von nicht heute in done-json
   - [x] erledigt laden können
   - [x] erledigt wiederholen

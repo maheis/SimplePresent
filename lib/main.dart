@@ -257,6 +257,50 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _initializeApp() async {
     await _ensureInitialFiles();
+
+    // Ensure daily reset: when app is started the first time on a new day,
+    // move all open (not done) tasks from Today into Backlog (bottom->top),
+    // leave Done tasks in their file. Persist a lastRunDate in settings.
+    try {
+      final settingsFile = await _fileFor('simplepresent_settings.json');
+      Map<String, dynamic> settings = {};
+      if (await settingsFile.exists()) {
+        try {
+          settings = jsonDecode(await settingsFile.readAsString()) as Map<String, dynamic>;
+        } catch (_) {
+          settings = {};
+        }
+      }
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final lastRun = settings['lastRunDate'] as String?;
+      if (lastRun != todayKey) {
+        // First run today -> migrate open tasks from today -> backlog
+        final List<TaskItem> todayList = [];
+        await _loadList('simplepresent_today.json', todayList);
+        if (todayList.isNotEmpty) {
+          final List<TaskItem> backlogList = [];
+          await _loadList('simplepresent_backlog.json', backlogList);
+
+          // Move open tasks from bottom->top into backlog preserving order
+          for (int i = todayList.length - 1; i >= 0; i--) {
+            final t = todayList[i];
+            if (!t.done) {
+              backlogList.add(t);
+            }
+          }
+
+          // Persist updated backlog and clear today
+          await _saveList('simplepresent_backlog.json', backlogList);
+          await _saveList('simplepresent_today.json', <TaskItem>[]);
+        }
+        settings['lastRunDate'] = todayKey;
+        final enc = const JsonEncoder.withIndent('  ');
+        try {
+          await settingsFile.writeAsString(enc.convert(settings));
+        } catch (_) {}
+      }
+    } catch (_) {}
+
     await _loadToday();
   }
 
@@ -441,6 +485,15 @@ class _HomePageState extends State<HomePage> {
     try {
       final f = await _fileFor('simplepresent_settings.json');
       final out = <String, dynamic>{'tileHeight': _tileHeight, 'fontScale': _fontScale};
+      // Preserve lastRunDate if present in existing settings so daily-reset runs only once per day
+      try {
+        if (await f.exists()) {
+          final existing = jsonDecode(await f.readAsString());
+          if (existing is Map && existing.containsKey('lastRunDate')) {
+            out['lastRunDate'] = existing['lastRunDate'];
+          }
+        }
+      } catch (_) {}
       try {
         Map<String, dynamic>? useGeom;
         if (geom != null) {
