@@ -59,8 +59,7 @@
 - [x] karusell
 - [x] Kleiner Zommen mit Schriftgröße
 - [x] Aufgaben die nicht heute aber erledigt ins Done
-- [ ] Unteraufgaben bzw. Schritte für Aufgaben
-- [ ] ++ button für backlog anlage
+- [x] Unteraufgaben bzw. Schritte für Aufgaben
 - [ ] verschieben von heute nach backlog
 - [ ] Button für die Übernahme aus Backlog
 - [ ] Stopuhr: Start, Stopp, Rücksetzten

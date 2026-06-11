@@ -1232,7 +1232,7 @@ class _HomePageState extends State<HomePage> {
                                   TextSpan(
                                     children: [
                                       TextSpan(
-                                        text: _showingBacklog ? 'Backlog' : (_showingDone ? 'Done' : 'Today'),
+                                        text: _showingBacklog ? 'backlog' : (_showingDone ? 'done' : 'today'),
                                         style: const TextStyle(
                                             fontSize: 24, fontWeight: FontWeight.w700),
                                       ),
@@ -1594,7 +1594,7 @@ class _HomePageState extends State<HomePage> {
                                                     onTap: () =>
                                                         _toggleExpanded(i),
                                                     leading: IconButton(
-                                                      tooltip: 'Done',
+                                                      tooltip: 'done',
                                                       icon: Icon(task.done
                                                           ? Icons
                                                               .radio_button_checked
@@ -2066,7 +2066,9 @@ class _HomePageState extends State<HomePage> {
                             enabled: !_showingDone,
                             textInputAction: TextInputAction.done,
                             decoration: InputDecoration(
-                              hintText: _showingDone ? 'Cannot add tasks in Done view' : 'New task for today',
+                                hintText: _showingDone
+                                  ? null
+                                  : (_showingBacklog ? 'new task for later' : 'new task for today'),
                               border: const OutlineInputBorder(),
                             ),
                             onSubmitted: _showingDone ? null : _addToToday,
