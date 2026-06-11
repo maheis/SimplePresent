@@ -13,6 +13,9 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:path_provider/path_provider.dart';
 
+// sentinel to indicate "no change" in copyWith optional parameters
+const _noChange = Object();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de_DE');
@@ -134,16 +137,16 @@ class TaskItem {
     bool? done,
     bool? important,
     bool? inProgress,
-    DateTime? completedAt,
-    DateTime? inProgressAt,
-    DateTime? importantAt,
-    DateTime? createdAt,
-    DateTime? scheduledAt,
+    Object? completedAt = _noChange,
+    Object? inProgressAt = _noChange,
+    Object? importantAt = _noChange,
+    Object? createdAt = _noChange,
+    Object? scheduledAt = _noChange,
     String? notes,
     List<TaskStep>? subtasks,
     int? stopwatchAccumulatedSeconds,
     bool? stopwatchRunning,
-    DateTime? stopwatchStartedAt,
+    Object? stopwatchStartedAt = _noChange,
     int? workMinutes,
   }) {
     return TaskItem(
@@ -152,16 +155,16 @@ class TaskItem {
       done: done ?? this.done,
       important: important ?? this.important,
       inProgress: inProgress ?? this.inProgress,
-      completedAt: completedAt ?? this.completedAt,
-      inProgressAt: inProgressAt ?? this.inProgressAt,
-      importantAt: importantAt ?? this.importantAt,
-      createdAt: createdAt ?? this.createdAt,
-      scheduledAt: scheduledAt ?? this.scheduledAt,
+      completedAt: identical(completedAt, _noChange) ? this.completedAt : (completedAt == null ? null : (completedAt as DateTime)),
+      inProgressAt: identical(inProgressAt, _noChange) ? this.inProgressAt : (inProgressAt == null ? null : (inProgressAt as DateTime)),
+      importantAt: identical(importantAt, _noChange) ? this.importantAt : (importantAt == null ? null : (importantAt as DateTime)),
+      createdAt: identical(createdAt, _noChange) ? this.createdAt : (createdAt == null ? null : (createdAt as DateTime)),
+      scheduledAt: identical(scheduledAt, _noChange) ? this.scheduledAt : (scheduledAt == null ? null : (scheduledAt as DateTime)),
       notes: notes ?? this.notes,
       subtasks: subtasks ?? this.subtasks,
       stopwatchAccumulatedSeconds: stopwatchAccumulatedSeconds ?? this.stopwatchAccumulatedSeconds,
       stopwatchRunning: stopwatchRunning ?? this.stopwatchRunning,
-      stopwatchStartedAt: stopwatchStartedAt ?? this.stopwatchStartedAt,
+      stopwatchStartedAt: identical(stopwatchStartedAt, _noChange) ? this.stopwatchStartedAt : (stopwatchStartedAt == null ? null : (stopwatchStartedAt as DateTime)),
       workMinutes: workMinutes ?? this.workMinutes,
     );
   }
@@ -402,6 +405,8 @@ class _HomePageState extends State<HomePage> {
         settings['lastRunDate'] = todayKey;
         final enc = const JsonEncoder.withIndent('  ');
         try {
+              // reload current view to ensure UI reflects changes
+              await _loadToday();
           await settingsFile.writeAsString(enc.convert(settings));
         } catch (_) {}
         // Show a short summary toast after first frame if any tasks were moved
@@ -945,13 +950,78 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _clearSchedule(int index) async {
+    // capture id before mutating list item
+    final id = _today[index].id;
+    // clear in-memory and save current view
     setState(() => _today[index] = _today[index].copyWith(scheduledAt: null));
     await _saveToday();
     _showTopToast('schedule cleared');
-    final idPrefix2 = '${_today[index].id}|';
+    final idPrefix2 = '$id|';
     _notified15.removeWhere((k) => k.startsWith(idPrefix2));
     _notifiedDue.removeWhere((k) => k.startsWith(idPrefix2));
     _registerActivity();
+
+    // Ensure persisted lists also have the schedule cleared for this task id
+    try {
+      final files = ['simplepresent_today.json', 'simplepresent_backlog.json', 'simplepresent_done.json'];
+      final changedFiles = <String>[];
+      for (final f in files) {
+        final List<TaskItem> list = [];
+        await _loadList(f, list);
+        var changed = false;
+        for (var i = 0; i < list.length; i++) {
+          final t = list[i];
+          if (t.id == id && t.scheduledAt != null) {
+            list[i] = t.copyWith(scheduledAt: null);
+            changed = true;
+          }
+        }
+        if (changed) {
+          await _saveList(f, list);
+          changedFiles.add(f);
+          // read back the saved file and capture the task snippet for debugging
+          try {
+            final savedFile = await _fileFor(f);
+            if (await savedFile.exists()) {
+              final savedText = await savedFile.readAsString();
+              // try to extract the JSON object for this id
+              final idIndex = savedText.indexOf('"id": "${id}"');
+              String snippet = '';
+              if (idIndex >= 0) {
+                // find the enclosing braces around this object
+                final start = savedText.lastIndexOf('{', idIndex);
+                final end = savedText.indexOf('}', idIndex);
+                if (start >= 0 && end >= 0 && end > start) {
+                  snippet = savedText.substring(start, end + 1);
+                }
+              }
+              final logFile2 = await _fileFor('simplepresent_clear_schedule.log');
+              final now2 = DateTime.now().toIso8601String();
+              final entry2 = '$now2 | post-save snippet for $f id=$id | snippet=${snippet.replaceAll("\n", " ")}\n';
+              if (await logFile2.exists()) {
+                await logFile2.writeAsString(entry2, mode: FileMode.append);
+              } else {
+                await logFile2.writeAsString(entry2);
+              }
+            }
+          } catch (_) {}
+        }
+      }
+      // reload view so UI reflects persisted changes
+      await _loadToday();
+
+      // write a debug log in app dir to help diagnose persistence mismatches
+      try {
+        final logFile = await _fileFor('simplepresent_clear_schedule.log');
+        final now = DateTime.now().toIso8601String();
+        final entry = '$now | cleared schedule for id=$id | changed=${changedFiles.join(',')}' + '\n';
+        if (await logFile.exists()) {
+          await logFile.writeAsString(entry, mode: FileMode.append);
+        } else {
+          await logFile.writeAsString(entry);
+        }
+      } catch (_) {}
+    } catch (_) {}
     try {
       await _saveSettingsWithGeom(_lastSavedWindowGeom);
     } catch (_) {}
