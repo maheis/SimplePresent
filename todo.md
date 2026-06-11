@@ -65,7 +65,7 @@
 - [x] stopuhr stoppen wenn aufgabe erledigt wird
 - [x] spent time in done anzeigen
 - [x] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
-- [ ] Umlaute in der Benachrichtigung
+- [x] Umlaute in der Benachrichtigung
 - [ ] verschieben von heute nach backlog
 - [ ] Textfilter
 - [ ] Worklog an Aufgaben...

@@ -6,6 +6,16 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+// Helper: convert UTF-8 std::string to UTF-16 std::wstring on Windows
+static std::wstring utf8_to_wstring(const std::string& s) {
+  if (s.empty()) return std::wstring();
+  int size_needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.length(), NULL, 0);
+  if (size_needed <= 0) return std::wstring(s.begin(), s.end());
+  std::wstring wstr(size_needed, 0);
+  MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.length(), &wstr[0], size_needed);
+  return wstr;
+}
+
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
@@ -82,9 +92,9 @@ bool FlutterWindow::OnCreate() {
             }
           }
           if (wtitle.empty()) {
-            wtitle = std::wstring(title.begin(), title.end());
+            wtitle = utf8_to_wstring(title);
           }
-          std::wstring wbody(body.begin(), body.end());
+          std::wstring wbody = utf8_to_wstring(body);
 
           // Ensure an icon entry exists; try to use the window's icon
           NOTIFYICONDATAW nidAdd = {};
@@ -108,7 +118,7 @@ bool FlutterWindow::OnCreate() {
                   size_t pos = mp.find_last_of(L"\\/");
                   if (pos != std::wstring::npos) mp = mp.substr(0, pos + 1);
                   // convert iconRel to wstring
-                  std::wstring wrel(iconRel.begin(), iconRel.end());
+                  std::wstring wrel = utf8_to_wstring(iconRel);
                   std::wstring full = mp + wrel;
                   // try to load icon from file
                   HICON loaded = (HICON)LoadImageW(NULL, full.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
