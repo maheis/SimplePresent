@@ -277,20 +277,32 @@ class _HomePageState extends State<HomePage> {
         // First run today -> migrate open tasks from today -> backlog
         final List<TaskItem> todayList = [];
         await _loadList('simplepresent_today.json', todayList);
+        final List<TaskItem> movedToDone = [];
+        int movedToBacklogCount = 0;
         if (todayList.isNotEmpty) {
           final List<TaskItem> backlogList = [];
           await _loadList('simplepresent_backlog.json', backlogList);
+          final List<TaskItem> doneList = [];
+          await _loadList('simplepresent_done.json', doneList);
 
-          // Move open tasks from bottom->top into backlog preserving order
+          // Move tasks from today: open tasks -> backlog (bottom->top), done tasks -> done
           for (int i = todayList.length - 1; i >= 0; i--) {
             final t = todayList[i];
             if (!t.done) {
               backlogList.add(t);
+              movedToBacklogCount++;
+            } else {
+              movedToDone.add(t);
             }
           }
 
-          // Persist updated backlog and clear today
+          // Persist updated backlog and done, then clear today
           await _saveList('simplepresent_backlog.json', backlogList);
+          if (movedToDone.isNotEmpty) {
+            // append moved done tasks to existing done list (preserve existing order)
+            doneList.addAll(movedToDone.reversed); // reverse to keep original top->bottom order
+            await _saveList('simplepresent_done.json', doneList);
+          }
           await _saveList('simplepresent_today.json', <TaskItem>[]);
         }
         settings['lastRunDate'] = todayKey;
@@ -298,6 +310,16 @@ class _HomePageState extends State<HomePage> {
         try {
           await settingsFile.writeAsString(enc.convert(settings));
         } catch (_) {}
+        // Show a short summary toast after first frame if any tasks were moved
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final movedDoneCount = movedToDone.length;
+          if (movedToBacklogCount > 0 || movedDoneCount > 0) {
+            final parts = <String>[];
+            if (movedToBacklogCount > 0) parts.add('$movedToBacklogCount moved to Backlog');
+            if (movedDoneCount > 0) parts.add('$movedDoneCount moved to Done');
+            _showTopToast(parts.join(', '));
+          }
+        });
       }
     } catch (_) {}
 
