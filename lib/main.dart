@@ -862,7 +862,7 @@ class _HomePageState extends State<HomePage> {
       todayList.insert(0, item.copyWith(done: false, inProgress: false));
       await _saveList('simplepresent_today.json', todayList);
 
-      _showTopToast('Task moved to Today');
+      _showTopToast('task moved to today');
     } catch (_) {
       _showTopToast('Failed to move task to Today');
     }
@@ -972,7 +972,7 @@ class _HomePageState extends State<HomePage> {
         todayList.insert(0, restored);
         await _saveList('simplepresent_today.json', todayList);
 
-        _showTopToast('Task moved to Today');
+        _showTopToast('task moved to today');
       } catch (_) {
         _showTopToast('Failed to move task');
       }
@@ -1466,9 +1466,9 @@ class _HomePageState extends State<HomePage> {
                                                 ? Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      const Icon(Icons.arrow_forward, color: Colors.white),
+                                                      const Icon(Icons.arrow_circle_left, color: Colors.white, size: 20),
                                                       const SizedBox(width: 8),
-                                                      const Text('Moved to Today', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                      const Text('moved to today', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                                     ],
                                                   )
                                                 : (_today[i].inProgress
@@ -1477,7 +1477,7 @@ class _HomePageState extends State<HomePage> {
                                                         children: [
                                                           const Icon(Icons.check_circle, color: Colors.white),
                                                           const SizedBox(width: 8),
-                                                          const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                          const Text('done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                                         ],
                                                       )
                                                     : Row(
@@ -1485,7 +1485,7 @@ class _HomePageState extends State<HomePage> {
                                                         children: [
                                                           const Icon(Icons.construction, color: Colors.white, size: 18),
                                                           const SizedBox(width: 8),
-                                                          const Text('In Progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                                          const Text('in progress', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                                                         ],
                                                       )),
                                           ),
@@ -1527,7 +1527,7 @@ class _HomePageState extends State<HomePage> {
                                               if (!t.inProgress && !t.done) {
                                                 setState(() => _today[i] = t.copyWith(inProgress: true, inProgressAt: DateTime.now()));
                                                 _saveToday();
-                                                _showTopToast('Task marked In Progress');
+                                                _showTopToast('task marked in progress');
                                               } else if (t.inProgress && !t.done) {
                                                 _setDone(i, true);
                                                 _showTopToast('Task marked done');
@@ -1541,8 +1541,8 @@ class _HomePageState extends State<HomePage> {
                                                       inProgress: false,
                                                       inProgressAt: null));
                                               _saveToday();
-                                              _showTopToast(
-                                                  'Task marked not In Progress');
+                                                _showTopToast(
+                                                  'task marked not in progress');
                                               return false;
                                             }
                                             // Otherwise ask for delete confirmation
@@ -1696,6 +1696,17 @@ class _HomePageState extends State<HomePage> {
                                                                   ),
                                                                   ),
                                                                 ),
+                                                              if (_currentFile == 'simplepresent_backlog.json' || _showingBacklog)
+                                                                Padding(
+                                                                  padding: const EdgeInsets.only(left: 8.0, right: 6.0),
+                                                                  child: IconButton(
+                                                                    tooltip: 'move to today',
+                                                                    icon: const Icon(Icons.arrow_circle_left, size: 20),
+                                                                    onPressed: () async {
+                                                                      await _moveFromBacklog(i);
+                                                                    },
+                                                                  ),
+                                                                ),
                                                                 Padding(
                                                                 padding: const EdgeInsets
                                                                   .only(
@@ -1705,8 +1716,8 @@ class _HomePageState extends State<HomePage> {
                                                                       6.0),
                                                                 child: IconButton(
                                                                   tooltip: task.inProgress && !task.done
-                                                                    ? 'Remove In Progress'
-                                                                    : 'Mark In Progress',
+                                                                    ? 'remove in progress'
+                                                                    : 'mark in progress',
                                                                   icon: Icon(
                                                                     Icons
                                                                       .construction,
@@ -2002,7 +2013,7 @@ class _HomePageState extends State<HomePage> {
                                                         const SizedBox(
                                                             height: 6),
                                                         Text(
-                                                            'In Progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
+                                                            'in progress: ${task.inProgressAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.inProgressAt!) : '-'}'),
                                                         const SizedBox(
                                                             height: 6),
                                                         Text(
