@@ -958,6 +958,28 @@ class _HomePageState extends State<HomePage> {
     _registerActivity();
   }
 
+  Future<void> _moveToBacklog(int index) async {
+    try {
+      final item = _today[index];
+      setState(() {
+        _today.removeAt(index);
+        _expanded.clear();
+      });
+      await _saveToday(); // persist removal from today
+
+      final List<TaskItem> backlogList = [];
+      await _loadList('simplepresent_backlog.json', backlogList);
+      // append to backlog at end
+      backlogList.add(item.copyWith(done: false, inProgress: false));
+      await _saveList('simplepresent_backlog.json', backlogList);
+
+      _showTopToast('task moved to backlog');
+    } catch (_) {
+      _showTopToast('failed to move task to backlog');
+    }
+    _registerActivity();
+  }
+
   Future<void> _clearSchedule(int index) async {
     // capture id before mutating list item
     final id = _today[index].id;
@@ -2310,6 +2332,14 @@ class _HomePageState extends State<HomePage> {
                                                                     _clearSchedule(
                                                                         i),
                                                               ),
+                                                            if (!_showingBacklog && !_showingDone && !task.done)
+                                                            IconButton(
+                                                              tooltip: 'move to backlog',
+                                                              icon: const Icon(Icons.arrow_circle_right),
+                                                              onPressed: () async {
+                                                                await _moveToBacklog(i);
+                                                              },
+                                                            ),
                                                           ],
                                                         ),
                                                       ],

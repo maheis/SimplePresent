@@ -37,8 +37,8 @@
 - [x] Sortierung per D&D in der Liste
 - [x] Editieren vom Titel per Button?
 - [x] Aufgaben die in Arbeit sind, sollen nach Rechts Wischen wieder "aus Arbeit" gesetzt werden
-- [?] icon
-- [?] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
+- [x] icon
+- [x] Erinnerungsfunktion bei nicht Nutzung der App ([x] Ton (45m), [x] Flackern (60m), [x] Benachrichtung (75m), [] Aufpoppen (90m))
 - [x] 3 Listen: heute, Done, Backlog (Json-Filesystem)
 - [x] "heute" soll jeden Tag leer starten
   - [x] erledigt von nicht heute in done-json
@@ -66,7 +66,7 @@
 - [x] spent time in done anzeigen
 - [x] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [x] Umlaute in der Benachrichtigung
-- [ ] verschieben von heute nach backlog
+- [x] Verschieben von heute nach backlog
 - [ ] Textfilter
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
