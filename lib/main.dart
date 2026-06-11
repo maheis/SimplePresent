@@ -102,6 +102,9 @@ class TaskItem {
     this.scheduledAt,
     this.notes,
     this.subtasks = const [],
+    this.stopwatchAccumulatedSeconds = 0,
+    this.stopwatchRunning = false,
+    this.stopwatchStartedAt,
   });
 
   final String id;
@@ -117,6 +120,10 @@ class TaskItem {
   final DateTime? scheduledAt; // optional scheduled date/time
   final String? notes;
   final List<TaskStep> subtasks;
+  // Stopwatch state per task
+  final int stopwatchAccumulatedSeconds; // total seconds accumulated when not running
+  final bool stopwatchRunning;
+  final DateTime? stopwatchStartedAt;
 
   TaskItem copyWith({
     String? id,
@@ -131,6 +138,9 @@ class TaskItem {
     DateTime? scheduledAt,
     String? notes,
     List<TaskStep>? subtasks,
+    int? stopwatchAccumulatedSeconds,
+    bool? stopwatchRunning,
+    DateTime? stopwatchStartedAt,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -145,6 +155,9 @@ class TaskItem {
       scheduledAt: scheduledAt ?? this.scheduledAt,
       notes: notes ?? this.notes,
       subtasks: subtasks ?? this.subtasks,
+      stopwatchAccumulatedSeconds: stopwatchAccumulatedSeconds ?? this.stopwatchAccumulatedSeconds,
+      stopwatchRunning: stopwatchRunning ?? this.stopwatchRunning,
+      stopwatchStartedAt: stopwatchStartedAt ?? this.stopwatchStartedAt,
     );
   }
 
@@ -162,6 +175,9 @@ class TaskItem {
         'scheduled_at': scheduledAt?.toIso8601String(),
         'notes': notes,
         'subtasks': subtasks.map((step) => step.toJson()).toList(),
+        'stopwatch_seconds': stopwatchAccumulatedSeconds,
+        'stopwatch_running': stopwatchRunning,
+        'stopwatch_started_at': stopwatchStartedAt?.toIso8601String(),
       };
 
   static DateTime? _parseDate(dynamic v) {
@@ -213,6 +229,9 @@ class TaskItem {
         }
         return const <TaskStep>[];
       }(),
+      stopwatchAccumulatedSeconds: (map['stopwatch_seconds'] is int) ? map['stopwatch_seconds'] as int : int.tryParse((map['stopwatch_seconds'] ?? '').toString() ) ?? 0,
+      stopwatchRunning: map['stopwatch_running'] == true,
+      stopwatchStartedAt: _parseDate(map['stopwatch_started_at'] ?? map['stopwatchStartedAt']),
     );
   }
 }
@@ -245,6 +264,7 @@ class _HomePageState extends State<HomePage> {
       const MethodChannel('simple_present/window');
   Timer? _scheduledCheckTimer;
   Timer? _windowWatcherTimer;
+  Timer? _stopwatchTicker;
   Map<String, int>? _lastSavedWindowGeom;
   final Set<String> _notified15 = <String>{};
   final Set<String> _notifiedDue = <String>{};
@@ -289,6 +309,10 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         _inputFocus.requestFocus();
       }
+    });
+    // Start a short ticker to update stopwatch displays every second
+    _stopwatchTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -635,6 +659,7 @@ class _HomePageState extends State<HomePage> {
     }
     _toastTimer?.cancel();
     _toastEntry?.remove();
+    _stopwatchTicker?.cancel();
     super.dispose();
   }
 
@@ -694,6 +719,36 @@ class _HomePageState extends State<HomePage> {
         }
       }
     });
+  }
+
+  int _elapsedSecondsFor(TaskItem t) {
+    var acc = t.stopwatchAccumulatedSeconds;
+    if (t.stopwatchRunning && t.stopwatchStartedAt != null) {
+      acc += DateTime.now().difference(t.stopwatchStartedAt!).inSeconds;
+    }
+    return acc;
+  }
+
+  Future<void> _startStopwatch(int index) async {
+    final t = _today[index];
+    if (t.stopwatchRunning) return;
+    setState(() => _today[index] = t.copyWith(stopwatchRunning: true, stopwatchStartedAt: DateTime.now()));
+    await _saveToday();
+  }
+
+  Future<void> _stopStopwatch(int index) async {
+    final t = _today[index];
+    if (!t.stopwatchRunning) return;
+    final started = t.stopwatchStartedAt ?? DateTime.now();
+    final added = DateTime.now().difference(started).inSeconds;
+    setState(() => _today[index] = t.copyWith(stopwatchRunning: false, stopwatchStartedAt: null, stopwatchAccumulatedSeconds: (t.stopwatchAccumulatedSeconds + added)));
+    await _saveToday();
+  }
+
+  Future<void> _resetStopwatch(int index) async {
+    final t = _today[index];
+    setState(() => _today[index] = t.copyWith(stopwatchRunning: false, stopwatchStartedAt: null, stopwatchAccumulatedSeconds: 0));
+    await _saveToday();
   }
 
   void _startWindowWatcher() {
@@ -1707,6 +1762,18 @@ class _HomePageState extends State<HomePage> {
                                                                     },
                                                                   ),
                                                                 ),
+                                                              if (task.stopwatchRunning)
+                                                                Padding(
+                                                                  padding: const EdgeInsets.only(left: 6.0, right: 6.0),
+                                                                  child: Tooltip(
+                                                                    message: 'stopwatch running',
+                                                                    child: Icon(
+                                                                      Icons.timer,
+                                                                      color: Colors.redAccent,
+                                                                      size: 18,
+                                                                    ),
+                                                                  ),
+                                                                ),
                                                                 Padding(
                                                                 padding: const EdgeInsets
                                                                   .only(
@@ -2008,6 +2075,39 @@ class _HomePageState extends State<HomePage> {
                                                           ),
                                                         const SizedBox(
                                                             height: 10),
+                                                        // Stopwatch display and controls
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(bottom: 8.0),
+                                                          child: Row(
+                                                            children: [
+                                                              Text(
+                                                                (() {
+                                                                  final s = _elapsedSecondsFor(task);
+                                                                  final hh = (s ~/ 3600).toString().padLeft(2, '0');
+                                                                  final mm = ((s % 3600) ~/ 60).toString().padLeft(2, '0');
+                                                                  final ss = (s % 60).toString().padLeft(2, '0');
+                                                                  return 'stopwatch: $hh:$mm:$ss';
+                                                                })(),
+                                                              ),
+                                                              const SizedBox(width: 8),
+                                                              IconButton(
+                                                                tooltip: 'start',
+                                                                icon: const Icon(Icons.play_arrow),
+                                                                onPressed: task.stopwatchRunning ? null : () => _startStopwatch(i),
+                                                              ),
+                                                              IconButton(
+                                                                tooltip: 'stop',
+                                                                icon: const Icon(Icons.stop),
+                                                                onPressed: task.stopwatchRunning ? () => _stopStopwatch(i) : null,
+                                                              ),
+                                                              IconButton(
+                                                                tooltip: 'reset',
+                                                                icon: const Icon(Icons.restart_alt),
+                                                                onPressed: (task.stopwatchAccumulatedSeconds > 0 || task.stopwatchRunning) ? () => _resetStopwatch(i) : null,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
                                                         Text(
                                                             'Created: ${task.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.createdAt!) : '-'}'),
                                                         const SizedBox(
