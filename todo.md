@@ -46,7 +46,7 @@
   - [x] erledigt wiederholen
 - [ ] Textfilter
 - [ ] Unteraufgaben bzw. Schritte für Aufgaben
-- [ ] Backlog sortieren nach Wichtigkeit und Reihenfolge des Einfügens (Berücksichtigung Aufgaben die aus heute rausfallen)
+- [x] Backlog sortieren nach Wichtigkeit und Reihenfolge des Einfügens (Berücksichtigung Aufgaben die aus heute rausfallen)
 - [ ] Stopuhr: Start, Stopp, Rücksetzten
 - [ ] Manuelle Zeiterfassung (Zeit der Stopuhr wird auf 15 Min aufgerundet und vorgeschlagen)
 - [x] Fenster soll sich Modal anpinnen lassen (Desktop)
@@ -63,6 +63,7 @@
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
+- [x] karusell
   
 ## notes
 

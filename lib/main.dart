@@ -382,6 +382,19 @@ class _HomePageState extends State<HomePage> {
     _notesControllers.clear();
     await _loadToday();
   }
+
+  Future<void> _cycleView(bool forward) async {
+    // Order: 0 = today, 1 = backlog, 2 = done
+    final idx = _showingBacklog ? 1 : (_showingDone ? 2 : 0);
+    final next = (idx + (forward ? 1 : 2)) % 3; // +2 is same as -1 mod 3
+    if (next == 0) {
+      await _switchFile(false);
+    } else if (next == 1) {
+      await _switchToBacklog();
+    } else {
+      await _switchFile(true);
+    }
+  }
   Future<void> _loadSettings() async {
     try {
       final f = await _fileFor('simplepresent_settings.json');
@@ -1099,24 +1112,35 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Row(
                           children: [
+                            // Left arrow moved to the far left of the header row
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios),
+                              tooltip: 'Previous',
+                              onPressed: () async {
+                                await _cycleView(false);
+                              },
+                            ),
                             Expanded(
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: _showingBacklog ? 'Backlog' : (_showingDone ? 'Done' : 'Today'),
-                                      style: const TextStyle(
-                                          fontSize: 24, fontWeight: FontWeight.w700),
-                                    ),
-                                    TextSpan(
-                                      text: ', $dateLabel',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant),
-                                    ),
-                                  ],
+                              child: Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: _showingBacklog ? 'Backlog' : (_showingDone ? 'Done' : 'Today'),
+                                        style: const TextStyle(
+                                            fontSize: 24, fontWeight: FontWeight.w700),
+                                      ),
+                                      TextSpan(
+                                        text: ', $dateLabel',
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -1136,19 +1160,12 @@ class _HomePageState extends State<HomePage> {
                                 } catch (_) {}
                               },
                             ),
-                            PopupMenuButton<String>(
-                              icon: const Icon(Icons.menu),
-                              tooltip: 'View',
-                              onSelected: (v) async {
-                                if (v == 'today') await _switchFile(false);
-                                if (v == 'done') await _switchFile(true);
-                                if (v == 'backlog') await _switchToBacklog();
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_ios),
+                              tooltip: 'Next',
+                              onPressed: () async {
+                                await _cycleView(true);
                               },
-                              itemBuilder: (ctx) => [
-                                const PopupMenuItem(value: 'today', child: Text('Today')),
-                                const PopupMenuItem(value: 'backlog', child: Text('Backlog')),
-                                const PopupMenuItem(value: 'done', child: Text('Done')),
-                              ],
                             ),
                           ],
                         ),
