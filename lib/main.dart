@@ -321,10 +321,18 @@ class _HomePageState extends State<HomePage> {
         _inputFocus.requestFocus();
       }
     });
+    // listen for any keyboard activity to reset idle timers
+    try {
+      RawKeyboard.instance.addListener(_rawKeyListener);
+    } catch (_) {}
     // Start a short ticker to update stopwatch displays every second
     _stopwatchTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
+  }
+
+  void _rawKeyListener(RawKeyEvent ev) {
+    _registerActivity();
   }
 
   Future<Directory> get _appDir async {
@@ -651,6 +659,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    try { RawKeyboard.instance.removeListener(_rawKeyListener); } catch (_) {}
     _windowWatcherTimer?.cancel();
     _saveSettings();
     _controller.dispose();
@@ -1317,6 +1326,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context, snap) {
         return Scaffold(
           body: Listener(
+            onPointerDown: (_) => _registerActivity(),
             onPointerSignal: (ps) {
               if (ps is PointerScrollEvent) {
                 final ctrl = RawKeyboard.instance.keysPressed.contains(LogicalKeyboardKey.controlLeft) ||
