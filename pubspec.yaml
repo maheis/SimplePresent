@@ -17,6 +17,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.10.0
 
 flutter:
   uses-material-design: true
@@ -29,3 +30,10 @@ flutter:
         - asset: assets/fonts/Ubuntu-Regular.ttf
         - asset: assets/fonts/Ubuntu-Bold.ttf
           weight: 700
+
+flutter_icons:
+  android: true
+  ios: false
+  image_path: assets/icons/icon.png
+  adaptive_icon_background: assets/icons/icon.png
+  adaptive_icon_foreground: assets/icons/icon.png
