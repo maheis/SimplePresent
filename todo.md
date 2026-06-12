@@ -89,23 +89,24 @@
   - [x] den header ein bisschen runter mit der app, damit platz für die android statusleiste ist
   - [x] spent time feld rutscht rechts aus dem bild
   - [x] app name ist noch simple_present
+  - [ ] backlog icon ist faded (datum entfernen?)
 - [ ] Swipe Optional machen!
 - [x] Aus in Arbeit setzten soll oben einsortieren
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
-- [ ] Statistikseite in der man sich pro Tag Zeiten anzeigen lassen kann
+- [x] Statistikseite in der man sich pro Tag Zeiten und erledigte Aufgaben anzeigen lassen kann
 - [x] aufgaben die nicht auf heute liegen, sollen ins backlog
 - [x] icon oben links einblenden
 - [x] buttons enger zusammen
 - [x] eigene icons für die liste
 - [ ] wenn debug, dann andere files verwenden
+- [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)
+- [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.
 
 ## notes
 
 - [ ] LLM-Integration: Automatisches Generieren von Unteraufgaben/Schritten aus der Hauptaufgabe, Vorschläge für Notizen/Lösungen basierend auf der Aufgabe, intelligente Sortierung des Backlogs basierend auf Wichtigkeit und Dringlichkeit.
-- [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.
 - [ ] Dark Mode: Unterstützung für dunkle und helle Designs, um die Benutzererfahrung zu verbessern und die Augenbelastung zu reduzieren.
 - [ ] Barrierefreiheit: Unterstützung für Screenreader, Tastaturnavigation und andere Barrierefreiheitsfunktionen, um die App für alle Benutzer zugänglich zu machen.
 - [ ] Export/Import: Möglichkeit, Aufgabenlisten zu exportieren und zu importieren, z.B. als JSON oder CSV, um Backups zu erstellen oder Daten zwischen verschiedenen Apps zu übertragen.
 - [ ] Widgets: Unterstützung für Widgets auf dem Startbildschirm (Mobile) oder Desktop, um schnellen Zugriff auf die wichtigsten Aufgaben zu ermöglichen.
 - [ ] Integration mit Kalendern: Möglichkeit, Aufgaben mit Kalenderereignissen zu verknüpfen, um eine bessere Übersicht über Termine und Aufgaben zu erhalten.
-- [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)

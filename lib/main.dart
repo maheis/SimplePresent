@@ -827,6 +827,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _openStats() async {
+    // load done list and open stats page
+    final List<TaskItem> doneList = [];
+    await _loadList('simplepresent_done.json', doneList);
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => StatsPage(doneList: doneList)));
+  }
+
   void _toggleExpanded(int index) {
     if (_expanded.contains(index)) {
       // collapsing: save edited title/notes before collapsing
@@ -1563,6 +1571,16 @@ class _HomePageState extends State<HomePage> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                IconButton(
+                                  icon: const Icon(Icons.bar_chart),
+                                  tooltip: 'Statistics',
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () async {
+                                    await _openStats();
+                                  },
+                                ),
                                 IconButton(
                                   icon: Icon(
                                     _alwaysOnTop ? Icons.push_pin : Icons.push_pin_outlined,
@@ -2569,6 +2587,96 @@ class _HomePageState extends State<HomePage> {
         ),
         );
       },
+    );
+  }
+}
+
+class StatsPage extends StatefulWidget {
+  const StatsPage({super.key, required this.doneList});
+  final List<TaskItem> doneList;
+  @override
+  State<StatsPage> createState() => _StatsPageState();
+}
+
+class _StatsPageState extends State<StatsPage> {
+  late DateTime _currentDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentDate = DateTime.now();
+  }
+
+  void _prevDay() {
+    setState(() {
+      _currentDate = _currentDate.subtract(const Duration(days: 1));
+    });
+  }
+
+  void _nextDay() {
+    setState(() {
+      _currentDate = _currentDate.add(const Duration(days: 1));
+    });
+  }
+
+  List<TaskItem> _tasksForDay(DateTime day) {
+    return widget.doneList.where((t) {
+      final c = t.completedAt;
+      if (c == null) return false;
+      return c.year == day.year && c.month == day.month && c.day == day.day;
+    }).toList();
+  }
+
+  int _minutesForTask(TaskItem t) {
+    if (t.workMinutes > 0) return t.workMinutes;
+    final secs = t.stopwatchAccumulatedSeconds;
+    return (secs / 60).round();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tasks = _tasksForDay(_currentDate);
+    final totalMinutes = tasks.fold<int>(0, (s, t) => s + _minutesForTask(t));
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(DateFormat('EEEE, dd.MM.yyyy').format(_currentDate)),
+        centerTitle: true,
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pop()),
+        actions: [
+          IconButton(icon: const Icon(Icons.arrow_left), tooltip: 'Previous day', onPressed: _prevDay),
+          IconButton(icon: const Icon(Icons.arrow_right), tooltip: 'Next day', onPressed: _nextDay),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total completed: ${tasks.length}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('Total time (minutes): $totalMinutes', style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: tasks.isEmpty
+                  ? Center(child: Text(_currentDate.day == DateTime.now().day ? 'No tasks completed today' : 'No tasks for this day'))
+                  : ListView.separated(
+                      itemCount: tasks.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (ctx, i) {
+                        final t = tasks[i];
+                        final minutes = _minutesForTask(t);
+                        final completed = t.completedAt != null ? DateFormat('HH:mm').format(t.completedAt!) : '-';
+                        return ListTile(
+                          title: Text(t.text),
+                          subtitle: Text('completed: $completed'),
+                          trailing: Text('$minutes min'),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
