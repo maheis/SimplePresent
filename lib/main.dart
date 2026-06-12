@@ -929,6 +929,19 @@ class _HomePageState extends State<HomePage> {
     _registerActivity();
   }
 
+  void _reorderSubtasks(int taskIndex, int oldIndex, int newIndex) {
+    final task = _today[taskIndex];
+    final list = List<TaskStep>.from(task.subtasks);
+    if (newIndex > oldIndex) newIndex -= 1;
+    final item = list.removeAt(oldIndex);
+    list.insert(newIndex, item);
+    setState(() {
+      _today[taskIndex] = task.copyWith(subtasks: list);
+    });
+    _saveToday();
+    _registerActivity();
+  }
+
   Future<void> _pickSchedule(int index) async {
     final now = DateTime.now();
     final initial = _today[index].scheduledAt ?? now;
@@ -2209,60 +2222,54 @@ class _HomePageState extends State<HomePage> {
                                                         if (task.subtasks.isNotEmpty)
                                                           Padding(
                                                             padding:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                      top: 12),
-                                                            child: Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                for (final step in task.subtasks)
-                                                                  Padding(
-                                                                    padding: const EdgeInsets
-                                                                        .only(
-                                                                          bottom:
-                                                                              6),
-                                                                    child: Row(
-                                                                      children: [
-                                                                        Checkbox(
-                                                                          value:
-                                                                              step.done,
-                                                                          onChanged: (value) => _updateSubtask(
-                                                                              i,
-                                                                              step.id,
-                                                                              done: value ?? false),
-                                                                        ),
-                                                                        Expanded(
-                                                                          child:
-                                                                              TextFormField(
-                                                                            key:
-                                                                                ValueKey('subtask_${task.id}_${step.id}'),
-                                                                            initialValue:
-                                                                                step.text,
-                                                                            decoration:
-                                                                                const InputDecoration(
-                                                                              border:
-                                                                                  InputBorder.none,
-                                                                              isDense:
-                                                                                  true,
-                                                                            ),
-                                                                            onChanged:
-                                                                                (value) => _updateSubtask(i, step.id, text: value),
+                                                                const EdgeInsets.only(top: 12),
+                                                            child: SizedBox(
+                                                              // let the ReorderableListView size to its children
+                                                              child: ReorderableListView(
+                                                                buildDefaultDragHandles: false,
+                                                                shrinkWrap: true,
+                                                                physics:
+                                                                    const NeverScrollableScrollPhysics(),
+                                                                onReorder: (oldIndex, newIndex) => _reorderSubtasks(i, oldIndex, newIndex),
+                                                                children: [
+                                                                  for (int sidx = 0; sidx < task.subtasks.length; sidx++)
+                                                                    () {
+                                                                      final step = task.subtasks[sidx];
+                                                                      return Card(
+                                                                        key: ValueKey('subtask_${task.id}_${step.id}'),
+                                                                        child: ListTile(
+                                                                          dense: true,
+                                                                          leading: Checkbox(
+                                                                            value: step.done,
+                                                                            onChanged: (value) => _updateSubtask(i, step.id, done: value ?? false),
+                                                                          ),
+                                                                          title: TextFormField(
+                                                                            initialValue: step.text,
+                                                                            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+                                                                            onChanged: (value) => _updateSubtask(i, step.id, text: value),
+                                                                          ),
+                                                                          trailing: Row(
+                                                                            mainAxisSize: MainAxisSize.min,
+                                                                            children: [
+                                                                              IconButton(
+                                                                                tooltip: 'delete step',
+                                                                                icon: const Icon(Icons.close),
+                                                                                onPressed: () => _removeSubtask(i, step.id),
+                                                                              ),
+                                                                              ReorderableDragStartListener(
+                                                                                index: sidx,
+                                                                                child: const Padding(
+                                                                                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                                                                  child: Icon(Icons.drag_handle),
+                                                                                ),
+                                                                              ),
+                                                                            ],
                                                                           ),
                                                                         ),
-                                                                        IconButton(
-                                                                          tooltip:
-                                                                              'Delete step',
-                                                                          icon:
-                                                                              const Icon(Icons.close),
-                                                                          onPressed: () =>
-                                                                              _removeSubtask(i, step.id),
-                                                                        ),
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                              ],
+                                                                      );
+                                                                    }(),
+                                                                ],
+                                                              ),
                                                             ),
                                                           ),
                                                         const SizedBox(
