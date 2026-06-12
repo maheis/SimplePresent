@@ -78,7 +78,7 @@
 - [ ] Textfilter
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [ ] Sounds Redesignen mit Lizenzprüfung (Pixabay)
+- [x] Sounds Redesignen mit Lizenzprüfung (Pixabay)
 - [ ] modal anpinnen klappt unter linux nicht.
 - [ ] kleiner zoomen
     Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
@@ -99,7 +99,7 @@
 - [x] buttons enger zusammen
 - [x] eigene icons für die liste
 - [x] wenn debug, dann andere files verwenden
-- [ ] 3rd party lizenzen
+- [x] 3rd party lizenzen
 - [ ] wenn aufgaben aufgeklappt sind, verruschts häufger der text in eine andere aufgabe!
 - [ ] 
 
