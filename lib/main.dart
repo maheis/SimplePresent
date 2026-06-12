@@ -1484,7 +1484,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 22, 12, 8),
+                    padding: const EdgeInsets.fromLTRB(12, 22, 6, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1494,41 +1494,77 @@ class _HomePageState extends State<HomePage> {
                             IconButton(
                               icon: const Icon(Icons.arrow_back_ios),
                               tooltip: 'Previous',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                              visualDensity: VisualDensity.compact,
                               onPressed: () async {
                                 await _cycleView(false);
                               },
                             ),
                             Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: Text.rich(
-                                  TextSpan(
+                              child: LayoutBuilder(builder: (ctx, constraints) {
+                                // Styles used for measurement and rendering
+                                final titleStyle = const TextStyle(fontSize: 24, fontWeight: FontWeight.w700);
+                                final dateStyle = TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant);
+                                final combined = TextSpan(children: [
+                                  TextSpan(text: _showingBacklog ? 'backlog' : (_showingDone ? 'done' : 'today'), style: titleStyle),
+                                  TextSpan(text: ', $dateLabel', style: dateStyle),
+                                ]);
+
+                                // Measure required width for the combined text
+                                final tp = TextPainter(text: combined, textDirection: Directionality.of(context), textScaleFactor: MediaQuery.textScaleFactorOf(context));
+                                tp.layout();
+                                final textWidth = tp.width;
+
+                                const double iconSize = 28.0; // size allocated for the icon when fully shown
+                                const double iconGap = 8.0;
+                                final available = constraints.maxWidth;
+
+                                final showIconFully = (textWidth + iconSize + iconGap) <= available;
+
+                                return SizedBox(
+                                  height: 40,
+                                  child: Stack(
+                                    alignment: Alignment.centerLeft,
                                     children: [
-                                      TextSpan(
-                                        text: _showingBacklog ? 'backlog' : (_showingDone ? 'done' : 'today'),
-                                        style: const TextStyle(
-                                            fontSize: 24, fontWeight: FontWeight.w700),
+                                      // Icon placed on the left; when not enough space we keep it behind the text and fade it
+                                      Positioned(
+                                        left: 0,
+                                        top: 6,
+                                        child: AnimatedOpacity(
+                                          duration: const Duration(milliseconds: 250),
+                                          opacity: showIconFully ? 1.0 : 0.18,
+                                          child: Image.asset('assets/icons/icon.png', width: iconSize, height: iconSize),
+                                        ),
                                       ),
-                                      TextSpan(
-                                        text: ', $dateLabel',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant),
+                                      // Title text — when icon is fully shown we add left padding so text sits beside the icon,
+                                      // otherwise we let the text occupy full width and visually overlap the faded icon.
+                                      Padding(
+                                        padding: EdgeInsets.only(left: showIconFully ? (iconSize + iconGap) : 0, right: 4.0),
+                                        child: RichText(
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          text: combined,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
+                                );
+                              }),
                             ),
-                            IconButton(
-                              icon: Icon(
-                                _alwaysOnTop ? Icons.push_pin : Icons.push_pin_outlined,
-                                size: 20,
-                              ),
-                              tooltip: _alwaysOnTop ? 'Unpin window' : 'Pin window on top',
-                              onPressed: () async {
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    _alwaysOnTop ? Icons.push_pin : Icons.push_pin_outlined,
+                                    size: 20,
+                                  ),
+                                  tooltip: _alwaysOnTop ? 'Unpin window' : 'Pin window on top',
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () async {
                                 final newVal = !_alwaysOnTop;
                                 try {
                                   await _nativeWindowChannel.invokeMethod('setWindowGeometry', <String, dynamic>{'always_on_top': newVal});
@@ -1536,14 +1572,19 @@ class _HomePageState extends State<HomePage> {
                                   await _saveSettings();
                                   _showTopToast(newVal ? 'Window pinned' : 'Window unpinned');
                                 } catch (_) {}
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_ios),
-                              tooltip: 'Next',
-                              onPressed: () async {
-                                await _cycleView(true);
-                              },
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_forward_ios),
+                                  tooltip: 'Next',
+                                  padding: const EdgeInsets.only(left: 6.0, right: 0.0),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () async {
+                                    await _cycleView(true);
+                                  },
+                                ),
+                              ],
                             ),
                           ],
                         ),

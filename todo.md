@@ -90,6 +90,9 @@
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
 - [ ] Statistikseite in der man sich pro Tag Zeiten anzeigen lassen kann
 - [x] aufgaben die nicht auf heute liegen, sollen ins backlog
+- [x] icon oben links einblenden
+- [x] buttons enger zusammen
+- [ ] 
 
 ## notes
 
