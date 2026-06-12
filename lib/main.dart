@@ -1225,14 +1225,33 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _addToToday(String text) {
-    if (text.trim().isEmpty) return;
+  void _addToToday([String? text]) {
+    // Use the main input controller as source of truth to avoid cases where
+    // other focused edit fields provide conflicting text.
+    final input = _controller.text.trim();
+    if (input.isEmpty) return;
+    // Prevent controller/index mismatch: collapse expanded editors and dispose their controllers
+    if (_expanded.isNotEmpty) {
+      for (final c in _editControllers.values) {
+        try {
+          c.dispose();
+        } catch (_) {}
+      }
+      _editControllers.clear();
+      for (final c in _notesControllers.values) {
+        try {
+          c.dispose();
+        } catch (_) {}
+      }
+      _notesControllers.clear();
+      _expanded.clear();
+    }
     setState(() {
       _today.insert(
           0,
           TaskItem(
               id: '${DateTime.now().millisecondsSinceEpoch}-${math.Random().nextInt(1<<32)}',
-              text: text.trim(),
+              text: input,
               done: false,
               createdAt: DateTime.now(),
               notes: ''));

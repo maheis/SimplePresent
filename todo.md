@@ -100,7 +100,7 @@
   - [x] backlog icon ist faded (datum entfernen?)
 - [ ] Swipe Optional machen!
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
-- [ ] wenn aufgaben aufgeklappt sind, verruschts häufger der text in eine andere aufgabe!
+- [x] wenn aufgaben aufgeklappt sind, verruschts häufger der text in eine andere aufgabe!
 - [x] delete task space
 
 - [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)
