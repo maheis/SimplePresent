@@ -275,6 +275,8 @@ class _HomePageState extends State<HomePage> {
       const MethodChannel('simple_present/window');
   Timer? _scheduledCheckTimer;
   Timer? _windowWatcherTimer;
+  Timer? _autoSwitchTimer;
+  final Duration _autoSwitchDuration = const Duration(minutes: 3);
   Timer? _stopwatchTicker;
   Map<String, int>? _lastSavedWindowGeom;
   final Set<String> _notified15 = <String>{};
@@ -316,6 +318,7 @@ class _HomePageState extends State<HomePage> {
     _startAttentionTimer();
     _startReminderTimer();
     _startUrgentTimer();
+    _startAutoSwitchTimer();
     _startScheduledChecker();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -670,6 +673,7 @@ class _HomePageState extends State<HomePage> {
     _attentionTimer?.cancel();
     _reminderTimer?.cancel();
     _urgentTimer?.cancel();
+    _autoSwitchTimer?.cancel();
     _scheduledCheckTimer?.cancel();
     for (final c in _editControllers.values) {
       c.dispose();
@@ -743,6 +747,21 @@ class _HomePageState extends State<HomePage> {
             await _saveSettingsWithGeom(_lastSavedWindowGeom);
           } catch (_) {}
         }
+      }
+    });
+  }
+
+  void _startAutoSwitchTimer() {
+    try {
+      _autoSwitchTimer?.cancel();
+    } catch (_) {}
+    _autoSwitchTimer = Timer(_autoSwitchDuration, () async {
+      if (!mounted) return;
+      // If we are not showing Today (either Backlog or Done), switch back to Today
+      if (_showingDone || _showingBacklog) {
+        try {
+          await _switchFile(false);
+        } catch (_) {}
       }
     });
   }
@@ -1250,6 +1269,7 @@ class _HomePageState extends State<HomePage> {
     _startAttentionTimer();
     _startReminderTimer();
     _startUrgentTimer();
+    _startAutoSwitchTimer();
   }
 
   Color _scheduleIconColor(DateTime scheduledAt) {

@@ -75,8 +75,18 @@
 - [x] Aufmerksamkeitstimer setzt sich nicht zurück
 - [ ] modal anpinnen klappt unter linux nicht.
 - [ ] kleiner zoomen
+    Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
+    Die Lösung: Card(clipBehavior: Clip.hardEdge) umschließt jetzt ein SizedBox(height: _tileHeight). Damit wird die Zeile auf genau _tileHeight Pixel abgeschnitten — egal was ListTile, Icons oder Padding intern beanspruchen. Die Icons können also in ihrer ursprünglichen Größe bleiben und müssen nicht mitskalieren.
 - [ ] position, Größe und Zoom werden nicht korrekt geladen
-- [ ] 
+- [ ] Subtasks mit Kachel darstellen
+  - [ ] Verschieben von Subtasks
+  - [ ] Subtasks können auch in Arbeit oder Wichtig markiert werden
+  - [ ] Subtasks können auch erledigt markiert werden
+- [ ] Done at und Spent bei jeder Done aufgabe anzeigen (nicht nur in der Liste)
+- [ ] Android APK Testen 
+- [x] Automatisches wechseln auf die Today-Ansicht wenn die App länger nicht genutzt wurde (3Minuten)
+- [ ] Statistikseite in der man sich pro Tag Zeiten anzeigen lassen kann
+- [ ] Subtask anlegen soll zurück in die Subtask Neuanlegen springen, nicht unten rein ins Aufgabenfeld
   
 ## notes
 
