@@ -75,10 +75,18 @@
 - [x] Subtask anlegen soll zurück in die Subtask Neuanlegen springen, nicht unten rein ins Aufgabenfeld
 - [x] Papierkorb für gelöschte Aufgaben, damit man sien nicht sofort endgültig verliert
 - [x] time spent, stopuhr nicht mehr vorschalgen, time spent schlägt stopuhr
+- [x] Sounds Redesignen mit Lizenzprüfung (Pixabay)
+- [x] Aus in Arbeit setzten soll oben einsortieren
+- [x] Statistikseite in der man sich pro Tag Zeiten und erledigte Aufgaben anzeigen lassen kann
+- [x] aufgaben die nicht auf heute liegen, sollen ins backlog
+- [x] icon oben links einblenden
+- [x] buttons enger zusammen
+- [x] eigene icons für die liste
+- [x] wenn debug, dann andere files verwenden
+- [x] 3rd party lizenzen
 - [ ] Textfilter
 - [ ] Worklog an Aufgaben...
 - [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [x] Sounds Redesignen mit Lizenzprüfung (Pixabay)
 - [ ] modal anpinnen klappt unter linux nicht.
 - [ ] kleiner zoomen
     Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
@@ -91,17 +99,9 @@
   - [x] app name ist noch simple_present
   - [x] backlog icon ist faded (datum entfernen?)
 - [ ] Swipe Optional machen!
-- [x] Aus in Arbeit setzten soll oben einsortieren
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
-- [x] Statistikseite in der man sich pro Tag Zeiten und erledigte Aufgaben anzeigen lassen kann
-- [x] aufgaben die nicht auf heute liegen, sollen ins backlog
-- [x] icon oben links einblenden
-- [x] buttons enger zusammen
-- [x] eigene icons für die liste
-- [x] wenn debug, dann andere files verwenden
-- [x] 3rd party lizenzen
 - [ ] wenn aufgaben aufgeklappt sind, verruschts häufger der text in eine andere aufgabe!
-- [ ] 
+- [x] delete task space
 
 - [ ] App-Store-Distribution (Google Play, Microsoft Store, Linux-Distributionen etc.)
 - [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.

@@ -1923,6 +1923,7 @@ class _HomePageState extends State<HomePage> {
                                                       child: const Text('cancel'),
                                                     ),
                                                     FilledButton(
+                                                      autofocus: true,
                                                       onPressed: () =>
                                                           Navigator.of(
                                                                   dialogContext)
