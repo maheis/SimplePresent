@@ -2444,21 +2444,22 @@ class _HomePageState extends State<HomePage> {
                                                               ),
                                                               const SizedBox(width: 12),
                                                               // Manual time entry (time spent) shown to the right of the stopwatch buttons
-                                                              SizedBox(
-                                                                width: 220,
-                                                                child: TextField(
-                                                                  controller: _workControllers.putIfAbsent(task.id, () {
-                                                                    final initial = task.workMinutes > 0 ? task.workMinutes.toString() : '';
-                                                                    final c = TextEditingController(text: initial);
-                                                                    c.addListener(() { if (mounted) setState(() {}); });
-                                                                    return c;
-                                                                  }),
-                                                                  keyboardType: TextInputType.number,
-                                                                  decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'time spent'),
-                                                                  onTap: () {
-                                                                    final ctrl = _workControllers[task.id]!;
-                                                                    // Manual entry only: do not auto-suggest stopwatch time here.
-                                                                  },
+                                                              Flexible(
+                                                                child: ConstrainedBox(
+                                                                  constraints: const BoxConstraints(maxWidth: 220),
+                                                                  child: TextField(
+                                                                    controller: _workControllers.putIfAbsent(task.id, () {
+                                                                      final initial = task.workMinutes > 0 ? task.workMinutes.toString() : '';
+                                                                      final c = TextEditingController(text: initial);
+                                                                      c.addListener(() { if (mounted) setState(() {}); });
+                                                                      return c;
+                                                                    }),
+                                                                    keyboardType: TextInputType.number,
+                                                                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'time spent'),
+                                                                    onTap: () {
+                                                                      // Manual entry only: do not auto-suggest stopwatch time here.
+                                                                    },
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ],
