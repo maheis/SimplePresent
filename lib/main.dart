@@ -2011,8 +2011,46 @@ class _HomePageState extends State<HomePage> {
                                                                   onPressed: task.done
                                                                     ? null
                                                                     : () {
-                                                                      final now = !_today[i].inProgress ? DateTime.now() : null;
-                                                                      setState(() => _today[i] = _today[i].copyWith(inProgress: !_today[i].inProgress, inProgressAt: now));
+                                                                      final wasInProgress = _today[i].inProgress;
+                                                                      final now = !wasInProgress ? DateTime.now() : null;
+                                                                      setState(() {
+                                                                        _today[i] = _today[i].copyWith(inProgress: !wasInProgress, inProgressAt: now);
+
+                                                                        // If we just unset inProgress (was true, now false), move the task
+                                                                        // to the top position after the buckets: overdue, important+inProgress, inProgress, important
+                                                                        if (wasInProgress && !_today[i].inProgress) {
+                                                                          final moved = _today.removeAt(i);
+                                                                          // compute insertion index: count tasks that belong to the earlier buckets
+                                                                          int insertAt = 0;
+                                                                          final now2 = DateTime.now();
+                                                                          for (final t in _today) {
+                                                                            if (t.done) break;
+                                                                            final hasSchedule = t.scheduledAt != null;
+                                                                            final diff = hasSchedule ? t.scheduledAt!.difference(now2) : null;
+                                                                            final isOverdue = hasSchedule && diff!.isNegative;
+                                                                            final dueWithin1h = hasSchedule && !diff!.isNegative && diff.inMinutes <= 60;
+                                                                            if (isOverdue) {
+                                                                              insertAt++;
+                                                                              continue;
+                                                                            }
+                                                                            if (t.important && t.inProgress) {
+                                                                              insertAt++;
+                                                                              continue;
+                                                                            }
+                                                                            if (t.inProgress) {
+                                                                              insertAt++;
+                                                                              continue;
+                                                                            }
+                                                                            if (t.important) {
+                                                                              insertAt++;
+                                                                              continue;
+                                                                            }
+                                                                            // first item that is not in the above buckets: stop here
+                                                                            break;
+                                                                          }
+                                                                          _today.insert(insertAt, moved);
+                                                                        }
+                                                                      });
                                                                       _saveToday();
                                                                       _registerActivity();
                                                                     },
