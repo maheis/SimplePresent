@@ -285,6 +285,9 @@ class _HomePageState extends State<HomePage> {
   final Set<String> _notifiedDue = <String>{};
   final Set<int> _swiping = <int>{};
 
+  // When debugging, prepend filenames with 'debug_' so test data doesn't mix
+  String _storage(String name) => kDebugMode ? 'debug_$name' : name;
+
   // Zoom state: tile height and font scaling
   double _tileHeight = 52.0;
   final double _defaultTileHeight = 52.0;
@@ -361,20 +364,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _ensureInitialFiles() async {
-    await _ensureListFile('simplepresent_today.json');
-    await _ensureListFile('simplepresent_done.json');
-    await _ensureListFile('simplepresent_backlog.json');
-    await _ensureListFile('simplepresent_trash.json');
+    await _ensureListFile(_storage('simplepresent_today.json'));
+    await _ensureListFile(_storage('simplepresent_done.json'));
+    await _ensureListFile(_storage('simplepresent_backlog.json'));
+    await _ensureListFile(_storage('simplepresent_trash.json'));
   }
 
   Future<void> _initializeApp() async {
+    // ensure current file respects debug mode
+    _currentFile = _storage('simplepresent_today.json');
     await _ensureInitialFiles();
 
     // Ensure daily reset: when app is started the first time on a new day,
     // move all open (not done) tasks from Today into Backlog (bottom->top),
     // leave Done tasks in their file. Persist a lastRunDate in settings.
     try {
-      final settingsFile = await _fileFor('simplepresent_settings.json');
+      final settingsFile = await _fileFor(_storage('simplepresent_settings.json'));
       Map<String, dynamic> settings = {};
       if (await settingsFile.exists()) {
         try {
@@ -388,14 +393,14 @@ class _HomePageState extends State<HomePage> {
       if (lastRun != todayKey) {
         // First run today -> migrate open tasks from today -> backlog
         final List<TaskItem> todayList = [];
-        await _loadList('simplepresent_today.json', todayList);
+        await _loadList(_storage('simplepresent_today.json'), todayList);
         final List<TaskItem> movedToDone = [];
         int movedToBacklogCount = 0;
         if (todayList.isNotEmpty) {
           final List<TaskItem> backlogList = [];
-          await _loadList('simplepresent_backlog.json', backlogList);
+          await _loadList(_storage('simplepresent_backlog.json'), backlogList);
           final List<TaskItem> doneList = [];
-          await _loadList('simplepresent_done.json', doneList);
+          await _loadList(_storage('simplepresent_done.json'), doneList);
 
           // Move tasks from today: open tasks -> backlog (bottom->top), done tasks -> done
           for (int i = todayList.length - 1; i >= 0; i--) {
@@ -409,13 +414,13 @@ class _HomePageState extends State<HomePage> {
           }
 
           // Persist updated backlog and done, then clear today
-          await _saveList('simplepresent_backlog.json', backlogList);
+          await _saveList(_storage('simplepresent_backlog.json'), backlogList);
           if (movedToDone.isNotEmpty) {
             // append moved done tasks to existing done list (preserve existing order)
             doneList.addAll(movedToDone.reversed); // reverse to keep original top->bottom order
-            await _saveList('simplepresent_done.json', doneList);
+            await _saveList(_storage('simplepresent_done.json'), doneList);
           }
-          await _saveList('simplepresent_today.json', <TaskItem>[]);
+          await _saveList(_storage('simplepresent_today.json'), <TaskItem>[]);
         }
         settings['lastRunDate'] = todayKey;
         final enc = const JsonEncoder.withIndent('  ');
@@ -460,9 +465,9 @@ class _HomePageState extends State<HomePage> {
     if (items.isEmpty) return;
     try {
       final List<TaskItem> existing = [];
-      await _loadList('simplepresent_done.json', existing);
+      await _loadList(_storage('simplepresent_done.json'), existing);
       existing.addAll(items);
-      await _saveList('simplepresent_done.json', existing);
+      await _saveList(_storage('simplepresent_done.json'), existing);
     } catch (_) {}
   }
 
@@ -487,7 +492,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _switchFile(bool showDone) async {
     _showingDone = showDone;
     _showingBacklog = false;
-    _currentFile = showDone ? 'simplepresent_done.json' : 'simplepresent_today.json';
+    _currentFile = showDone ? _storage('simplepresent_done.json') : _storage('simplepresent_today.json');
     // clear expanded/edit state
     _expanded.clear();
     for (final c in _editControllers.values) {
@@ -505,7 +510,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _switchToBacklog() async {
     _showingBacklog = true;
     _showingDone = false;
-    _currentFile = 'simplepresent_backlog.json';
+    _currentFile = _storage('simplepresent_backlog.json');
     // clear expanded/edit state
     _expanded.clear();
     for (final c in _editControllers.values) {
@@ -533,7 +538,7 @@ class _HomePageState extends State<HomePage> {
   }
   Future<void> _loadSettings() async {
     try {
-      final f = await _fileFor('simplepresent_settings.json');
+      final f = await _fileFor(_storage('simplepresent_settings.json'));
       if (!await f.exists()) return;
       final data = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
       if (data.containsKey('tileHeight')) {
@@ -635,7 +640,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _saveSettingsWithGeom(Map<String, dynamic>? geom) async {
     try {
-      final f = await _fileFor('simplepresent_settings.json');
+      final f = await _fileFor(_storage('simplepresent_settings.json'));
       final out = <String, dynamic>{'tileHeight': _tileHeight, 'fontScale': _fontScale};
       // Preserve lastRunDate if present in existing settings so daily-reset runs only once per day
       try {
@@ -830,7 +835,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _openStats() async {
     // load done list and open stats page
     final List<TaskItem> doneList = [];
-    await _loadList('simplepresent_done.json', doneList);
+    await _loadList(_storage('simplepresent_done.json'), doneList);
     if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => StatsPage(doneList: doneList)));
   }
@@ -1012,7 +1017,7 @@ class _HomePageState extends State<HomePage> {
       await _saveToday(); // persist removal from backlog file
 
       final List<TaskItem> todayList = [];
-      await _loadList('simplepresent_today.json', todayList);
+      await _loadList(_storage('simplepresent_today.json'), todayList);
       todayList.insert(0, item.copyWith(done: false, inProgress: false));
       await _saveList('simplepresent_today.json', todayList);
 
