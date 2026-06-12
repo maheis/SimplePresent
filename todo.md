@@ -93,7 +93,7 @@
 - [x] icon oben links einblenden
 - [x] buttons enger zusammen
 - [x] eigene icons für die liste
-- [ ] 
+- [ ] wenn debug, dann andere files verwenden
 
 ## notes
 
