@@ -86,7 +86,7 @@
 - [ ] Android APK Testen 
 - [x] Automatisches wechseln auf die Today-Ansicht wenn die App länger nicht genutzt wurde (3Minuten)
 - [ ] Statistikseite in der man sich pro Tag Zeiten anzeigen lassen kann
-- [ ] Subtask anlegen soll zurück in die Subtask Neuanlegen springen, nicht unten rein ins Aufgabenfeld
+- [x] Subtask anlegen soll zurück in die Subtask Neuanlegen springen, nicht unten rein ins Aufgabenfeld
   
 ## notes
 

@@ -256,6 +256,7 @@ class _HomePageState extends State<HomePage> {
   final Map<int, TextEditingController> _editControllers = {};
   final Map<int, TextEditingController> _notesControllers = {};
   final Map<String, TextEditingController> _subtaskInputControllers = {};
+  final Map<String, FocusNode> _subtaskFocusNodes = {};
   final Map<String, TextEditingController> _workControllers = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _idleTimer;
@@ -684,6 +685,9 @@ class _HomePageState extends State<HomePage> {
     for (final c in _subtaskInputControllers.values) {
       c.dispose();
     }
+    for (final f in _subtaskFocusNodes.values) {
+      try { f.dispose(); } catch (_) {}
+    }
     for (final c in _workControllers.values) {
       c.dispose();
     }
@@ -885,6 +889,10 @@ class _HomePageState extends State<HomePage> {
       _today[taskIndex] = task.copyWith(subtasks: [...task.subtasks, step]);
     });
     controller.clear();
+    // Return focus to the subtask input so the user can add another subtask quickly
+    try {
+      _subtaskFocusNodes[task.id]?.requestFocus();
+    } catch (_) {}
     _saveToday();
     _registerActivity();
   }
@@ -2161,36 +2169,38 @@ class _HomePageState extends State<HomePage> {
                                                         Row(
                                                           children: [
                                                             Expanded(
-                                                              child:
-                                                                  TextField(
-                                                                controller: _subtaskInputControllers
-                                                                    .putIfAbsent(
-                                                                  task.id,
-                                                                  () =>
-                                                                      TextEditingController(),
+                                                                  child:
+                                                                      TextField(
+                                                                    controller: _subtaskInputControllers
+                                                                        .putIfAbsent(
+                                                                      task.id,
+                                                                      () =>
+                                                                          TextEditingController(),
+                                                                    ),
+                                                                    focusNode: _subtaskFocusNodes.putIfAbsent(
+                                                                        task.id,
+                                                                        () => FocusNode()),
+                                                                    decoration:
+                                                                      const InputDecoration(
+                                                                      border:
+                                                                        OutlineInputBorder(),
+                                                                      hintText:
+                                                                        'add subtask',
+                                                                    ),
+                                                                    onSubmitted: (_) =>
+                                                                        _addSubtask(
+                                                                            i,
+                                                                            _subtaskInputControllers[
+                                                                                task.id]!),
+                                                                  ),
                                                                 ),
-                                                                decoration:
-                                                                  const InputDecoration(
-                                                                  border:
-                                                                    OutlineInputBorder(),
-                                                                  hintText:
-                                                                    'add subtask',
-                                                                ),
-                                                                onSubmitted: (_) =>
-                                                                    _addSubtask(
-                                                                        i,
-                                                                        _subtaskInputControllers[
-                                                                            task.id]!),
-                                                              ),
-                                                            ),
                                                             const SizedBox(
                                                                 width: 8),
                                                             FilledButton(
-                                                              onPressed: () =>
-                                                                  _addSubtask(
-                                                                      i,
-                                                                      _subtaskInputControllers[
-                                                                          task.id]!),
+                                                                onPressed: () => _addSubtask(
+                                                                    i,
+                                                                    _subtaskInputControllers[
+                                                                      task.id]!),
                                                               child: const Text(
                                                                   '+'),
                                                             ),
