@@ -1,0 +1,55 @@
+name: CI - Build Windows
+
+on:
+    release:
+        types: [published]
+    workflow_dispatch: {}
+
+permissions:
+    contents: write
+
+jobs:
+    windows:
+        name: Build Windows
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup Flutter
+              uses: subosito/flutter-action@v2
+              with:
+                  channel: "stable"
+            - name: Flutter pub get
+              run: flutter pub get
+            - name: Build Windows release
+              run: flutter build windows --release
+            - name: Package Windows bundle
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force -Path release_dist | Out-Null
+                  Write-Host "Listing build directories for diagnostics"
+                  Get-ChildItem -Force build -ErrorAction SilentlyContinue | Select-Object -First 50
+                  $found = Get-ChildItem -Path build/windows -Directory -Recurse -ErrorAction SilentlyContinue |
+                           Where-Object { $_.FullName -match "\\runner\\Release$" } | Select-Object -First 1
+                  if ($found) {
+                      $src = $found.FullName
+                      Write-Host "Found runner release dir: $src"
+                      Compress-Archive -Path "$src\*" -DestinationPath "release_dist\simplepresent-windows.zip" -Force
+                  } else {
+                      Write-Host "ERROR: build output not found: expected build/windows/**/runner/Release"
+                      Get-ChildItem -Path build -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First 200
+                      exit 1
+                  }
+            - name: Upload Windows artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: simplepresent-windows
+                  path: release_dist/simplepresent-windows.zip
+            - name: Upload Windows artifact to Release
+              uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  upload_url: ${{ github.event.release.upload_url }}
+                  asset_path: release_dist/simplepresent-windows.zip
+                  asset_name: simplepresent-windows.zip
+                  asset_content_type: application/zip
