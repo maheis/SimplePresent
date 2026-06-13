@@ -15,6 +15,22 @@
 
 # Fonts
 
+## OpenDyslexic
+
+- [Free to use...](https://opendyslexic.org)
+
 ## Ubuntu
 
-- [UBUNTU FONT LICENCE Version 1.0](https://github.com/maheis/SimplePresent/blob/main/assets/fonts/UFL.txt)
+- [UBUNTU FONT LICENCE Version 1.0](https://github.com/maheis/SimplePresent/blob/main/assets/fonts/Ubuntu/UFL.txt)
+
+## Open Sans
+
+- [SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007](https://github.com/maheis/SimplePresent/blob/main/assets/fonts/Open_Sans/UFL.txt)
+- 
+## Noto Sans
+
+- [SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007](https://github.com/maheis/SimplePresent/blob/main/assets/fonts/Noto_Sans/UFL.txt)
+- 
+## Courier Prime
+
+- [SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007](https://github.com/maheis/SimplePresent/blob/main/assets/fonts/Courier_Prime/UFL.txt)
