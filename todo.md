@@ -106,11 +106,14 @@
 - [ ] Worklog an Aufgaben...
 - [ ] position, Größe und Zoom werden nicht korrekt geladen
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
-- [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.
-  - [ ] eigener api-server (hinter Apache Proxy)
-  - [ ] beschränkt auf x user die sich registrieren können (mail bei erreichen von 75%, 90% und 100% der Kapazität)
-  - [ ] wenn konto nicht länger als 30(!) tage nicht genutzt wird, soll der account archiviert werden und ein neuer platz frei werden (meldung an den anwender)
-  - [ ] ende zu ende verschlüsselung mit word-phrasen (qr-code für einfaches pairen)
+- [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren
+  - [ ] eigener api-server (optional hinter Apache Proxy) (linux only applikation in go?)
+  - [ ] registrierung soll automatisch und anonym erfolgen, man kann als server "maheis.de" auswählen oder eigene serveradresse eingeben (selfhosted)
+  - [ ] server registrierung serverseitig beschränkt auf x user (mail an den admin bei erreichen von 75%, 90% und 100% der Kapazität)
+  - [ ] wenn konto nicht länger als 30(konfigurierbar) tage nicht genutzt wird, soll der account archiviert werden und ein neuer platz frei werden 
+  - [ ] warnung 14/7 tage vor archivierung an den anwender (in app) und info bei registrierung das der account aktiv zu nutzen ist und nach 30 tagen nicht nutztung archiviert wird
+  - [ ] bei registrierung wird für den account eine word-phrasen erstellt und im account gespeichert (in app für den anwender sichtbar+qr-code). mit dieser wird der accoutn identifiziert, synchronisiert und verschlüsselt. 
+  - [ ] andere clients können mit word-phrase angebunden werden und synchronisieren (z.B. über QR-Code scannen oder manuell eingeben) 
 - [ ] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md)
 
 ## notes
