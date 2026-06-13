@@ -273,6 +273,14 @@ class _HomePageState extends State<HomePage> {
   bool _attentionFlashEnabled = true;
   bool _reminderSoundEnabled = true;
   bool _reminderNotifyEnabled = true;
+  bool _idleFlashEnabled = false;
+  bool _idleNotifyEnabled = false;
+  bool _idleBringToFrontEnabled = false;
+  bool _attentionNotifyEnabled = false;
+  bool _attentionBringToFrontEnabled = false;
+  bool _reminderFlashEnabled = false;
+  bool _reminderBringToFrontEnabled = false;
+  bool _urgentFlashEnabled = false;
   bool _urgentSoundEnabled = true;
   bool _urgentNotifyEnabled = true;
   bool _urgentBringToFrontEnabled = true;
@@ -591,12 +599,20 @@ class _HomePageState extends State<HomePage> {
         _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
         _urgentMinutes = readInt('urgentMinutes', _urgentMinutes);
         _idleSoundEnabled = readBool('idleSoundEnabled', _idleSoundEnabled);
+          _idleFlashEnabled = readBool('idleFlashEnabled', _idleFlashEnabled);
+          _idleNotifyEnabled = readBool('idleNotifyEnabled', _idleNotifyEnabled);
+          _idleBringToFrontEnabled = readBool('idleBringToFrontEnabled', _idleBringToFrontEnabled);
         _attentionSoundEnabled = readBool('attentionSoundEnabled', _attentionSoundEnabled);
         _attentionFlashEnabled = readBool('attentionFlashEnabled', _attentionFlashEnabled);
+          _attentionNotifyEnabled = readBool('attentionNotifyEnabled', _attentionNotifyEnabled);
+          _attentionBringToFrontEnabled = readBool('attentionBringToFrontEnabled', _attentionBringToFrontEnabled);
         _reminderSoundEnabled = readBool('reminderSoundEnabled', _reminderSoundEnabled);
         _reminderNotifyEnabled = readBool('reminderNotifyEnabled', _reminderNotifyEnabled);
+          _reminderFlashEnabled = readBool('reminderFlashEnabled', _reminderFlashEnabled);
+          _reminderBringToFrontEnabled = readBool('reminderBringToFrontEnabled', _reminderBringToFrontEnabled);
         _urgentSoundEnabled = readBool('urgentSoundEnabled', _urgentSoundEnabled);
         _urgentNotifyEnabled = readBool('urgentNotifyEnabled', _urgentNotifyEnabled);
+          _urgentFlashEnabled = readBool('urgentFlashEnabled', _urgentFlashEnabled);
         _urgentBringToFrontEnabled = readBool('urgentBringToFrontEnabled', _urgentBringToFrontEnabled);
         _swipeEnabled = readBool('swipeEnabled', _swipeEnabled);
       });
@@ -693,11 +709,19 @@ class _HomePageState extends State<HomePage> {
         'reminderMinutes': _reminderMinutes,
         'urgentMinutes': _urgentMinutes,
         'idleSoundEnabled': _idleSoundEnabled,
+        'idleFlashEnabled': _idleFlashEnabled,
+        'idleNotifyEnabled': _idleNotifyEnabled,
+        'idleBringToFrontEnabled': _idleBringToFrontEnabled,
         'attentionSoundEnabled': _attentionSoundEnabled,
         'attentionFlashEnabled': _attentionFlashEnabled,
+        'attentionNotifyEnabled': _attentionNotifyEnabled,
+        'attentionBringToFrontEnabled': _attentionBringToFrontEnabled,
         'reminderSoundEnabled': _reminderSoundEnabled,
         'reminderNotifyEnabled': _reminderNotifyEnabled,
+        'reminderFlashEnabled': _reminderFlashEnabled,
+        'reminderBringToFrontEnabled': _reminderBringToFrontEnabled,
         'urgentSoundEnabled': _urgentSoundEnabled,
+        'urgentFlashEnabled': _urgentFlashEnabled,
         'urgentNotifyEnabled': _urgentNotifyEnabled,
         'urgentBringToFrontEnabled': _urgentBringToFrontEnabled,
         'swipeEnabled': _swipeEnabled,
@@ -927,11 +951,19 @@ class _HomePageState extends State<HomePage> {
             'reminderMinutes': _reminderMinutes,
             'urgentMinutes': _urgentMinutes,
             'idleSoundEnabled': _idleSoundEnabled,
+            'idleFlashEnabled': _idleFlashEnabled,
+            'idleNotifyEnabled': _idleNotifyEnabled,
+            'idleBringToFrontEnabled': _idleBringToFrontEnabled,
             'attentionSoundEnabled': _attentionSoundEnabled,
             'attentionFlashEnabled': _attentionFlashEnabled,
+            'attentionNotifyEnabled': _attentionNotifyEnabled,
+            'attentionBringToFrontEnabled': _attentionBringToFrontEnabled,
             'reminderSoundEnabled': _reminderSoundEnabled,
             'reminderNotifyEnabled': _reminderNotifyEnabled,
+            'reminderFlashEnabled': _reminderFlashEnabled,
+            'reminderBringToFrontEnabled': _reminderBringToFrontEnabled,
             'urgentSoundEnabled': _urgentSoundEnabled,
+            'urgentFlashEnabled': _urgentFlashEnabled,
             'urgentNotifyEnabled': _urgentNotifyEnabled,
             'urgentBringToFrontEnabled': _urgentBringToFrontEnabled,
             'swipeEnabled': _swipeEnabled,
@@ -953,11 +985,19 @@ class _HomePageState extends State<HomePage> {
       _reminderMinutes = clampMin(result['reminderMinutes'], _reminderMinutes);
       _urgentMinutes = clampMin(result['urgentMinutes'], _urgentMinutes);
       _idleSoundEnabled = result['idleSoundEnabled'] == true;
+      _idleFlashEnabled = result['idleFlashEnabled'] == true;
+      _idleNotifyEnabled = result['idleNotifyEnabled'] == true;
+      _idleBringToFrontEnabled = result['idleBringToFrontEnabled'] == true;
       _attentionSoundEnabled = result['attentionSoundEnabled'] == true;
       _attentionFlashEnabled = result['attentionFlashEnabled'] == true;
+      _attentionNotifyEnabled = result['attentionNotifyEnabled'] == true;
+      _attentionBringToFrontEnabled = result['attentionBringToFrontEnabled'] == true;
       _reminderSoundEnabled = result['reminderSoundEnabled'] == true;
       _reminderNotifyEnabled = result['reminderNotifyEnabled'] == true;
+      _reminderFlashEnabled = result['reminderFlashEnabled'] == true;
+      _reminderBringToFrontEnabled = result['reminderBringToFrontEnabled'] == true;
       _urgentSoundEnabled = result['urgentSoundEnabled'] == true;
+      _urgentFlashEnabled = result['urgentFlashEnabled'] == true;
       _urgentNotifyEnabled = result['urgentNotifyEnabled'] == true;
       _urgentBringToFrontEnabled = result['urgentBringToFrontEnabled'] == true;
       _swipeEnabled = result['swipeEnabled'] == true;
@@ -1526,6 +1566,25 @@ class _HomePageState extends State<HomePage> {
           SystemSound.play(SystemSoundType.alert);
         }
       }
+      if (_idleFlashEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('flashTaskbar');
+        } catch (_) {}
+      }
+      if (_idleNotifyEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('notify', <String, String>{
+            'title': _appTitle,
+            'body': 'You have been inactive for $_idleMinutes minutes',
+            'icon': 'assets/icons/icon.png',
+          });
+        } catch (_) {}
+      }
+      if (_idleBringToFrontEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('bringToFront');
+        } catch (_) {}
+      }
       _idleFired = true;
       // do not auto-restart; wait for user activity to reset
     });
@@ -1544,6 +1603,20 @@ class _HomePageState extends State<HomePage> {
           await _nativeWindowChannel.invokeMethod('flashTaskbar');
         } catch (_) {}
       }
+      if (_attentionNotifyEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('notify', <String, String>{
+            'title': _appTitle,
+            'body': 'You have been inactive for $_attentionMinutes minutes',
+            'icon': 'assets/icons/icon.png',
+          });
+        } catch (_) {}
+      }
+      if (_attentionBringToFrontEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('bringToFront');
+        } catch (_) {}
+      }
       _attentionFired = true;
       // do not auto-restart; wait for user activity to reset
     });
@@ -1557,6 +1630,11 @@ class _HomePageState extends State<HomePage> {
           await _audioPlayer.play(AssetSource('sounds/there.mp3'));
         } catch (_) {}
       }
+      if (_reminderFlashEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('flashTaskbar');
+        } catch (_) {}
+      }
       if (_reminderNotifyEnabled) {
         try {
           await _nativeWindowChannel.invokeMethod('notify', <String, String>{
@@ -1564,6 +1642,11 @@ class _HomePageState extends State<HomePage> {
             'body': 'You have been inactive for $_reminderMinutes minutes',
             'icon': 'assets/icons/icon.png',
           });
+        } catch (_) {}
+      }
+      if (_reminderBringToFrontEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('bringToFront');
         } catch (_) {}
       }
       _reminderFired = true;
@@ -1577,6 +1660,11 @@ class _HomePageState extends State<HomePage> {
       if (_urgentSoundEnabled) {
         try {
           await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+        } catch (_) {}
+      }
+      if (_urgentFlashEnabled) {
+        try {
+          await _nativeWindowChannel.invokeMethod('flashTaskbar');
         } catch (_) {}
       }
       if (_urgentNotifyEnabled) {
@@ -2787,12 +2875,20 @@ class _SettingsPageState extends State<SettingsPage> {
   late int reminderMinutes;
   late int urgentMinutes;
   late bool idleSoundEnabled;
+  late bool idleFlashEnabled;
+  late bool idleNotifyEnabled;
+  late bool idleBringToFrontEnabled;
   late bool attentionSoundEnabled;
   late bool attentionFlashEnabled;
+  late bool attentionNotifyEnabled;
+  late bool attentionBringToFrontEnabled;
   late bool reminderSoundEnabled;
   late bool reminderNotifyEnabled;
+  late bool reminderFlashEnabled;
+  late bool reminderBringToFrontEnabled;
   late bool urgentSoundEnabled;
   late bool urgentNotifyEnabled;
+  late bool urgentFlashEnabled;
   late bool urgentBringToFrontEnabled;
   late bool swipeEnabled;
   late int _initialIdleMinutes;
@@ -2800,12 +2896,20 @@ class _SettingsPageState extends State<SettingsPage> {
   late int _initialReminderMinutes;
   late int _initialUrgentMinutes;
   late bool _initialIdleSoundEnabled;
+  late bool _initialIdleFlashEnabled;
+  late bool _initialIdleNotifyEnabled;
+  late bool _initialIdleBringToFrontEnabled;
   late bool _initialAttentionSoundEnabled;
   late bool _initialAttentionFlashEnabled;
+  late bool _initialAttentionNotifyEnabled;
+  late bool _initialAttentionBringToFrontEnabled;
   late bool _initialReminderSoundEnabled;
   late bool _initialReminderNotifyEnabled;
+  late bool _initialReminderFlashEnabled;
+  late bool _initialReminderBringToFrontEnabled;
   late bool _initialUrgentSoundEnabled;
   late bool _initialUrgentNotifyEnabled;
+  late bool _initialUrgentFlashEnabled;
   late bool _initialUrgentBringToFrontEnabled;
   late bool _initialSwipeEnabled;
 
@@ -2834,13 +2938,21 @@ class _SettingsPageState extends State<SettingsPage> {
     reminderMinutes = readInt('reminderMinutes', 75).clamp(1, 720);
     urgentMinutes = readInt('urgentMinutes', 90).clamp(1, 720);
     idleSoundEnabled = readBool('idleSoundEnabled', true);
+    idleFlashEnabled = readBool('idleFlashEnabled', false);
+    idleNotifyEnabled = readBool('idleNotifyEnabled', false);
+    idleBringToFrontEnabled = readBool('idleBringToFrontEnabled', false);
     attentionSoundEnabled = readBool('attentionSoundEnabled', true);
     attentionFlashEnabled = readBool('attentionFlashEnabled', true);
+    attentionNotifyEnabled = readBool('attentionNotifyEnabled', false);
+    attentionBringToFrontEnabled = readBool('attentionBringToFrontEnabled', false);
     reminderSoundEnabled = readBool('reminderSoundEnabled', true);
     reminderNotifyEnabled = readBool('reminderNotifyEnabled', true);
+    reminderFlashEnabled = readBool('reminderFlashEnabled', false);
+    reminderBringToFrontEnabled = readBool('reminderBringToFrontEnabled', false);
     urgentSoundEnabled = readBool('urgentSoundEnabled', true);
     urgentNotifyEnabled = readBool('urgentNotifyEnabled', true);
     urgentBringToFrontEnabled = readBool('urgentBringToFrontEnabled', true);
+    urgentFlashEnabled = readBool('urgentFlashEnabled', false);
     swipeEnabled = readBool('swipeEnabled', true);
     // Save initial values to detect changes
     _initialIdleMinutes = idleMinutes;
@@ -2848,12 +2960,20 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialReminderMinutes = reminderMinutes;
     _initialUrgentMinutes = urgentMinutes;
     _initialIdleSoundEnabled = idleSoundEnabled;
+    _initialIdleFlashEnabled = idleFlashEnabled;
+    _initialIdleNotifyEnabled = idleNotifyEnabled;
+    _initialIdleBringToFrontEnabled = idleBringToFrontEnabled;
     _initialAttentionSoundEnabled = attentionSoundEnabled;
     _initialAttentionFlashEnabled = attentionFlashEnabled;
+    _initialAttentionNotifyEnabled = attentionNotifyEnabled;
+    _initialAttentionBringToFrontEnabled = attentionBringToFrontEnabled;
     _initialReminderSoundEnabled = reminderSoundEnabled;
     _initialReminderNotifyEnabled = reminderNotifyEnabled;
+    _initialReminderFlashEnabled = reminderFlashEnabled;
+    _initialReminderBringToFrontEnabled = reminderBringToFrontEnabled;
     _initialUrgentSoundEnabled = urgentSoundEnabled;
     _initialUrgentNotifyEnabled = urgentNotifyEnabled;
+    _initialUrgentFlashEnabled = urgentFlashEnabled;
     _initialUrgentBringToFrontEnabled = urgentBringToFrontEnabled;
     _initialSwipeEnabled = swipeEnabled;
   }
@@ -2864,11 +2984,19 @@ class _SettingsPageState extends State<SettingsPage> {
         reminderMinutes != _initialReminderMinutes ||
         urgentMinutes != _initialUrgentMinutes ||
         idleSoundEnabled != _initialIdleSoundEnabled ||
+      idleFlashEnabled != _initialIdleFlashEnabled ||
+      idleNotifyEnabled != _initialIdleNotifyEnabled ||
+      idleBringToFrontEnabled != _initialIdleBringToFrontEnabled ||
         attentionSoundEnabled != _initialAttentionSoundEnabled ||
         attentionFlashEnabled != _initialAttentionFlashEnabled ||
+      attentionNotifyEnabled != _initialAttentionNotifyEnabled ||
+      attentionBringToFrontEnabled != _initialAttentionBringToFrontEnabled ||
         reminderSoundEnabled != _initialReminderSoundEnabled ||
         reminderNotifyEnabled != _initialReminderNotifyEnabled ||
+      reminderFlashEnabled != _initialReminderFlashEnabled ||
+      reminderBringToFrontEnabled != _initialReminderBringToFrontEnabled ||
         urgentSoundEnabled != _initialUrgentSoundEnabled ||
+      urgentFlashEnabled != _initialUrgentFlashEnabled ||
         urgentNotifyEnabled != _initialUrgentNotifyEnabled ||
         urgentBringToFrontEnabled != _initialUrgentBringToFrontEnabled ||
         swipeEnabled != _initialSwipeEnabled;
@@ -2891,11 +3019,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 'reminderMinutes': safe(reminderMinutes),
                 'urgentMinutes': safe(urgentMinutes),
                 'idleSoundEnabled': idleSoundEnabled,
+                'idleFlashEnabled': idleFlashEnabled,
+                'idleNotifyEnabled': idleNotifyEnabled,
+                'idleBringToFrontEnabled': idleBringToFrontEnabled,
                 'attentionSoundEnabled': attentionSoundEnabled,
                 'attentionFlashEnabled': attentionFlashEnabled,
+                'attentionNotifyEnabled': attentionNotifyEnabled,
+                'attentionBringToFrontEnabled': attentionBringToFrontEnabled,
                 'reminderSoundEnabled': reminderSoundEnabled,
                 'reminderNotifyEnabled': reminderNotifyEnabled,
+                'reminderFlashEnabled': reminderFlashEnabled,
+                'reminderBringToFrontEnabled': reminderBringToFrontEnabled,
                 'urgentSoundEnabled': urgentSoundEnabled,
+                'urgentFlashEnabled': urgentFlashEnabled,
                 'urgentNotifyEnabled': urgentNotifyEnabled,
                 'urgentBringToFrontEnabled': urgentBringToFrontEnabled,
                 'swipeEnabled': swipeEnabled,
@@ -2922,6 +3058,12 @@ class _SettingsPageState extends State<SettingsPage> {
             onMinutesChanged: (v) => setState(() => idleMinutes = safe(v)),
             soundEnabled: idleSoundEnabled,
             onSoundChanged: (v) => setState(() => idleSoundEnabled = v),
+            flashEnabled: idleFlashEnabled,
+            onFlashChanged: (v) => setState(() => idleFlashEnabled = v),
+            notifyEnabled: idleNotifyEnabled,
+            onNotifyChanged: (v) => setState(() => idleNotifyEnabled = v),
+            bringToFrontEnabled: idleBringToFrontEnabled,
+            onBringToFrontChanged: (v) => setState(() => idleBringToFrontEnabled = v),
           ),
           _ReminderStageCard(
             title: '60 min',
@@ -2931,6 +3073,10 @@ class _SettingsPageState extends State<SettingsPage> {
             onSoundChanged: (v) => setState(() => attentionSoundEnabled = v),
             flashEnabled: attentionFlashEnabled,
             onFlashChanged: (v) => setState(() => attentionFlashEnabled = v),
+            notifyEnabled: attentionNotifyEnabled,
+            onNotifyChanged: (v) => setState(() => attentionNotifyEnabled = v),
+            bringToFrontEnabled: attentionBringToFrontEnabled,
+            onBringToFrontChanged: (v) => setState(() => attentionBringToFrontEnabled = v),
           ),
           _ReminderStageCard(
             title: '75 min',
@@ -2938,8 +3084,12 @@ class _SettingsPageState extends State<SettingsPage> {
             onMinutesChanged: (v) => setState(() => reminderMinutes = safe(v)),
             soundEnabled: reminderSoundEnabled,
             onSoundChanged: (v) => setState(() => reminderSoundEnabled = v),
+            flashEnabled: reminderFlashEnabled,
+            onFlashChanged: (v) => setState(() => reminderFlashEnabled = v),
             notifyEnabled: reminderNotifyEnabled,
             onNotifyChanged: (v) => setState(() => reminderNotifyEnabled = v),
+            bringToFrontEnabled: reminderBringToFrontEnabled,
+            onBringToFrontChanged: (v) => setState(() => reminderBringToFrontEnabled = v),
           ),
           _ReminderStageCard(
             title: '90 min',
@@ -2947,6 +3097,8 @@ class _SettingsPageState extends State<SettingsPage> {
             onMinutesChanged: (v) => setState(() => urgentMinutes = safe(v)),
             soundEnabled: urgentSoundEnabled,
             onSoundChanged: (v) => setState(() => urgentSoundEnabled = v),
+            flashEnabled: urgentFlashEnabled,
+            onFlashChanged: (v) => setState(() => urgentFlashEnabled = v),
             notifyEnabled: urgentNotifyEnabled,
             onNotifyChanged: (v) => setState(() => urgentNotifyEnabled = v),
             bringToFrontEnabled: urgentBringToFrontEnabled,
@@ -2974,12 +3126,12 @@ class _ReminderStageCard extends StatelessWidget {
     required this.onMinutesChanged,
     required this.soundEnabled,
     required this.onSoundChanged,
-    this.flashEnabled,
-    this.onFlashChanged,
-    this.notifyEnabled,
-    this.onNotifyChanged,
-    this.bringToFrontEnabled,
-    this.onBringToFrontChanged,
+    required this.flashEnabled,
+    required this.onFlashChanged,
+    required this.notifyEnabled,
+    required this.onNotifyChanged,
+    required this.bringToFrontEnabled,
+    required this.onBringToFrontChanged,
   });
 
   final String title;
@@ -2987,12 +3139,12 @@ class _ReminderStageCard extends StatelessWidget {
   final ValueChanged<int> onMinutesChanged;
   final bool soundEnabled;
   final ValueChanged<bool> onSoundChanged;
-  final bool? flashEnabled;
-  final ValueChanged<bool>? onFlashChanged;
-  final bool? notifyEnabled;
-  final ValueChanged<bool>? onNotifyChanged;
-  final bool? bringToFrontEnabled;
-  final ValueChanged<bool>? onBringToFrontChanged;
+  final bool flashEnabled;
+  final ValueChanged<bool> onFlashChanged;
+  final bool notifyEnabled;
+  final ValueChanged<bool> onNotifyChanged;
+  final bool bringToFrontEnabled;
+  final ValueChanged<bool> onBringToFrontChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -3033,24 +3185,21 @@ class _ReminderStageCard extends StatelessWidget {
                   selected: soundEnabled,
                   onSelected: onSoundChanged,
                 ),
-                if (flashEnabled != null && onFlashChanged != null)
-                  FilterChip(
-                    label: const Text('Flash'),
-                    selected: flashEnabled!,
-                    onSelected: onFlashChanged,
-                  ),
-                if (notifyEnabled != null && onNotifyChanged != null)
-                  FilterChip(
-                    label: const Text('Notification'),
-                    selected: notifyEnabled!,
-                    onSelected: onNotifyChanged,
-                  ),
-                if (bringToFrontEnabled != null && onBringToFrontChanged != null)
-                  FilterChip(
-                    label: const Text('Bring to front'),
-                    selected: bringToFrontEnabled!,
-                    onSelected: onBringToFrontChanged,
-                  ),
+                FilterChip(
+                  label: const Text('Flash'),
+                  selected: flashEnabled,
+                  onSelected: onFlashChanged,
+                ),
+                FilterChip(
+                  label: const Text('Notification'),
+                  selected: notifyEnabled,
+                  onSelected: onNotifyChanged,
+                ),
+                FilterChip(
+                  label: const Text('Bring to front'),
+                  selected: bringToFrontEnabled,
+                  onSelected: onBringToFrontChanged,
+                ),
               ],
             ),
           ],
