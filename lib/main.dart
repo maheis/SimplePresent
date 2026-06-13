@@ -3009,7 +3009,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('settings'),
+        title: const Text('Settings'),
         actions: [
           TextButton(
             onPressed: () {
@@ -3038,7 +3038,7 @@ class _SettingsPageState extends State<SettingsPage> {
               });
             },
             child: Text(
-              'save',
+              'Save',
               style: TextStyle(
                 color: hasChanges ? Colors.red : null,
                 fontWeight: hasChanges ? FontWeight.bold : FontWeight.normal,
@@ -3050,7 +3050,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
-          const Text('inactivity reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text('Inactivity reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           _ReminderStageCard(
             title: '45 min',
@@ -3109,8 +3109,8 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 8),
           SwitchListTile(
             value: swipeEnabled,
-            title: const Text('swipe actions enabled'),
-            subtitle: const Text('if disabled, swipe gestures on task rows are turned off.'),
+            title: const Text('Swipe actions enabled'),
+            subtitle: const Text('If disabled, swipe gestures on task rows are turned off.'),
             onChanged: (v) => setState(() => swipeEnabled = v),
           ),
         ],
@@ -3154,12 +3154,12 @@ class _ReminderStageCard extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
-                const Text('minutes:'),
+                const Text('Minutes:'),
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 100,
@@ -3181,22 +3181,22 @@ class _ReminderStageCard extends StatelessWidget {
               runSpacing: 0,
               children: [
                 FilterChip(
-                  label: const Text('sound'),
+                  label: const Text('Sound'),
                   selected: soundEnabled,
                   onSelected: onSoundChanged,
                 ),
                 FilterChip(
-                  label: const Text('flash'),
+                  label: const Text('Flash'),
                   selected: flashEnabled,
                   onSelected: onFlashChanged,
                 ),
                 FilterChip(
-                  label: const Text('notification'),
+                  label: const Text('Notification'),
                   selected: notifyEnabled,
                   onSelected: onNotifyChanged,
                 ),
                 FilterChip(
-                  label: const Text('bring to front'),
+                  label: const Text('Bring to front'),
                   selected: bringToFrontEnabled,
                   onSelected: onBringToFrontChanged,
                 ),
