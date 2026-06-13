@@ -262,12 +262,21 @@ class _HomePageState extends State<HomePage> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   Timer? _idleTimer;
   Timer? _attentionTimer;
-  final Duration _idleDuration = const Duration(minutes: 45);
-  final Duration _attentionDuration = const Duration(minutes: 60);
+  int _idleMinutes = 45;
+  int _attentionMinutes = 60;
   Timer? _reminderTimer;
-  final Duration _reminderDuration = const Duration(minutes: 75);
+  int _reminderMinutes = 75;
   Timer? _urgentTimer;
-  final Duration _urgentDuration = const Duration(minutes: 90);
+  int _urgentMinutes = 90;
+  bool _idleSoundEnabled = true;
+  bool _attentionSoundEnabled = true;
+  bool _attentionFlashEnabled = true;
+  bool _reminderSoundEnabled = true;
+  bool _reminderNotifyEnabled = true;
+  bool _urgentSoundEnabled = true;
+  bool _urgentNotifyEnabled = true;
+  bool _urgentBringToFrontEnabled = true;
+  bool _swipeEnabled = true;
   // Fired flags to ensure each reminder type fires only once per inactivity period
   bool _idleFired = false;
   bool _attentionFired = false;
@@ -299,6 +308,11 @@ class _HomePageState extends State<HomePage> {
   double _fontScaleStart = 1.0;
   bool _alwaysOnTop = false;
   final String _appTitle = 'SimplePresent';
+
+  Duration get _idleDuration => Duration(minutes: _idleMinutes.clamp(1, 720));
+  Duration get _attentionDuration => Duration(minutes: _attentionMinutes.clamp(1, 720));
+  Duration get _reminderDuration => Duration(minutes: _reminderMinutes.clamp(1, 720));
+  Duration get _urgentDuration => Duration(minutes: _urgentMinutes.clamp(1, 720));
 
   double _fontScaleForTileHeight(double tileHeight) {
     if (tileHeight >= 1.0) return 1.0;
@@ -541,6 +555,23 @@ class _HomePageState extends State<HomePage> {
       final f = await _fileFor(_storage('simplepresent_settings.json'));
       if (!await f.exists()) return;
       final data = jsonDecode(await f.readAsString()) as Map<String, dynamic>;
+      int readInt(String key, int fallback) {
+        final v = data[key];
+        if (v is int) return v;
+        if (v is num) return v.toInt();
+        return int.tryParse(v?.toString() ?? '') ?? fallback;
+      }
+
+      bool readBool(String key, bool fallback) {
+        final v = data[key];
+        if (v is bool) return v;
+        if (v is num) return v != 0;
+        final s = (v?.toString() ?? '').toLowerCase();
+        if (s == 'true' || s == '1' || s == 'yes') return true;
+        if (s == 'false' || s == '0' || s == 'no') return false;
+        return fallback;
+      }
+
       if (data.containsKey('tileHeight')) {
         final v = data['tileHeight'];
         if (v is num) {
@@ -555,6 +586,19 @@ class _HomePageState extends State<HomePage> {
       }
       setState(() {
         _fontScale = _fontScaleForTileHeight(_tileHeight);
+        _idleMinutes = readInt('idleMinutes', _idleMinutes);
+        _attentionMinutes = readInt('attentionMinutes', _attentionMinutes);
+        _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
+        _urgentMinutes = readInt('urgentMinutes', _urgentMinutes);
+        _idleSoundEnabled = readBool('idleSoundEnabled', _idleSoundEnabled);
+        _attentionSoundEnabled = readBool('attentionSoundEnabled', _attentionSoundEnabled);
+        _attentionFlashEnabled = readBool('attentionFlashEnabled', _attentionFlashEnabled);
+        _reminderSoundEnabled = readBool('reminderSoundEnabled', _reminderSoundEnabled);
+        _reminderNotifyEnabled = readBool('reminderNotifyEnabled', _reminderNotifyEnabled);
+        _urgentSoundEnabled = readBool('urgentSoundEnabled', _urgentSoundEnabled);
+        _urgentNotifyEnabled = readBool('urgentNotifyEnabled', _urgentNotifyEnabled);
+        _urgentBringToFrontEnabled = readBool('urgentBringToFrontEnabled', _urgentBringToFrontEnabled);
+        _swipeEnabled = readBool('swipeEnabled', _swipeEnabled);
       });
       if (data.containsKey('window')) {
         try {
@@ -641,7 +685,23 @@ class _HomePageState extends State<HomePage> {
   Future<void> _saveSettingsWithGeom(Map<String, dynamic>? geom) async {
     try {
       final f = await _fileFor(_storage('simplepresent_settings.json'));
-      final out = <String, dynamic>{'tileHeight': _tileHeight, 'fontScale': _fontScale};
+      final out = <String, dynamic>{
+        'tileHeight': _tileHeight,
+        'fontScale': _fontScale,
+        'idleMinutes': _idleMinutes,
+        'attentionMinutes': _attentionMinutes,
+        'reminderMinutes': _reminderMinutes,
+        'urgentMinutes': _urgentMinutes,
+        'idleSoundEnabled': _idleSoundEnabled,
+        'attentionSoundEnabled': _attentionSoundEnabled,
+        'attentionFlashEnabled': _attentionFlashEnabled,
+        'reminderSoundEnabled': _reminderSoundEnabled,
+        'reminderNotifyEnabled': _reminderNotifyEnabled,
+        'urgentSoundEnabled': _urgentSoundEnabled,
+        'urgentNotifyEnabled': _urgentNotifyEnabled,
+        'urgentBringToFrontEnabled': _urgentBringToFrontEnabled,
+        'swipeEnabled': _swipeEnabled,
+      };
       // Preserve lastRunDate if present in existing settings so daily-reset runs only once per day
       try {
         if (await f.exists()) {
@@ -855,6 +915,57 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => StatsPage(doneList: normalized)));
+  }
+
+  Future<void> _openSettings() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (ctx) => SettingsPage(
+          initial: <String, dynamic>{
+            'idleMinutes': _idleMinutes,
+            'attentionMinutes': _attentionMinutes,
+            'reminderMinutes': _reminderMinutes,
+            'urgentMinutes': _urgentMinutes,
+            'idleSoundEnabled': _idleSoundEnabled,
+            'attentionSoundEnabled': _attentionSoundEnabled,
+            'attentionFlashEnabled': _attentionFlashEnabled,
+            'reminderSoundEnabled': _reminderSoundEnabled,
+            'reminderNotifyEnabled': _reminderNotifyEnabled,
+            'urgentSoundEnabled': _urgentSoundEnabled,
+            'urgentNotifyEnabled': _urgentNotifyEnabled,
+            'urgentBringToFrontEnabled': _urgentBringToFrontEnabled,
+            'swipeEnabled': _swipeEnabled,
+          },
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    int clampMin(dynamic v, int fallback) {
+      final parsed = (v is int) ? v : int.tryParse(v?.toString() ?? '');
+      if (parsed == null) return fallback;
+      return parsed.clamp(1, 720);
+    }
+
+    setState(() {
+      _idleMinutes = clampMin(result['idleMinutes'], _idleMinutes);
+      _attentionMinutes = clampMin(result['attentionMinutes'], _attentionMinutes);
+      _reminderMinutes = clampMin(result['reminderMinutes'], _reminderMinutes);
+      _urgentMinutes = clampMin(result['urgentMinutes'], _urgentMinutes);
+      _idleSoundEnabled = result['idleSoundEnabled'] == true;
+      _attentionSoundEnabled = result['attentionSoundEnabled'] == true;
+      _attentionFlashEnabled = result['attentionFlashEnabled'] == true;
+      _reminderSoundEnabled = result['reminderSoundEnabled'] == true;
+      _reminderNotifyEnabled = result['reminderNotifyEnabled'] == true;
+      _urgentSoundEnabled = result['urgentSoundEnabled'] == true;
+      _urgentNotifyEnabled = result['urgentNotifyEnabled'] == true;
+      _urgentBringToFrontEnabled = result['urgentBringToFrontEnabled'] == true;
+      _swipeEnabled = result['swipeEnabled'] == true;
+    });
+
+    _registerActivity();
+    await _saveSettings();
+    _showTopToast('settings saved');
   }
 
   void _toggleExpanded(int index) {
@@ -1408,10 +1519,12 @@ class _HomePageState extends State<HomePage> {
   void _startIdleTimer() {
     _idleTimer = Timer(_idleDuration, () async {
       if (_idleFired) return;
-      try {
-        await _audioPlayer.play(AssetSource('sounds/there.mp3'));
-      } catch (_) {
-        SystemSound.play(SystemSoundType.alert);
+      if (_idleSoundEnabled) {
+        try {
+          await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+        } catch (_) {
+          SystemSound.play(SystemSoundType.alert);
+        }
       }
       _idleFired = true;
       // do not auto-restart; wait for user activity to reset
@@ -1421,13 +1534,15 @@ class _HomePageState extends State<HomePage> {
   void _startAttentionTimer() {
     _attentionTimer = Timer(_attentionDuration, () async {
       if (_attentionFired) return;
-      try {
-        await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+      if (_attentionSoundEnabled) {
+        try {
+          await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+        } catch (_) {}
+      }
+      if (_attentionFlashEnabled) {
         try {
           await _nativeWindowChannel.invokeMethod('flashTaskbar');
         } catch (_) {}
-      } catch (_) {
-        SystemSound.play(SystemSoundType.alert);
       }
       _attentionFired = true;
       // do not auto-restart; wait for user activity to reset
@@ -1437,17 +1552,19 @@ class _HomePageState extends State<HomePage> {
   void _startReminderTimer() {
     _reminderTimer = Timer(_reminderDuration, () async {
       if (_reminderFired) return;
-      try {
-        await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+      if (_reminderSoundEnabled) {
+        try {
+          await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+        } catch (_) {}
+      }
+      if (_reminderNotifyEnabled) {
         try {
           await _nativeWindowChannel.invokeMethod('notify', <String, String>{
             'title': _appTitle,
-            'body': 'You have been inactive for 75 minutes',
+            'body': 'You have been inactive for $_reminderMinutes minutes',
             'icon': 'assets/icons/icon.png',
           });
         } catch (_) {}
-      } catch (_) {
-        SystemSound.play(SystemSoundType.alert);
       }
       _reminderFired = true;
       // do not auto-restart; wait for user activity to reset
@@ -1457,20 +1574,24 @@ class _HomePageState extends State<HomePage> {
   void _startUrgentTimer() {
     _urgentTimer = Timer(_urgentDuration, () async {
       if (_urgentFired) return;
-      try {
-        await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+      if (_urgentSoundEnabled) {
+        try {
+          await _audioPlayer.play(AssetSource('sounds/there.mp3'));
+        } catch (_) {}
+      }
+      if (_urgentNotifyEnabled) {
         try {
           await _nativeWindowChannel.invokeMethod('notify', <String, String>{
             'title': _appTitle,
-            'body': 'You have been inactive for 90 minutes',
+            'body': 'You have been inactive for $_urgentMinutes minutes',
             'icon': 'assets/icons/icon.png',
           });
         } catch (_) {}
+      }
+      if (_urgentBringToFrontEnabled) {
         try {
           await _nativeWindowChannel.invokeMethod('bringToFront');
         } catch (_) {}
-      } catch (_) {
-        SystemSound.play(SystemSoundType.alert);
       }
       _urgentFired = true;
       // do not auto-restart; wait for user activity to reset
@@ -1617,6 +1738,16 @@ class _HomePageState extends State<HomePage> {
                                   visualDensity: VisualDensity.compact,
                                   onPressed: () async {
                                     await _openStats();
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.settings),
+                                  tooltip: 'Settings',
+                                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () async {
+                                    await _openSettings();
                                   },
                                 ),
                                 (Platform.isWindows)
@@ -1956,9 +2087,11 @@ class _HomePageState extends State<HomePage> {
                                             );
                                             return shouldDelete == true;
                                           },
-                                          direction: !task.done
-                                              ? DismissDirection.horizontal
-                                              : DismissDirection.endToStart,
+                                            direction: _swipeEnabled
+                                              ? (!task.done
+                                                ? DismissDirection.horizontal
+                                                : DismissDirection.endToStart)
+                                              : DismissDirection.none,
                                           onDismissed: (_) =>
                                               _removeFromToday(i),
                                           child: Column(
@@ -2637,6 +2770,294 @@ class StatsPage extends StatefulWidget {
   final List<TaskItem> doneList;
   @override
   State<StatsPage> createState() => _StatsPageState();
+}
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key, required this.initial});
+
+  final Map<String, dynamic> initial;
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  late int idleMinutes;
+  late int attentionMinutes;
+  late int reminderMinutes;
+  late int urgentMinutes;
+  late bool idleSoundEnabled;
+  late bool attentionSoundEnabled;
+  late bool attentionFlashEnabled;
+  late bool reminderSoundEnabled;
+  late bool reminderNotifyEnabled;
+  late bool urgentSoundEnabled;
+  late bool urgentNotifyEnabled;
+  late bool urgentBringToFrontEnabled;
+  late bool swipeEnabled;
+  late int _initialIdleMinutes;
+  late int _initialAttentionMinutes;
+  late int _initialReminderMinutes;
+  late int _initialUrgentMinutes;
+  late bool _initialIdleSoundEnabled;
+  late bool _initialAttentionSoundEnabled;
+  late bool _initialAttentionFlashEnabled;
+  late bool _initialReminderSoundEnabled;
+  late bool _initialReminderNotifyEnabled;
+  late bool _initialUrgentSoundEnabled;
+  late bool _initialUrgentNotifyEnabled;
+  late bool _initialUrgentBringToFrontEnabled;
+  late bool _initialSwipeEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    int readInt(String key, int fallback) {
+      final v = widget.initial[key];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '') ?? fallback;
+    }
+
+    bool readBool(String key, bool fallback) {
+      final v = widget.initial[key];
+      if (v is bool) return v;
+      if (v is num) return v != 0;
+      final s = (v?.toString() ?? '').toLowerCase();
+      if (s == 'true' || s == '1' || s == 'yes') return true;
+      if (s == 'false' || s == '0' || s == 'no') return false;
+      return fallback;
+    }
+
+    idleMinutes = readInt('idleMinutes', 45).clamp(1, 720);
+    attentionMinutes = readInt('attentionMinutes', 60).clamp(1, 720);
+    reminderMinutes = readInt('reminderMinutes', 75).clamp(1, 720);
+    urgentMinutes = readInt('urgentMinutes', 90).clamp(1, 720);
+    idleSoundEnabled = readBool('idleSoundEnabled', true);
+    attentionSoundEnabled = readBool('attentionSoundEnabled', true);
+    attentionFlashEnabled = readBool('attentionFlashEnabled', true);
+    reminderSoundEnabled = readBool('reminderSoundEnabled', true);
+    reminderNotifyEnabled = readBool('reminderNotifyEnabled', true);
+    urgentSoundEnabled = readBool('urgentSoundEnabled', true);
+    urgentNotifyEnabled = readBool('urgentNotifyEnabled', true);
+    urgentBringToFrontEnabled = readBool('urgentBringToFrontEnabled', true);
+    swipeEnabled = readBool('swipeEnabled', true);
+    // Save initial values to detect changes
+    _initialIdleMinutes = idleMinutes;
+    _initialAttentionMinutes = attentionMinutes;
+    _initialReminderMinutes = reminderMinutes;
+    _initialUrgentMinutes = urgentMinutes;
+    _initialIdleSoundEnabled = idleSoundEnabled;
+    _initialAttentionSoundEnabled = attentionSoundEnabled;
+    _initialAttentionFlashEnabled = attentionFlashEnabled;
+    _initialReminderSoundEnabled = reminderSoundEnabled;
+    _initialReminderNotifyEnabled = reminderNotifyEnabled;
+    _initialUrgentSoundEnabled = urgentSoundEnabled;
+    _initialUrgentNotifyEnabled = urgentNotifyEnabled;
+    _initialUrgentBringToFrontEnabled = urgentBringToFrontEnabled;
+    _initialSwipeEnabled = swipeEnabled;
+  }
+
+  bool _hasChanges() {
+    return idleMinutes != _initialIdleMinutes ||
+        attentionMinutes != _initialAttentionMinutes ||
+        reminderMinutes != _initialReminderMinutes ||
+        urgentMinutes != _initialUrgentMinutes ||
+        idleSoundEnabled != _initialIdleSoundEnabled ||
+        attentionSoundEnabled != _initialAttentionSoundEnabled ||
+        attentionFlashEnabled != _initialAttentionFlashEnabled ||
+        reminderSoundEnabled != _initialReminderSoundEnabled ||
+        reminderNotifyEnabled != _initialReminderNotifyEnabled ||
+        urgentSoundEnabled != _initialUrgentSoundEnabled ||
+        urgentNotifyEnabled != _initialUrgentNotifyEnabled ||
+        urgentBringToFrontEnabled != _initialUrgentBringToFrontEnabled ||
+        swipeEnabled != _initialSwipeEnabled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    int safe(int v) => v.clamp(1, 720);
+    final hasChanges = _hasChanges();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(<String, dynamic>{
+                'idleMinutes': safe(idleMinutes),
+                'attentionMinutes': safe(attentionMinutes),
+                'reminderMinutes': safe(reminderMinutes),
+                'urgentMinutes': safe(urgentMinutes),
+                'idleSoundEnabled': idleSoundEnabled,
+                'attentionSoundEnabled': attentionSoundEnabled,
+                'attentionFlashEnabled': attentionFlashEnabled,
+                'reminderSoundEnabled': reminderSoundEnabled,
+                'reminderNotifyEnabled': reminderNotifyEnabled,
+                'urgentSoundEnabled': urgentSoundEnabled,
+                'urgentNotifyEnabled': urgentNotifyEnabled,
+                'urgentBringToFrontEnabled': urgentBringToFrontEnabled,
+                'swipeEnabled': swipeEnabled,
+              });
+            },
+            child: Text(
+              'Save',
+              style: TextStyle(
+                color: hasChanges ? Colors.red : null,
+                fontWeight: hasChanges ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          const Text('Inactivity reminders', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _ReminderStageCard(
+            title: '45 min',
+            minutes: idleMinutes,
+            onMinutesChanged: (v) => setState(() => idleMinutes = safe(v)),
+            soundEnabled: idleSoundEnabled,
+            onSoundChanged: (v) => setState(() => idleSoundEnabled = v),
+          ),
+          _ReminderStageCard(
+            title: '60 min',
+            minutes: attentionMinutes,
+            onMinutesChanged: (v) => setState(() => attentionMinutes = safe(v)),
+            soundEnabled: attentionSoundEnabled,
+            onSoundChanged: (v) => setState(() => attentionSoundEnabled = v),
+            flashEnabled: attentionFlashEnabled,
+            onFlashChanged: (v) => setState(() => attentionFlashEnabled = v),
+          ),
+          _ReminderStageCard(
+            title: '75 min',
+            minutes: reminderMinutes,
+            onMinutesChanged: (v) => setState(() => reminderMinutes = safe(v)),
+            soundEnabled: reminderSoundEnabled,
+            onSoundChanged: (v) => setState(() => reminderSoundEnabled = v),
+            notifyEnabled: reminderNotifyEnabled,
+            onNotifyChanged: (v) => setState(() => reminderNotifyEnabled = v),
+          ),
+          _ReminderStageCard(
+            title: '90 min',
+            minutes: urgentMinutes,
+            onMinutesChanged: (v) => setState(() => urgentMinutes = safe(v)),
+            soundEnabled: urgentSoundEnabled,
+            onSoundChanged: (v) => setState(() => urgentSoundEnabled = v),
+            notifyEnabled: urgentNotifyEnabled,
+            onNotifyChanged: (v) => setState(() => urgentNotifyEnabled = v),
+            bringToFrontEnabled: urgentBringToFrontEnabled,
+            onBringToFrontChanged: (v) => setState(() => urgentBringToFrontEnabled = v),
+          ),
+          const SizedBox(height: 8),
+          const Divider(),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            value: swipeEnabled,
+            title: const Text('Swipe actions enabled'),
+            subtitle: const Text('If disabled, swipe gestures on task rows are turned off.'),
+            onChanged: (v) => setState(() => swipeEnabled = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReminderStageCard extends StatelessWidget {
+  const _ReminderStageCard({
+    required this.title,
+    required this.minutes,
+    required this.onMinutesChanged,
+    required this.soundEnabled,
+    required this.onSoundChanged,
+    this.flashEnabled,
+    this.onFlashChanged,
+    this.notifyEnabled,
+    this.onNotifyChanged,
+    this.bringToFrontEnabled,
+    this.onBringToFrontChanged,
+  });
+
+  final String title;
+  final int minutes;
+  final ValueChanged<int> onMinutesChanged;
+  final bool soundEnabled;
+  final ValueChanged<bool> onSoundChanged;
+  final bool? flashEnabled;
+  final ValueChanged<bool>? onFlashChanged;
+  final bool? notifyEnabled;
+  final ValueChanged<bool>? onNotifyChanged;
+  final bool? bringToFrontEnabled;
+  final ValueChanged<bool>? onBringToFrontChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Text('Minutes:'),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 100,
+                  child: TextFormField(
+                    initialValue: minutes.toString(),
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+                    onChanged: (v) {
+                      final parsed = int.tryParse(v);
+                      if (parsed != null) onMinutesChanged(parsed.clamp(1, 720));
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 0,
+              children: [
+                FilterChip(
+                  label: const Text('Sound'),
+                  selected: soundEnabled,
+                  onSelected: onSoundChanged,
+                ),
+                if (flashEnabled != null && onFlashChanged != null)
+                  FilterChip(
+                    label: const Text('Flash'),
+                    selected: flashEnabled!,
+                    onSelected: onFlashChanged,
+                  ),
+                if (notifyEnabled != null && onNotifyChanged != null)
+                  FilterChip(
+                    label: const Text('Notification'),
+                    selected: notifyEnabled!,
+                    onSelected: onNotifyChanged,
+                  ),
+                if (bringToFrontEnabled != null && onBringToFrontChanged != null)
+                  FilterChip(
+                    label: const Text('Bring to front'),
+                    selected: bringToFrontEnabled!,
+                    onSelected: onBringToFrontChanged,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _StatsPageState extends State<StatsPage> {

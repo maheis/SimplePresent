@@ -93,8 +93,8 @@
     Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
     Die Lösung: Card(clipBehavior: Clip.hardEdge) umschließt jetzt ein SizedBox(height: _tileHeight). Damit wird die Zeile auf genau _tileHeight Pixel abgeschnitten — egal was ListTile, Icons oder Padding intern beanspruchen. Die Icons können also in ihrer ursprünglichen Größe bleiben und müssen nicht mitskalieren.
 - [ ] position, Größe und Zoom werden nicht korrekt geladen
-- [ ] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
-- [ ] Swipe Optional machen!
+- [x] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
+- [x] Swipe Optional machen!
 - [ ] Android APK Testen
   - [x] icon
   - [x] den header ein bisschen runter mit der app, damit platz für die android statusleiste ist
@@ -109,7 +109,7 @@
   - [ ] beschränkt auf x user die sich registrieren können (mail bei erreichen von 75%, 90% und 100% der Kapazität)
   - [ ] wenn konto nicht länger als 30(!) tage nicht genutzt wird, soll der account archiviert werden und ein neuer platz frei werden (meldung an den anwender)
   - [ ] ende zu ende verschlüsselung mit word-phrasen (qr-code für einfaches pairen)
-- [ ] Google Play Store Veröffentlichung
+- [ ] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md)
 
 ## notes
 
