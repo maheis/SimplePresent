@@ -87,14 +87,14 @@
 - [x] wenn aufgaben aufgeklappt sind, verruschts häufger der text in eine andere aufgabe!
 - [x] delete task space
 - [x] modal anpinnen klappt unter linux nicht. (Wayland+KDE) kwin-rule würde benötigt!
-- [ ] Textfilter
-- [ ] Worklog an Aufgaben...
-- [ ] kleiner zoomen
-    Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
-    Die Lösung: Card(clipBehavior: Clip.hardEdge) umschließt jetzt ein SizedBox(height: _tileHeight). Damit wird die Zeile auf genau _tileHeight Pixel abgeschnitten — egal was ListTile, Icons oder Padding intern beanspruchen. Die Icons können also in ihrer ursprünglichen Größe bleiben und müssen nicht mitskalieren.
-- [ ] position, Größe und Zoom werden nicht korrekt geladen
 - [x] Erinnergunsfunktion konfigurierbar machen (Zeit, Art der Erinnerung, etc.)
 - [x] Swipe Optional machen!
+- [x] Schriftart auswählbar machen
+- [x] Schriftgröße anpassbar machen (und nicht im Zoom)
+- [x] Textfilter -> Wird aktuell nicht umgesetzt, da die Listen nicht so lang werden sollen!
+- [x] kleiner zoomen / Schrift wird in den Einstellungen seperat eingestellt!
+    Ich verstehe jetzt die Ursache vollständig. Das Problem ist nicht die Icongröße, sondern ListTile selbst: Flutter's ListTile hat eine interne Mindesthöhe (~56/36dp) die sich nicht wegdiskutieren lässt. Die sauberste Lösung: Card + ListTile in ein SizedBox(height: _tileHeight) + ClipRect einwickeln. Icons können dabei so groß bleiben wie sie wollen — sie werden einfach abgeschnitten.
+    Die Lösung: Card(clipBehavior: Clip.hardEdge) umschließt jetzt ein SizedBox(height: _tileHeight). Damit wird die Zeile auf genau _tileHeight Pixel abgeschnitten — egal was ListTile, Icons oder Padding intern beanspruchen. Die Icons können also in ihrer ursprünglichen Größe bleiben und müssen nicht mitskalieren.
 - [ ] Android APK Testen
   - [x] icon
   - [x] den header ein bisschen runter mit der app, damit platz für die android statusleiste ist
@@ -103,6 +103,8 @@
   - [x] backlog icon ist faded (datum entfernen?)
   - [x] pin button nur unter windows anzeigen
   - [ ] icon fritte
+- [ ] Worklog an Aufgaben...
+- [ ] position, Größe und Zoom werden nicht korrekt geladen
 - [ ] Reihenfolge auch über andere gruppen hinaus und dann optisch einsortieren
 - [ ] Cloud-Synchronisation: Möglichkeit, Aufgaben über mehrere Geräte hinweg zu synchronisieren, z.B. über einen eigenen Server oder Dienste wie Firebase.
   - [ ] eigener api-server (hinter Apache Proxy)
@@ -110,9 +112,6 @@
   - [ ] wenn konto nicht länger als 30(!) tage nicht genutzt wird, soll der account archiviert werden und ein neuer platz frei werden (meldung an den anwender)
   - [ ] ende zu ende verschlüsselung mit word-phrasen (qr-code für einfaches pairen)
 - [ ] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md)
-- [x] Schriftart auswählbar machen
-- [x] Schriftgröße anpassbar machen (und nicht im Zoom)
-- [ ] 
 
 ## notes
 

@@ -3546,7 +3546,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('Settings'),
+            title: const Text('settings'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -3578,7 +3578,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   });
                 },
                 child: Text(
-                  'Save',
+                  'save',
                   style: TextStyle(
                     color: hasChanges ? Colors.red : null,
                     fontWeight:
@@ -3591,12 +3591,12 @@ class _SettingsPageState extends State<SettingsPage> {
           body: ListView(
             padding: const EdgeInsets.all(12),
             children: [
-              const Text('Inactivity reminders',
+                const Text('inactivity reminders',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('Font:'),
+                  const Text('font:'),
                   const SizedBox(width: 12),
                   DropdownButton<String>(
                     value: fontFamily,
@@ -3621,7 +3621,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Font size: ${(textScaleFactor * 100).round()}%',
+                'font size: ${(textScaleFactor * 100).round()}%',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Slider(
@@ -3634,7 +3634,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() => textScaleFactor = value);
                 },
               ),
-              const Text('Range: 50% to 160%'),
+              const Text('range: 50% to 160%'),
               const SizedBox(height: 8),
               _ReminderStageCard(
                 title: '45 min',
@@ -3704,9 +3704,9 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 8),
               SwitchListTile(
                 value: swipeEnabled,
-                title: const Text('Swipe actions enabled'),
+                title: const Text('swipe actions enabled'),
                 subtitle: const Text(
-                    'If disabled, swipe gestures on task rows are turned off.'),
+                    'if disabled, swipe gestures on task rows are turned off.'),
                 onChanged: (v) => setState(() => swipeEnabled = v),
               ),
             ],
@@ -3756,8 +3756,8 @@ class _ReminderStageCard extends StatelessWidget {
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
-              children: [
-                const Text('Minutes:'),
+                children: [
+                const Text('minutes:'),
                 const SizedBox(width: 12),
                 SizedBox(
                   width: 100,
@@ -3781,22 +3781,22 @@ class _ReminderStageCard extends StatelessWidget {
               runSpacing: 0,
               children: [
                 FilterChip(
-                  label: const Text('Sound'),
+                  label: const Text('sound'),
                   selected: soundEnabled,
                   onSelected: onSoundChanged,
                 ),
                 FilterChip(
-                  label: const Text('Flash'),
+                  label: const Text('flash'),
                   selected: flashEnabled,
                   onSelected: onFlashChanged,
                 ),
                 FilterChip(
-                  label: const Text('Notification'),
+                  label: const Text('notification'),
                   selected: notifyEnabled,
                   onSelected: onNotifyChanged,
                 ),
                 FilterChip(
-                  label: const Text('Bring to front'),
+                  label: const Text('bring to front'),
                   selected: bringToFrontEnabled,
                   onSelected: onBringToFrontChanged,
                 ),
