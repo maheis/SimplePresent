@@ -1,0 +1,9 @@
+{
+  "bind": "127.0.0.1:8080",
+  "database_path": "./data/simplepresent.db",
+  "tls": {
+    "enabled": false,
+    "cert_file": "",
+    "key_file": ""
+  }
+}
