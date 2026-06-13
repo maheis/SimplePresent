@@ -25,10 +25,30 @@ flutter:
     - assets/icons/
     - assets/sounds/
   fonts:
+    - family: OpenDyslexic
+      fonts:
+        - asset: assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf
+        - asset: assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf
+          weight: 700
     - family: Ubuntu
       fonts:
-        - asset: assets/fonts/Ubuntu-Regular.ttf
-        - asset: assets/fonts/Ubuntu-Bold.ttf
+        - asset: assets/fonts/Ubuntu/Ubuntu-Regular.ttf
+        - asset: assets/fonts/Ubuntu/Ubuntu-Bold.ttf
+          weight: 700
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/Open_Sans/static/OpenSans-Regular.ttf
+        - asset: assets/fonts/Open_Sans/static/OpenSans-Bold.ttf
+          weight: 700
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/Noto_Sans/static/NotoSans-Regular.ttf
+        - asset: assets/fonts/Noto_Sans/static/NotoSans-Bold.ttf
+          weight: 700
+    - family: CourierPrime
+      fonts:
+        - asset: assets/fonts/Courier_Prime/CourierPrime-Regular.ttf
+        - asset: assets/fonts/Courier_Prime/CourierPrime-Bold.ttf
           weight: 700
 
 flutter_icons:
