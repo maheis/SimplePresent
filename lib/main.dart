@@ -358,6 +358,10 @@ class _HomePageState extends State<HomePage> {
     return math.max(tileHeight, _minFontScale);
   }
 
+  TextStyle _fontTextStyle([TextStyle style = const TextStyle()]) {
+    return style.copyWith(fontFamily: _fontFamily);
+  }
+
   // Toggle which file is shown: false = today, true = done
   bool _showingDone = false;
   // Backlog view toggle
@@ -1893,8 +1897,9 @@ class _HomePageState extends State<HomePage> {
                                       builder: (ctx, constraints) {
                                     // Styles used for measurement and rendering
                                     final titleStyle = const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w700);
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                    ).copyWith(fontFamily: _fontFamily);
                                     final combined = TextSpan(
                                       text: _showingBacklog
                                           ? 'backlog'
@@ -2472,18 +2477,19 @@ class _HomePageState extends State<HomePage> {
                                                                     Text(
                                                                       task.text,
                                                                       style:
-                                                                          TextStyle(
-                                                                        fontSize:
-                                                                            _baseFontSize *
-                                                                                _fontScale,
-                                                                        fontWeight:
-                                                                            FontWeight.normal,
-                                                                        decoration: task.done
-                                                                            ? TextDecoration.lineThrough
-                                                                            : TextDecoration.none,
-                                                                        color: task.done
-                                                                            ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
-                                                                            : Theme.of(context).colorScheme.onSurface,
+                                                                          _fontTextStyle(
+                                                                        TextStyle(
+                                                                          fontSize:
+                                                                              _baseFontSize * _fontScale,
+                                                                          fontWeight:
+                                                                              FontWeight.normal,
+                                                                          decoration: task.done
+                                                                              ? TextDecoration.lineThrough
+                                                                              : TextDecoration.none,
+                                                                          color: task.done
+                                                                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)
+                                                                              : Theme.of(context).colorScheme.onSurface,
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                     if (totalSubtasks >
