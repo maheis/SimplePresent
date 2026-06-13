@@ -2479,8 +2479,7 @@ class _HomePageState extends State<HomePage> {
                                                                       style:
                                                                           _fontTextStyle(
                                                                         TextStyle(
-                                                                          fontSize:
-                                                                              _baseFontSize * _fontScale,
+                                                                          fontSize: _baseFontSize,
                                                                           fontWeight:
                                                                               FontWeight.normal,
                                                                           decoration: task.done
