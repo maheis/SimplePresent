@@ -12,6 +12,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:path_provider/path_provider.dart';
+import 'package:simple_present/sync/cloud_sync_client.dart';
 
 // sentinel to indicate "no change" in copyWith optional parameters
 const _noChange = Object();
@@ -347,6 +348,12 @@ class _HomePageState extends State<HomePage> {
   double _fontScaleStart = 1.0;
   bool _alwaysOnTop = false;
   final String _appTitle = 'SimplePresent';
+  String _cloudServerUrl = '';
+  String _cloudAccountId = '';
+  String _cloudDeviceId = '';
+  String _cloudToken = '';
+  String _cloudWordPhrase = '';
+  String _cloudDeviceName = Platform.localHostname;
 
   Duration get _idleDuration => Duration(minutes: _idleMinutes.clamp(1, 720));
   Duration get _attentionDuration =>
@@ -689,6 +696,30 @@ class _HomePageState extends State<HomePage> {
         if (font is String && font.isNotEmpty) {
           _fontFamily = font;
         }
+        final serverUrl = data['cloudServerUrl'];
+        if (serverUrl is String) {
+          _cloudServerUrl = serverUrl;
+        }
+        final accountId = data['cloudAccountId'];
+        if (accountId is String) {
+          _cloudAccountId = accountId;
+        }
+        final deviceId = data['cloudDeviceId'];
+        if (deviceId is String) {
+          _cloudDeviceId = deviceId;
+        }
+        final token = data['cloudToken'];
+        if (token is String) {
+          _cloudToken = token;
+        }
+        final phrase = data['cloudWordPhrase'];
+        if (phrase is String) {
+          _cloudWordPhrase = phrase;
+        }
+        final deviceName = data['cloudDeviceName'];
+        if (deviceName is String && deviceName.isNotEmpty) {
+          _cloudDeviceName = deviceName;
+        }
       });
       if (data.containsKey('window')) {
         try {
@@ -819,6 +850,12 @@ class _HomePageState extends State<HomePage> {
         'swipeEnabled': _swipeEnabled,
         'uiTextScaleFactor': _uiTextScaleFactor,
         'fontFamily': _fontFamily,
+        'cloudServerUrl': _cloudServerUrl,
+        'cloudAccountId': _cloudAccountId,
+        'cloudDeviceId': _cloudDeviceId,
+        'cloudToken': _cloudToken,
+        'cloudWordPhrase': _cloudWordPhrase,
+        'cloudDeviceName': _cloudDeviceName,
       };
       // Preserve lastRunDate if present in existing settings so daily-reset runs only once per day
       try {
@@ -1085,6 +1122,12 @@ class _HomePageState extends State<HomePage> {
             'swipeEnabled': _swipeEnabled,
             'uiTextScaleFactor': _uiTextScaleFactor,
             'fontFamily': _fontFamily,
+            'cloudServerUrl': _cloudServerUrl,
+            'cloudAccountId': _cloudAccountId,
+            'cloudDeviceId': _cloudDeviceId,
+            'cloudToken': _cloudToken,
+            'cloudWordPhrase': _cloudWordPhrase,
+            'cloudDeviceName': _cloudDeviceName,
           },
         ),
       ),
@@ -1134,6 +1177,25 @@ class _HomePageState extends State<HomePage> {
       if (result['fontFamily'] is String &&
           (result['fontFamily'] as String).isNotEmpty) {
         _fontFamily = result['fontFamily'] as String;
+      }
+      if (result['cloudServerUrl'] is String) {
+        _cloudServerUrl = result['cloudServerUrl'] as String;
+      }
+      if (result['cloudAccountId'] is String) {
+        _cloudAccountId = result['cloudAccountId'] as String;
+      }
+      if (result['cloudDeviceId'] is String) {
+        _cloudDeviceId = result['cloudDeviceId'] as String;
+      }
+      if (result['cloudToken'] is String) {
+        _cloudToken = result['cloudToken'] as String;
+      }
+      if (result['cloudWordPhrase'] is String) {
+        _cloudWordPhrase = result['cloudWordPhrase'] as String;
+      }
+      if (result['cloudDeviceName'] is String &&
+          (result['cloudDeviceName'] as String).isNotEmpty) {
+        _cloudDeviceName = result['cloudDeviceName'] as String;
       }
     });
 
@@ -3396,6 +3458,14 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool swipeEnabled;
   late double textScaleFactor;
   late String fontFamily;
+  late String cloudServerUrl;
+  late String cloudAccountId;
+  late String cloudDeviceId;
+  late String cloudToken;
+  late String cloudWordPhrase;
+  late String cloudDeviceName;
+  String _cloudStatus = '';
+  bool _cloudBusy = false;
   late int _initialIdleMinutes;
   late int _initialAttentionMinutes;
   late int _initialReminderMinutes;
@@ -3419,6 +3489,12 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _initialSwipeEnabled;
   late double _initialTextScaleFactor;
   late String _initialFontFamily;
+  late String _initialCloudServerUrl;
+  late String _initialCloudAccountId;
+  late String _initialCloudDeviceId;
+  late String _initialCloudToken;
+  late String _initialCloudWordPhrase;
+  late String _initialCloudDeviceName;
 
   @override
   void initState() {
@@ -3477,6 +3553,12 @@ class _SettingsPageState extends State<SettingsPage> {
     swipeEnabled = readBool('swipeEnabled', true);
     textScaleFactor = readDouble('uiTextScaleFactor', 1.0).clamp(0.5, 1.6);
     fontFamily = readString('fontFamily', 'OpenDyslexic');
+    cloudServerUrl = readString('cloudServerUrl', '');
+    cloudAccountId = readString('cloudAccountId', '');
+    cloudDeviceId = readString('cloudDeviceId', '');
+    cloudToken = readString('cloudToken', '');
+    cloudWordPhrase = readString('cloudWordPhrase', '');
+    cloudDeviceName = readString('cloudDeviceName', Platform.localHostname);
     // Save initial values to detect changes
     _initialIdleMinutes = idleMinutes;
     _initialAttentionMinutes = attentionMinutes;
@@ -3501,6 +3583,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialSwipeEnabled = swipeEnabled;
     _initialTextScaleFactor = textScaleFactor;
     _initialFontFamily = fontFamily;
+    _initialCloudServerUrl = cloudServerUrl;
+    _initialCloudAccountId = cloudAccountId;
+    _initialCloudDeviceId = cloudDeviceId;
+    _initialCloudToken = cloudToken;
+    _initialCloudWordPhrase = cloudWordPhrase;
+    _initialCloudDeviceName = cloudDeviceName;
   }
 
   bool _hasChanges() {
@@ -3526,7 +3614,95 @@ class _SettingsPageState extends State<SettingsPage> {
         urgentBringToFrontEnabled != _initialUrgentBringToFrontEnabled ||
         swipeEnabled != _initialSwipeEnabled ||
         textScaleFactor != _initialTextScaleFactor ||
-        fontFamily != _initialFontFamily;
+        fontFamily != _initialFontFamily ||
+        cloudServerUrl != _initialCloudServerUrl ||
+        cloudAccountId != _initialCloudAccountId ||
+        cloudDeviceId != _initialCloudDeviceId ||
+        cloudToken != _initialCloudToken ||
+        cloudWordPhrase != _initialCloudWordPhrase ||
+        cloudDeviceName != _initialCloudDeviceName;
+  }
+
+  String _normalizedServerUrl() {
+    final trimmed = cloudServerUrl.trim();
+    if (trimmed.isEmpty) {
+      throw Exception('Server URL fehlt.');
+    }
+    return trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+  }
+
+  Future<void> _suggestPhrase() async {
+    setState(() {
+      cloudWordPhrase = CloudSyncClient.suggestWordPhrase();
+      _cloudStatus = 'Neue 9-Wort-Phrase vorgeschlagen.';
+    });
+  }
+
+  Future<void> _registerFirstDevice() async {
+    try {
+      setState(() {
+        _cloudBusy = true;
+        _cloudStatus = '';
+      });
+      final client = CloudSyncClient(serverBaseUrl: _normalizedServerUrl());
+      final result = await client.registerFirstClient(
+        deviceName: cloudDeviceName.trim().isEmpty
+            ? Platform.localHostname
+            : cloudDeviceName.trim(),
+        phrase: cloudWordPhrase,
+        accountId: cloudAccountId.trim().isEmpty ? null : cloudAccountId.trim(),
+      );
+      setState(() {
+        cloudAccountId = result.accountId;
+        cloudDeviceId = result.deviceId;
+        cloudToken = result.token;
+        _cloudStatus = 'Erstgerät registriert.';
+      });
+    } catch (e) {
+      setState(() {
+        _cloudStatus = 'Register fehlgeschlagen: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _cloudBusy = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pairDevice() async {
+    try {
+      setState(() {
+        _cloudBusy = true;
+        _cloudStatus = '';
+      });
+      final client = CloudSyncClient(serverBaseUrl: _normalizedServerUrl());
+      final result = await client.pairClient(
+        accountId: cloudAccountId.trim(),
+        deviceName: cloudDeviceName.trim().isEmpty
+            ? Platform.localHostname
+            : cloudDeviceName.trim(),
+        phrase: cloudWordPhrase,
+      );
+      setState(() {
+        cloudDeviceId = result.deviceId;
+        cloudToken = result.token;
+        _cloudStatus = 'Gerät erfolgreich angebunden.';
+      });
+    } catch (e) {
+      setState(() {
+        _cloudStatus = 'Pairing fehlgeschlagen: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _cloudBusy = false;
+        });
+      }
+    }
   }
 
   @override
@@ -3575,6 +3751,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     'swipeEnabled': swipeEnabled,
                     'uiTextScaleFactor': textScaleFactor,
                     'fontFamily': fontFamily,
+                    'cloudServerUrl': cloudServerUrl,
+                    'cloudAccountId': cloudAccountId,
+                    'cloudDeviceId': cloudDeviceId,
+                    'cloudToken': cloudToken,
+                    'cloudWordPhrase': cloudWordPhrase,
+                    'cloudDeviceName': cloudDeviceName,
                   });
                 },
                 child: Text(
@@ -3619,6 +3801,108 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                'cloud sync (server)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: TextEditingController(text: cloudServerUrl)
+                  ..selection = TextSelection.collapsed(
+                      offset: cloudServerUrl.length),
+                decoration: const InputDecoration(
+                  labelText: 'Server URL',
+                  hintText: 'https://maheis.de',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => cloudServerUrl = value),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: TextEditingController(text: cloudDeviceName)
+                  ..selection = TextSelection.collapsed(
+                      offset: cloudDeviceName.length),
+                decoration: const InputDecoration(
+                  labelText: 'Gerätename',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => cloudDeviceName = value),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: TextEditingController(text: cloudAccountId)
+                  ..selection = TextSelection.collapsed(
+                      offset: cloudAccountId.length),
+                decoration: const InputDecoration(
+                  labelText: 'Account ID',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => cloudAccountId = value),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: TextEditingController(text: cloudWordPhrase)
+                  ..selection = TextSelection.collapsed(
+                      offset: cloudWordPhrase.length),
+                minLines: 2,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: '9-Wort-Phrase (lokal)',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => cloudWordPhrase = value),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _cloudBusy ? null : _suggestPhrase,
+                      icon: const Icon(Icons.lightbulb_outline),
+                      label: const Text('9 Wörter vorschlagen'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _cloudBusy ? null : _registerFirstDevice,
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: const Text('Erstgerät registrieren'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _cloudBusy ? null : _pairDevice,
+                      icon: const Icon(Icons.link),
+                      label: const Text('Gerät anbinden'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                'Device ID: $cloudDeviceId\nToken: ${cloudToken.isEmpty ? '-' : cloudToken}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              if (_cloudStatus.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  _cloudStatus,
+                  style: TextStyle(
+                    color: _cloudStatus.contains('fehlgeschlagen')
+                        ? Colors.redAccent
+                        : Colors.greenAccent,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'font size: ${(textScaleFactor * 100).round()}%',
