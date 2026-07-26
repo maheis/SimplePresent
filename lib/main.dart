@@ -120,6 +120,31 @@ class TimeEntry {
 // `<Documents>/simplepresent/simplepresent_debug.log` (or the
 // debug variant when in debug mode). This is intentionally simple so
 // different widgets can call it without needing an instance.
+Future<void> _debugLogWriteQueue = Future.value();
+
+String _normalizeDebugLogMessage(String msg) {
+  return msg
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .replaceAll('\n', r'\n');
+}
+
+Future<void> _appendQueuedDebugLog(
+  Future<File> Function() fileResolver,
+  String msg,
+) async {
+  _debugLogWriteQueue = _debugLogWriteQueue.catchError((_) {}).then((_) async {
+    try {
+      final f = await fileResolver();
+      final stamp =
+          DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.now());
+      final normalized = _normalizeDebugLogMessage(msg);
+      await f.writeAsString('[$stamp] $normalized\n', mode: FileMode.append);
+    } catch (_) {}
+  });
+  await _debugLogWriteQueue;
+}
+
 Future<void> _debugLog(String msg) async {
   try {
     final dir = await getApplicationDocumentsDirectory();
@@ -127,8 +152,7 @@ Future<void> _debugLog(String msg) async {
     final sub = Directory('${dir.path}/$folderName');
     if (!await sub.exists()) await sub.create(recursive: true);
     final f = File('${sub.path}/simplepresent_debug.log');
-    final stamp = DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.now());
-    await f.writeAsString('[$stamp] $msg\n', mode: FileMode.append);
+    await _appendQueuedDebugLog(() async => f, msg);
   } catch (_) {}
 }
 
@@ -652,6 +676,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _cloudArchiveLastWarnedDays = -1;
   Timer? _cloudPullTimer;
   bool _autoPromoteDueBacklogBusy = false;
+  DateTime? _lastPromoteDueBacklogNoopLogAt;
   bool _cloudSyncBusy = false;
   bool _applyingCloudState = false;
   bool _suppressSyncToasts = false;
@@ -955,9 +980,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     try {
       if (!_debugWriteLog) return;
       final f = await _fileFor(_storage('simplepresent_debug.log'));
-      final stamp =
-          DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.now());
-      await f.writeAsString('[$stamp] $msg\n', mode: FileMode.append);
+      await _appendQueuedDebugLog(() async => f, msg);
     } catch (_) {}
   }
 
@@ -1427,7 +1450,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<int> _promoteDueBacklogToToday({bool showToast = false}) async {
     if (_autoPromoteDueBacklogBusy) {
-      unawaited(_debugLog('promote due backlog skipped: busy'));
+      if (_shouldLogPromoteDueBacklogNoop()) {
+        unawaited(_debugLog('promote due backlog skipped: busy'));
+      }
       return 0;
     }
     _autoPromoteDueBacklogBusy = true;
@@ -1465,7 +1490,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       });
 
       if (!changed) {
-        unawaited(_debugLog('promote due backlog: nothing to move'));
+        if (_shouldLogPromoteDueBacklogNoop()) {
+          unawaited(_debugLog('promote due backlog: nothing to move'));
+        }
         return 0;
       }
 
@@ -1504,6 +1531,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } finally {
       _autoPromoteDueBacklogBusy = false;
     }
+  }
+
+  bool _shouldLogPromoteDueBacklogNoop() {
+    final now = DateTime.now();
+    final last = _lastPromoteDueBacklogNoopLogAt;
+    if (last != null && now.difference(last) < const Duration(minutes: 5)) {
+      return false;
+    }
+    _lastPromoteDueBacklogNoopLogAt = now;
+    return true;
   }
 
   String _dayKey(DateTime value) {
