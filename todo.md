@@ -73,7 +73,8 @@
 - [ ] aufgaben fenster position und größe merken
         -> hat unter windows jetzt nicht geklappt.
 - [ ] save button geht unter windows nicht bzw. schließt nicht!
-- [ ] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
+- [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
+- [ ] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
 
 ## notes
 

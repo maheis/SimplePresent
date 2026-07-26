@@ -5571,17 +5571,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _moveFromBacklog(int index) async {
+  Future<void> _moveFromBacklog(String taskId) async {
     try {
-      // Load backlog file and remove the item there (index refers to backlog list)
       final backlogFile = _storage('simplepresent_backlog.json');
       final List<TaskItem> backlogList = [];
       await _loadList(backlogFile, backlogList);
-      if (index < 0 || index >= backlogList.length) {
+      final backlogIndex = backlogList.indexWhere((task) => task.id == taskId);
+      if (backlogIndex == -1) {
+        unawaited(_debugLog(
+            'move backlog to today failed: taskId=$taskId not found'));
         _showTopToast('failed to move task to today');
         return;
       }
-      final item = backlogList.removeAt(index);
+      final item = backlogList.removeAt(backlogIndex);
 
       // Prepare today list and item to move.
       // Do not use `_today` here because in backlog view `_today` holds backlog data.
@@ -5603,9 +5605,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         if (!mounted) return;
         setState(() {
           if (_showingBacklog || _currentFile == backlogFile) {
-            if (index >= 0 && index < _today.length) {
-              _today.removeAt(index);
-            }
+            _today.removeWhere((task) => task.id == movedItem.id);
           } else {
             _today.insert(0, movedItem);
           }
@@ -5616,7 +5616,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _showTopToast('task moved to today');
 
       // Log move from backlog to today
-        unawaited(_debugLog(
+      unawaited(_debugLog(
           'move backlog to today: taskId=${item.id}, text=${item.text}, backlog=${backlogList.length}, today=${todayList.length}'));
       unawaited(_appendRedoLog('move_to_today',
           taskId: item.id, details: {'from': 'backlog', 'to': 'today'}));
@@ -5701,7 +5701,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _registerActivity();
   }
 
-  Future<void> _moveToBacklog(int index) async {
+  Future<void> _moveToBacklog(String taskId) async {
     // Skip moving into backlog if we're already viewing backlog to avoid
     // re-inserting the item into the same list (which looks like an
     // unnecessary intra-backlog move).
@@ -5712,16 +5712,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     try {
+      final index = _today.indexWhere((task) => task.id == taskId);
+      if (index == -1) {
+        unawaited(_debugLog(
+            'move today to backlog failed: taskId=$taskId not found'));
+        _showTopToast('failed to move task to backlog');
+        return;
+      }
       final item = _today[index];
-      // Remove via per-task queue so spinner appears on the task while removing
-      await _queueTaskAction(item.id, () async {
-        if (!mounted) return;
-        setState(() {
-          _today.removeAt(index);
-          _expanded.clear();
-        });
-        await _saveToday(); // persist removal from today
+      if (!mounted) return;
+      setState(() {
+        _today.removeWhere((task) => task.id == taskId);
+        _expanded.clear();
       });
+      await _saveToday();
       // Stop running stopwatch and persist time if necessary
       TaskItem toStore = item;
       if (item.stopwatchRunning) {
@@ -5740,6 +5744,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // insert at top so task appears first in backlog via queued helper
       await _queueAppendToList('simplepresent_backlog.json', toStore,
           insertTop: true);
+      unawaited(_debugLog(
+          'move today to backlog: taskId=${toStore.id}, text=${toStore.text}'));
       unawaited(_appendRedoLog('move_to_backlog',
           taskId: toStore.id, details: {'from': 'today', 'to': 'backlog'}));
       try {
@@ -6376,16 +6382,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // Wrapper to queue _moveToBacklog by task ID instead of index
   Future<void> _queueMoveToBacklogByTaskId(String taskId) async {
-    final idx = _today.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
-    await _queueTaskAction(taskId, () => _moveToBacklog(idx));
+    if (!_today.any((task) => task.id == taskId)) return;
+    await _queueTaskAction(taskId, () => _moveToBacklog(taskId));
   }
 
   // Wrapper to queue _moveFromBacklog by task ID instead of index
   Future<void> _queueMoveFromBacklogByTaskId(String taskId) async {
-    final idx = _today.indexWhere((t) => t.id == taskId);
-    if (idx == -1) return;
-    await _queueTaskAction(taskId, () => _moveFromBacklog(idx));
+    if (!_today.any((task) => task.id == taskId)) return;
+    await _queueTaskAction(taskId, () => _moveFromBacklog(taskId));
   }
 
   Future<void> _removeFromToday(int index) async {
