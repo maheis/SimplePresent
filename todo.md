@@ -60,7 +60,7 @@
   - [ ] Aufräumen (ois)
 - [ ] sync: self signed certs prüfen (ca-chain)
 - [ ] sync: nur ein gerät sollte automatisches löschen aktiv haben! (primärgerät-definieren?)
-- [ ] android: icon fritte (muss es einen hintergrund haben?), was ist mit weißem icon für statusleiste z.b.?
+- [x] android: icon fritte (muss es einen hintergrund haben?), was ist mit weißem icon für statusleiste z.b.?
       notification funktioniert mit weißen icon.[text](about:blank#blocked)
       kleines app icon in der taks auswahl und benachrichtigung klappt auchhttps://www.youtube.com/watch?v=rNPMETYAKYA&t=13s
       app icon ist 4 eckig auf weißem grund (rund)
