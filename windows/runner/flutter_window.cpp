@@ -7,22 +7,27 @@
 #include "flutter/generated_plugin_registrant.h"
 
 // Helper: convert UTF-8 std::string to UTF-16 std::wstring on Windows
-static std::wstring utf8_to_wstring(const std::string& s) {
-  if (s.empty()) return std::wstring();
+static std::wstring utf8_to_wstring(const std::string &s)
+{
+  if (s.empty())
+    return std::wstring();
   int size_needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.length(), NULL, 0);
-  if (size_needed <= 0) return std::wstring(s.begin(), s.end());
+  if (size_needed <= 0)
+    return std::wstring(s.begin(), s.end());
   std::wstring wstr(size_needed, 0);
   MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.length(), &wstr[0], size_needed);
   return wstr;
 }
 
-FlutterWindow::FlutterWindow(const flutter::DartProject& project)
+FlutterWindow::FlutterWindow(const flutter::DartProject &project)
     : project_(project) {}
 
 FlutterWindow::~FlutterWindow() {}
 
-bool FlutterWindow::OnCreate() {
-  if (!Win32Window::OnCreate()) {
+bool FlutterWindow::OnCreate()
+{
+  if (!Win32Window::OnCreate())
+  {
     return false;
   }
 
@@ -33,15 +38,15 @@ bool FlutterWindow::OnCreate() {
   flutter_controller_ = std::make_unique<flutter::FlutterViewController>(
       frame.right - frame.left, frame.bottom - frame.top, project_);
   // Ensure that basic setup of the controller was successful.
-  if (!flutter_controller_->engine() || !flutter_controller_->view()) {
+  if (!flutter_controller_->engine() || !flutter_controller_->view())
+  {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
-  });
+  flutter_controller_->engine()->SetNextFrameCallback([&]()
+                                                      { this->Show(); });
 
   // Register a MethodChannel for native window operations (e.g., flash taskbar)
   auto messenger = flutter_controller_->engine()->messenger();
@@ -49,9 +54,11 @@ bool FlutterWindow::OnCreate() {
       messenger, "simple_present/window",
       &flutter::StandardMethodCodec::GetInstance());
   method_channel_->SetMethodCallHandler(
-      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
-             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        if (call.method_name().compare("flashTaskbar") == 0) {
+      [this](const flutter::MethodCall<flutter::EncodableValue> &call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result)
+      {
+        if (call.method_name().compare("flashTaskbar") == 0)
+        {
           // Flash the taskbar icon (FlashWindowEx)
           FLASHWINFO fi;
           fi.cbSize = sizeof(fi);
@@ -63,20 +70,25 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(true));
           return;
         }
-        if (call.method_name().compare("notify") == 0) {
+        if (call.method_name().compare("notify") == 0)
+        {
           std::string title = "SimplePresent - today";
           std::string body = "";
-          const flutter::EncodableValue* args = call.arguments();
-          if (args) {
-            const flutter::EncodableMap* map = std::get_if<flutter::EncodableMap>(args);
-            if (map) {
+          const flutter::EncodableValue *args = call.arguments();
+          if (args)
+          {
+            const flutter::EncodableMap *map = std::get_if<flutter::EncodableMap>(args);
+            if (map)
+            {
               auto it = map->find(flutter::EncodableValue("title"));
-              if (it != map->end() && !it->second.IsNull()) {
+              if (it != map->end() && !it->second.IsNull())
+              {
                 if (std::holds_alternative<std::string>(it->second))
                   title = std::get<std::string>(it->second);
               }
               it = map->find(flutter::EncodableValue("body"));
-              if (it != map->end() && !it->second.IsNull()) {
+              if (it != map->end() && !it->second.IsNull())
+              {
                 if (std::holds_alternative<std::string>(it->second))
                   body = std::get<std::string>(it->second);
               }
@@ -85,13 +97,16 @@ bool FlutterWindow::OnCreate() {
           // Prefer window title if available
           HWND hwnd = GetHandle();
           std::wstring wtitle;
-          if (hwnd) {
+          if (hwnd)
+          {
             wchar_t buf[512] = {0};
-            if (GetWindowTextW(hwnd, buf, sizeof(buf)/sizeof(wchar_t))) {
+            if (GetWindowTextW(hwnd, buf, sizeof(buf) / sizeof(wchar_t)))
+            {
               wtitle = buf;
             }
           }
-          if (wtitle.empty()) {
+          if (wtitle.empty())
+          {
             wtitle = utf8_to_wstring(title);
           }
           std::wstring wbody = utf8_to_wstring(body);
@@ -104,35 +119,45 @@ bool FlutterWindow::OnCreate() {
           nidAdd.uFlags = NIF_ICON | NIF_TIP;
           HICON hIcon = NULL;
           // If caller provided an explicit icon path, try to load it first
-          if (args) {
-            const flutter::EncodableMap* amap = std::get_if<flutter::EncodableMap>(args);
-            if (amap) {
+          if (args)
+          {
+            const flutter::EncodableMap *amap = std::get_if<flutter::EncodableMap>(args);
+            if (amap)
+            {
               auto itIcon = amap->find(flutter::EncodableValue("icon"));
-              if (itIcon != amap->end() && !itIcon->second.IsNull() && std::holds_alternative<std::string>(itIcon->second)) {
+              if (itIcon != amap->end() && !itIcon->second.IsNull() && std::holds_alternative<std::string>(itIcon->second))
+              {
                 std::string iconRel = std::get<std::string>(itIcon->second);
                 // Build candidate full path relative to exe directory
                 wchar_t modulePath[MAX_PATH + 1];
-                if (GetModuleFileNameW(nullptr, modulePath, MAX_PATH) > 0) {
+                if (GetModuleFileNameW(nullptr, modulePath, MAX_PATH) > 0)
+                {
                   std::wstring mp(modulePath);
                   // strip filename
                   size_t pos = mp.find_last_of(L"\\/");
-                  if (pos != std::wstring::npos) mp = mp.substr(0, pos + 1);
+                  if (pos != std::wstring::npos)
+                    mp = mp.substr(0, pos + 1);
                   // convert iconRel to wstring
                   std::wstring wrel = utf8_to_wstring(iconRel);
                   std::wstring full = mp + wrel;
                   // try to load icon from file
                   HICON loaded = (HICON)LoadImageW(NULL, full.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
-                  if (loaded) hIcon = loaded;
+                  if (loaded)
+                    hIcon = loaded;
                 }
               }
             }
           }
-          if (hwnd) {
+          if (hwnd)
+          {
             hIcon = (HICON)SendMessage(hwnd, WM_GETICON, ICON_SMALL, 0);
-            if (!hIcon) hIcon = (HICON)GetClassLongPtr(hwnd, GCLP_HICONSM);
-            if (!hIcon) hIcon = (HICON)GetClassLongPtr(hwnd, GCLP_HICON);
+            if (!hIcon)
+              hIcon = (HICON)GetClassLongPtr(hwnd, GCLP_HICONSM);
+            if (!hIcon)
+              hIcon = (HICON)GetClassLongPtr(hwnd, GCLP_HICON);
           }
-          if (!hIcon) hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+          if (!hIcon)
+            hIcon = LoadIcon(nullptr, IDI_APPLICATION);
           nidAdd.hIcon = hIcon;
           // Set tooltip to the window title (app name)
           wcscpy_s(nidAdd.szTip, sizeof(nidAdd.szTip) / sizeof(wchar_t), wtitle.c_str());
@@ -151,12 +176,16 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(true));
           return;
         }
-        if (call.method_name().compare("bringToFront") == 0) {
+        if (call.method_name().compare("bringToFront") == 0)
+        {
           HWND hwnd = GetHandle();
-          if (hwnd) {
+          if (hwnd)
+          {
             // Restore if minimized
-            if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-            else ShowWindow(hwnd, SW_SHOW);
+            if (IsIconic(hwnd))
+              ShowWindow(hwnd, SW_RESTORE);
+            else
+              ShowWindow(hwnd, SW_SHOW);
             // Try to bring to foreground
             SetForegroundWindow(hwnd);
             // Also bring to top
@@ -167,24 +196,31 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(false));
           return;
         }
-        if (call.method_name().compare("setWindowGeometry") == 0) {
-          const flutter::EncodableValue* args = call.arguments();
-          if (args) {
-            const flutter::EncodableMap* map = std::get_if<flutter::EncodableMap>(args);
-            if (map) {
-              // Handle always_on_top flag independently
+        if (call.method_name().compare("setWindowGeometry") == 0)
+        {
+          const flutter::EncodableValue *args = call.arguments();
+          if (args)
+          {
+            const flutter::EncodableMap *map = std::get_if<flutter::EncodableMap>(args);
+            if (map)
+            {
+              HWND hwnd = GetHandle();
+              // Apply always_on_top without returning; the same call also
+              // carries the saved position and size.
               auto itAot = map->find(flutter::EncodableValue("always_on_top"));
-              if (itAot != map->end() && !itAot->second.IsNull() && std::holds_alternative<bool>(itAot->second)) {
-                HWND hwnd = GetHandle();
+              if (itAot != map->end() && !itAot->second.IsNull() && std::holds_alternative<bool>(itAot->second))
+              {
                 bool aot = std::get<bool>(itAot->second);
-                if (hwnd) {
-                  if (aot) SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                  else SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                if (hwnd)
+                {
+                  if (aot)
+                    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                  else
+                    SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
                 }
-                result->Success(flutter::EncodableValue(true));
-                return;
               }
-              auto getInt = [&](const std::string& k) -> int {
+              auto getInt = [&](const std::string &k) -> int
+              {
                 auto it = map->find(flutter::EncodableValue(k));
                 if (it != map->end() && std::holds_alternative<int>(it->second))
                   return std::get<int>(it->second);
@@ -194,17 +230,21 @@ bool FlutterWindow::OnCreate() {
               int y = getInt("y");
               int w = getInt("width");
               int h = getInt("height");
-              HWND hwnd = GetHandle();
-              if (hwnd) {
+              if (hwnd)
+              {
                 // Honor maximized flag if present
                 auto itMax = map->find(flutter::EncodableValue("maximized"));
                 bool maximized = false;
-                if (itMax != map->end() && std::holds_alternative<bool>(itMax->second)) {
+                if (itMax != map->end() && std::holds_alternative<bool>(itMax->second))
+                {
                   maximized = std::get<bool>(itMax->second);
                 }
-                if (maximized) {
+                if (maximized)
+                {
                   ShowWindow(hwnd, SW_MAXIMIZE);
-                } else {
+                }
+                else
+                {
                   // Ensure not maximized before setting geometry
                   ShowWindow(hwnd, SW_RESTORE);
                   SetWindowPos(hwnd, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -217,11 +257,14 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(false));
           return;
         }
-        if (call.method_name().compare("getWindowGeometry") == 0) {
+        if (call.method_name().compare("getWindowGeometry") == 0)
+        {
           HWND hwnd = GetHandle();
-          if (hwnd) {
+          if (hwnd)
+          {
             RECT r;
-            if (GetWindowRect(hwnd, &r)) {
+            if (GetWindowRect(hwnd, &r))
+            {
               flutter::EncodableMap out;
               out[flutter::EncodableValue("x")] = flutter::EncodableValue(static_cast<int>(r.left));
               out[flutter::EncodableValue("y")] = flutter::EncodableValue(static_cast<int>(r.top));
@@ -240,15 +283,29 @@ bool FlutterWindow::OnCreate() {
           result->Success(flutter::EncodableValue(flutter::EncodableMap()));
           return;
         }
-          if (call.method_name().compare("getScreenSize") == 0) {
-            int sw = GetSystemMetrics(SM_CXSCREEN);
-            int sh = GetSystemMetrics(SM_CYSCREEN);
-            flutter::EncodableMap out;
-            out[flutter::EncodableValue("width")] = flutter::EncodableValue(sw);
-            out[flutter::EncodableValue("height")] = flutter::EncodableValue(sh);
-            result->Success(flutter::EncodableValue(out));
+        if (call.method_name().compare("closeWindow") == 0)
+        {
+          HWND hwnd = GetHandle();
+          if (hwnd)
+          {
+            // Queue the close so the method result can reach Dart first.
+            PostMessageW(hwnd, WM_CLOSE, 0, 0);
+            result->Success(flutter::EncodableValue(true));
             return;
           }
+          result->Success(flutter::EncodableValue(false));
+          return;
+        }
+        if (call.method_name().compare("getScreenSize") == 0)
+        {
+          int sw = GetSystemMetrics(SM_CXSCREEN);
+          int sh = GetSystemMetrics(SM_CYSCREEN);
+          flutter::EncodableMap out;
+          out[flutter::EncodableValue("width")] = flutter::EncodableValue(sw);
+          out[flutter::EncodableValue("height")] = flutter::EncodableValue(sh);
+          result->Success(flutter::EncodableValue(out));
+          return;
+        }
         result->NotImplemented();
       });
 
@@ -260,8 +317,10 @@ bool FlutterWindow::OnCreate() {
   return true;
 }
 
-void FlutterWindow::OnDestroy() {
-  if (flutter_controller_) {
+void FlutterWindow::OnDestroy()
+{
+  if (flutter_controller_)
+  {
     flutter_controller_ = nullptr;
   }
 
@@ -271,21 +330,25 @@ void FlutterWindow::OnDestroy() {
 LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
-                              LPARAM const lparam) noexcept {
+                              LPARAM const lparam) noexcept
+{
   // Give Flutter, including plugins, an opportunity to handle window messages.
-  if (flutter_controller_) {
+  if (flutter_controller_)
+  {
     std::optional<LRESULT> result =
         flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,
                                                       lparam);
-    if (result) {
+    if (result)
+    {
       return *result;
     }
   }
 
-  switch (message) {
-    case WM_FONTCHANGE:
-      flutter_controller_->engine()->ReloadSystemFonts();
-      break;
+  switch (message)
+  {
+  case WM_FONTCHANGE:
+    flutter_controller_->engine()->ReloadSystemFonts();
+    break;
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);

@@ -70,9 +70,8 @@
 - [ ] Zeiterfassung muss granularer sein, damit die Zeiten pro Tag passen!
 - [ ] SimplePresent -> simple present | dateinamen: simple-present
 - [x] aufgaben nicht aufklappen auf dem desktop, sondern in einem eigenen fenster öffnen (optional in den settings konfigurierbar)
-- [ ] aufgaben fenster position und größe merken
-        -> hat unter windows jetzt nicht geklappt.
-- [ ] save button geht unter windows nicht bzw. schließt nicht!
+- [x] aufgaben fenster position und größe merken
+- [x] save button geht unter windows nicht bzw. schließt nicht!
 - [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
 - [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
 

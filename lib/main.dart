@@ -9744,13 +9744,13 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
     return jsonEncode(task.toJson()) != jsonEncode(initial.toJson());
   }
 
-  Future<void> _saveTask() async {
+  Future<bool> _saveTask() async {
     final task = _effectiveTask;
-    if (task == null || _saving) return;
+    if (task == null || _saving) return false;
     final newText = _titleController.text.trim();
     if (newText.isEmpty) {
       setState(() => _status = 'title must not be empty');
-      return;
+      return false;
     }
     setState(() {
       _saving = true;
@@ -9767,7 +9767,7 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
             _status = 'task changed in another window';
           });
         }
-        return;
+        return false;
       }
       final updated = task.copyWith(
         text: newText,
@@ -9776,25 +9776,28 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       );
       rows[idx] = updated.toJson();
       await _storage.writeTaskList(_sourceList, rows);
-      if (!mounted) return;
+      if (!mounted) return true;
       setState(() {
         _task = updated;
         _initialTask = updated;
         _saving = false;
         _status = 'saved';
       });
+      return true;
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _status = 'save failed: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _status = 'save failed: $e';
+        });
+      }
+      return false;
     }
   }
 
   Future<void> _closeWindow() async {
-    if (_hasChanges) {
-      await _saveTask();
+    if (_hasChanges && !await _saveTask()) {
+      return;
     }
     if (!mounted) return;
     await _persistWindowGeometryIfNeeded();
@@ -9802,6 +9805,13 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       await _writeRefreshSignal();
     }
     if (widget.closeAppOnExit) {
+      if (Platform.isWindows) {
+        try {
+          final closeRequested =
+              await _nativeWindowChannel.invokeMethod<bool>('closeWindow');
+          if (closeRequested == true) return;
+        } catch (_) {}
+      }
       SystemNavigator.pop();
       return;
     }
