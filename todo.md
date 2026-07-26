@@ -74,7 +74,7 @@
         -> hat unter windows jetzt nicht geklappt.
 - [ ] save button geht unter windows nicht bzw. schließt nicht!
 - [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
-- [ ] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
+- [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
 
 ## notes
 

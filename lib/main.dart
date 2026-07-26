@@ -2285,8 +2285,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // reload current view and counts
       try {
         await _loadToday();
+        if (mounted) setState(() {});
       } catch (_) {}
-      unawaited(_updateListCounts());
+      await _updateListCounts();
       try {
         _showTopToast('imported ${p.basename(path)}');
       } catch (_) {}
