@@ -5616,6 +5616,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _showTopToast('task moved to today');
 
       // Log move from backlog to today
+        unawaited(_debugLog(
+          'move backlog to today: taskId=${item.id}, text=${item.text}, backlog=${backlogList.length}, today=${todayList.length}'));
       unawaited(_appendRedoLog('move_to_today',
           taskId: item.id, details: {'from': 'backlog', 'to': 'today'}));
 
