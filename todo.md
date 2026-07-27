@@ -74,7 +74,8 @@
 - [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
 - [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
 - [x] trash durchsuchbar machen wie done, damit man auch gelöschte aufgaben wiederfinden kann!
-- [ ] android hintergrund synchronisation (push) implementieren
+- [x] android hintergrund synchronisation implementieren
+      -> nutzt jetzt einen stillen Android-Hintergrund-Timer fuer Cloud-Sync, solange der Prozess laeuft
 - [x] android sound unterbricht musik wiedergaben...
       -> nutzt jetzt SystemSound auf Android (unterbricht nicht, Audio-Focus-freundlich)
 

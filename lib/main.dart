@@ -678,6 +678,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String _cloudSyncLastError = '';
   int _cloudArchiveLastWarnedDays = -1;
   Timer? _cloudPullTimer;
+  Timer? _cloudBackgroundSyncTimer;
   bool _autoPromoteDueBacklogBusy = false;
   DateTime? _lastPromoteDueBacklogNoopLogAt;
   bool _cloudSyncBusy = false;
@@ -803,9 +804,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _cloudBackgroundSyncTimer?.cancel();
       if (!_initializationComplete) return;
       unawaited(_runDailyMigrationIfNeeded());
       unawaited(_promoteDueBacklogToToday(showToast: false));
+    } else if (Platform.isAndroid &&
+        (state == AppLifecycleState.paused ||
+            state == AppLifecycleState.inactive)) {
+      _startAndroidBackgroundSyncTimer();
     }
   }
 
@@ -2922,13 +2928,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return scheme.outline;
   }
 
-  Future<void> _manualSyncNow() async {
+  Future<void> _manualSyncNow({bool suppressToasts = false}) async {
     if (!_cloudSyncConfigured) {
-      _showTopToast('cloud-sync is not configured');
+      if (!suppressToasts) _showTopToast('cloud-sync is not configured');
       return;
     }
     if (_cloudSyncBusy) {
-      _showTopToast('synchronization in progress...');
+      if (!suppressToasts) _showTopToast('synchronization in progress...');
       return;
     }
 
@@ -2942,7 +2948,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     _suppressSyncToasts = true;
     try {
-      _showTopToast('synchronizing...');
+      if (!suppressToasts) _showTopToast('synchronizing...');
 
       // Step 1: Load all local lists and notes from disk.
       final todayFile = _storage('simplepresent_today.json');
@@ -3002,9 +3008,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Step 7: Reload current view
       await _loadToday();
 
-      _showTopToast('synchronization completed');
+      if (!suppressToasts) _showTopToast('synchronization completed');
     } catch (e) {
-      _showTopToast('synchronization failed');
+      if (!suppressToasts) _showTopToast('synchronization failed');
     } finally {
       _suppressSyncToasts = false;
     }
@@ -3262,6 +3268,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _cloudPullTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       _syncPullFromCloud();
     });
+  }
+
+  void _startAndroidBackgroundSyncTimer() {
+    if (!Platform.isAndroid || !_cloudSyncConfigured) return;
+    _cloudBackgroundSyncTimer?.cancel();
+    _cloudBackgroundSyncTimer = Timer.periodic(
+      const Duration(minutes: 15),
+      (_) => unawaited(_manualSyncNow(suppressToasts: true)),
+    );
+    unawaited(_manualSyncNow(suppressToasts: true));
   }
 
   Future<void> _switchFile(bool showDone) async {
@@ -3735,6 +3751,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _autoSwitchTimer?.cancel();
     _scheduledCheckTimer?.cancel();
     _cloudPullTimer?.cancel();
+    _cloudBackgroundSyncTimer?.cancel();
     for (final c in _editControllers.values) {
       c.dispose();
     }
