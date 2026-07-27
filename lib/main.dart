@@ -512,6 +512,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // Controller and query for Done-list search
   final TextEditingController _doneSearchController = TextEditingController();
   String _doneSearchQuery = '';
+  // Controller and query for Trash-list search
+  final TextEditingController _trashSearchController = TextEditingController();
+  String _trashSearchQuery = '';
   final FocusNode _inputFocus = FocusNode();
   OverlayEntry? _toastEntry;
   Timer? _toastTimer;
@@ -3706,6 +3709,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _controller.dispose();
     try {
       _doneSearchController.dispose();
+    } catch (_) {}
+    try {
+      _trashSearchController.dispose();
     } catch (_) {}
     _inputFocus.dispose();
     _audioPlayer.dispose();
@@ -7281,68 +7287,83 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                               ),
                                               const SizedBox(width: 8),
                                               Expanded(
-                                                child: _showingDone
-                                                    ? SizedBox(
-                                                        height: 44,
-                                                        child: TextField(
-                                                          controller:
-                                                              _doneSearchController,
-                                                          onChanged: (v) =>
-                                                              setState(() {
-                                                            _doneSearchQuery =
-                                                                v.trim();
-                                                          }),
-                                                          decoration:
-                                                              InputDecoration(
-                                                            hintText:
-                                                                'Search done',
-                                                            isDense: true,
-                                                            contentPadding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    vertical:
-                                                                        10,
-                                                                    horizontal:
-                                                                        12),
-                                                            suffixIcon:
-                                                                _doneSearchQuery
+                                                child:
+                                                    (_showingDone ||
+                                                            _showingTrash)
+                                                        ? SizedBox(
+                                                            height: 44,
+                                                            child: TextField(
+                                                              controller: _showingDone
+                                                                  ? _doneSearchController
+                                                                  : _trashSearchController,
+                                                              onChanged: (v) =>
+                                                                  setState(() {
+                                                                if (_showingDone) {
+                                                                  _doneSearchQuery =
+                                                                      v.trim();
+                                                                } else {
+                                                                  _trashSearchQuery =
+                                                                      v.trim();
+                                                                }
+                                                              }),
+                                                              decoration:
+                                                                  InputDecoration(
+                                                                hintText: _showingDone
+                                                                    ? 'Search done'
+                                                                    : 'Search trash',
+                                                                isDense: true,
+                                                                contentPadding:
+                                                                    const EdgeInsets
+                                                                        .symmetric(
+                                                                        vertical:
+                                                                            10,
+                                                                        horizontal:
+                                                                            12),
+                                                                suffixIcon: (_showingDone
+                                                                            ? _doneSearchQuery
+                                                                            : _trashSearchQuery)
                                                                         .isNotEmpty
                                                                     ? IconButton(
                                                                         icon: const Icon(
                                                                             Icons.clear),
                                                                         onPressed:
                                                                             () {
-                                                                          _doneSearchController
-                                                                              .clear();
                                                                           setState(
                                                                               () {
-                                                                            _doneSearchQuery =
-                                                                                '';
+                                                                            if (_showingDone) {
+                                                                              _doneSearchController.clear();
+                                                                              _doneSearchQuery = '';
+                                                                            } else {
+                                                                              _trashSearchController.clear();
+                                                                              _trashSearchQuery = '';
+                                                                            }
                                                                           });
                                                                         },
                                                                       )
                                                                     : null,
+                                                              ),
+                                                            ),
+                                                          )
+                                                        : Text(
+                                                            _showingBacklog
+                                                                ? 'backlog'
+                                                                : (_showingTrash
+                                                                    ? 'trash'
+                                                                    : 'today'),
+                                                            style: const TextStyle(
+                                                                    fontSize:
+                                                                        24,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700)
+                                                                .copyWith(
+                                                                    fontFamily:
+                                                                        _fontFamily),
+                                                            maxLines: 2,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
                                                           ),
-                                                        ),
-                                                      )
-                                                    : Text(
-                                                        _showingBacklog
-                                                            ? 'backlog'
-                                                            : (_showingTrash
-                                                                ? 'trash'
-                                                                : 'today'),
-                                                        style: const TextStyle(
-                                                                fontSize: 24,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700)
-                                                            .copyWith(
-                                                                fontFamily:
-                                                                    _fontFamily),
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
                                               ),
                                               const SizedBox(width: 8.0),
                                               Text(
@@ -7581,13 +7602,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                             final now = DateTime.now();
                                             final entries =
                                                 _today.asMap().entries;
-                                            // If viewing Done and a search query is present,
+                                            // If viewing Done or Trash and a search query is present,
                                             // filter entries so only matching tasks are processed.
                                             Iterable<MapEntry<int, TaskItem>>
                                                 entriesFiltered = entries;
                                             if (_showingDone &&
                                                 _doneSearchQuery.isNotEmpty) {
                                               final q = _doneSearchQuery
+                                                  .toLowerCase();
+                                              entriesFiltered =
+                                                  entries.where((e) {
+                                                final t = e.value;
+                                                final txt =
+                                                    t.text.toLowerCase();
+                                                final notes = (t.notes ?? '')
+                                                    .toLowerCase();
+                                                return txt.contains(q) ||
+                                                    notes.contains(q);
+                                              });
+                                            } else if (_showingTrash &&
+                                                _trashSearchQuery.isNotEmpty) {
+                                              final q = _trashSearchQuery
                                                   .toLowerCase();
                                               entriesFiltered =
                                                   entries.where((e) {
