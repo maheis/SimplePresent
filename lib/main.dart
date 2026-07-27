@@ -6220,6 +6220,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     try {
       await _debugLog(
           '_playShortSound: starting playback of $asset (alert=$alert)');
+      if (Platform.isAndroid) {
+        SystemSound.play(SystemSoundType.alert);
+        await _debugLog(
+            '_playShortSound: used SystemSound.alert on Android instead of asset playback');
+        return;
+      }
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       await _audioPlayer.play(AssetSource(asset));
       await _debugLog('_playShortSound: playback started successfully');

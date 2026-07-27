@@ -50,7 +50,6 @@
       sachen die ins backlog gehen, bleiben in today...
       dopplung von aufgaben...
       dauer kringel an aufgabe (vorzugsweise völkerball, oder die apache- aufgabe, ggf. notes an den aufgaben?)
-- [ ] android hintergrund synchronisation (push) implementieren
 - [?] android verliert manchmal den text focus beim editieren und springt runter in "neue aufgaben"-feld
 - [ ] Worklog an Aufgaben...
 - [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
@@ -75,6 +74,9 @@
 - [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
 - [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
 - [x] trash durchsuchbar machen wie done, damit man auch gelöschte aufgaben wiederfinden kann!
+- [ ] android hintergrund synchronisation (push) implementieren
+- [x] android sound unterbricht musik wiedergaben...
+      -> nutzt jetzt SystemSound auf Android (unterbricht nicht, Audio-Focus-freundlich)
 
 ## notes
 
