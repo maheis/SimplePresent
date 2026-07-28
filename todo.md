@@ -79,7 +79,7 @@
 - [ ] Anzeigen wenn es Notes gibt?
 - [ ] Checklisten / Notes
 - [x] Unteraufgaben Tooltip wenn Text zu lang!
-- [ ] aufgaben fenster position und größe merken
+- [?] aufgaben fenster position und größe merken
 - [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
 
 ## notes

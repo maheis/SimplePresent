@@ -3591,6 +3591,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _saveSettingsWithGeom(Map<String, dynamic>? geom) async {
     try {
+      final existingSettings = await _readSettingsMap();
       final out = <String, dynamic>{
         'tileHeight': _tileHeight,
         'idleMinutes': _idleMinutes,
@@ -3653,6 +3654,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         'lastRunDate': _lastRunDate ?? '',
         'useTrash': _useTrash,
       };
+
+      // Preserve task-window geometry written by the separate desktop task
+      // window process so main-window saves do not wipe it out.
+      final preservedTaskWindowGeometry =
+          existingSettings['taskWindowGeometry'];
+      if (preservedTaskWindowGeometry != null) {
+        out['taskWindowGeometry'] = preservedTaskWindowGeometry;
+      }
 
       // Do not capture or persist window geometry or position.
       // Persist current notification flags as lists so restarts don't re-notify
@@ -9258,6 +9267,8 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
   bool _refreshSignalWritten = false;
   String? _lastWindowGeometrySignature;
   bool _windowGeometryRestoreScheduled = false;
+  static const String _taskWindowGeometryFileName =
+      'simplepresent_task_window_geometry.json';
 
   @override
   void initState() {
@@ -9421,11 +9432,49 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
 
   Future<void> _restoreWindowGeometryFromSettings() async {
     try {
-      final settings = await _readSettingsMap();
-      final geom = _taskWindowGeometryFromSettings(settings);
+      final geom = await _readTaskWindowGeometry();
       if (geom == null) return;
       await _nativeWindowChannel.invokeMethod('setWindowGeometry', geom);
     } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> _readTaskWindowGeometry() async {
+    try {
+      final file = await _fileFor(_taskWindowGeometryFileName);
+      if (await file.exists()) {
+        final raw = _asSettingsMap(await file.readAsString());
+        final direct = _taskWindowGeometryFromMap(raw);
+        if (direct != null) return direct;
+      }
+    } catch (_) {}
+    // Backward compatibility: fallback to the old settings key.
+    try {
+      final settings = await _readSettingsMap();
+      return _taskWindowGeometryFromSettings(settings);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic>? _taskWindowGeometryFromMap(Map<String, dynamic> data) {
+    int readInt(String key, int fallback) {
+      final v = data[key];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      return int.tryParse(v?.toString() ?? '') ?? fallback;
+    }
+
+    final width = readInt('width', 0);
+    final height = readInt('height', 0);
+    if (width <= 0 || height <= 0) return null;
+    return <String, dynamic>{
+      'x': readInt('x', 0),
+      'y': readInt('y', 0),
+      'width': width,
+      'height': height,
+      'maximized': data['maximized'] == true,
+      'always_on_top': data['always_on_top'] == true,
+    };
   }
 
   String _geometrySignature(Map<String, dynamic> geom) {
@@ -9456,6 +9505,17 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       final sig = _geometrySignature(geom);
       if (sig == _lastWindowGeometrySignature) return;
       _lastWindowGeometrySignature = sig;
+
+      // Store geometry in a dedicated file to avoid cross-process overwrites
+      // from main settings writes.
+      try {
+        final file = await _fileFor(_taskWindowGeometryFileName);
+        await file.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(geom),
+        );
+      } catch (_) {}
+
+      // Keep legacy settings key in sync for backward compatibility.
       final settings = await _readSettingsMap();
       settings['taskWindowGeometry'] = geom;
       await _writeSettingsMap(settings);
