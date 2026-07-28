@@ -4467,6 +4467,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           } catch (_) {}
         }
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          _editFocusNodes.putIfAbsent(taskId, () => FocusNode()).requestFocus();
+        } catch (_) {}
+      });
     }
     _registerActivity();
   }

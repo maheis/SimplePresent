@@ -42,34 +42,10 @@
 - [x] in arbeit sichtbarerer!
 - [x] automatic backups und auto delete old trash settings werden nicht gespeichert
 - [x] auto delete old trash 90 tage default
-- [ ] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - IN WORK
-- [ ] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
-- [ ] Web Applikation ?
-- [ ] ausführliches sync testen! kommt ständig zu fehlern, die nicht reproduzierbar sind!
-      z.b. move von backlog zu today wird nicht synchronisiert
-      sachen die ins backlog gehen, bleiben in today...
-      dopplung von aufgaben...
-      dauer kringel an aufgabe (vorzugsweise völkerball, oder die apache- aufgabe, ggf. notes an den aufgaben?)
-- [?] android verliert manchmal den text focus beim editieren und springt runter in "neue aufgaben"-feld
-- [ ] Worklog an Aufgaben...
-- [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
-- [ ] Abhängigkeiten Reduzieren
+- [x] android verliert manchmal den text focus beim editieren und springt runter in "neue aufgaben"-feld
+- [x] Abhängigkeiten Reduzieren
   - [x] sqlite3.dll
-  - [ ] mehr?
-  - [ ] Aufräumen (ois)
-- [ ] sync: self signed certs prüfen (ca-chain)
-- [ ] sync: nur ein gerät sollte automatisches löschen aktiv haben! (primärgerät-definieren?)
-- [x] android: icon fritte (muss es einen hintergrund haben?), was ist mit weißem icon für statusleiste z.b.?
-      notification funktioniert mit weißen icon.[text](about:blank#blocked)
-      kleines app icon in der taks auswahl und benachrichtigung klappt auchhttps://www.youtube.com/watch?v=rNPMETYAKYA&t=13s
-      app icon ist 4 eckig auf weißem grund (rund)
-      jetzt ist das icon wieder vermatscht, glaube muss transparentes icon mit gößerem transparenten rand sein, damit es rund passt
-      es wird besser! ich habe color_transparent_icon.png und color_teal_icon.png kleiner gemacht (stopwatch, background blieb gleich)
-      genau das ist es! die zwei bzw. vermutlich das transparent dürfte es sein! könnte noch ein µ kleiner sein, dann passt es endlich!
-- [ ] Zeiterfassung muss granularer sein, damit die Zeiten pro Tag passen!
-- [ ] SimplePresent -> simple present | dateinamen: simple-present
 - [x] aufgaben nicht aufklappen auf dem desktop, sondern in einem eigenen fenster öffnen (optional in den settings konfigurierbar)
-- [x] aufgaben fenster position und größe merken
 - [x] save button geht unter windows nicht bzw. schließt nicht!
 - [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
 - [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
@@ -78,6 +54,32 @@
       -> nutzt jetzt einen stillen Android-Hintergrund-Timer fuer Cloud-Sync, solange der Prozess laeuft
 - [x] android sound unterbricht musik wiedergaben...
       -> nutzt jetzt SystemSound auf Android (unterbricht nicht, Audio-Focus-freundlich)
+- [x] android: icon fritte (muss es einen hintergrund haben?), was ist mit weißem icon für statusleiste z.b.?
+      notification funktioniert mit weißen icon.[text](about:blank#blocked)
+      kleines app icon in der taks auswahl und benachrichtigung klappt auchhttps://www.youtube.com/watch?v=rNPMETYAKYA&t=13s
+      app icon ist 4 eckig auf weißem grund (rund)
+      jetzt ist das icon wieder vermatscht, glaube muss transparentes icon mit gößerem transparenten rand sein, damit es rund passt
+      es wird besser! ich habe color_transparent_icon.png und color_teal_icon.png kleiner gemacht (stopwatch, background blieb gleich)
+      genau das ist es! die zwei bzw. vermutlich das transparent dürfte es sein! könnte noch ein µ kleiner sein, dann passt es endlich!
+- [ ] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - IN WORK
+- [ ] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
+- [ ] Web Applikation ?
+- [ ] Worklog an Aufgaben...
+- [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
+- [ ] sync: self signed certs prüfen (ca-chain)
+- [ ] sync: nur ein gerät sollte automatisches löschen aktiv haben! (primärgerät-definieren?)
+- [ ] Zeiterfassung muss granularer sein, damit die Zeiten pro Tag passen!
+- [ ] SimplePresent -> simple present | dateinamen: simple-present
+- [ ] ausführliches sync testen! kommt ständig zu fehlern, die nicht reproduzierbar sind!
+      z.b. move von backlog zu today wird nicht synchronisiert
+      sachen die ins backlog gehen, bleiben in today...
+      dopplung von aufgaben...
+      dauer kringel an aufgabe (vorzugsweise völkerball, oder die apache- aufgabe, ggf. notes an den aufgaben?)
+- [x] Aufklappen von Aufgabe soll ins Textfeld der Aufgabe springen.
+- [ ] Anzeigen wenn es Notes gibt
+- [ ] Checklisten / Notes
+- [ ] Unteraufgaben Tooltip wenn Text zu lang!
+- [ ] aufgaben fenster position und größe merken
 
 ## notes
 
