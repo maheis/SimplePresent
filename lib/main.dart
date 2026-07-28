@@ -8397,12 +8397,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                           mainAxisSize:
                                                                               MainAxisSize.min,
                                                                           children: [
-                                                                            IconButton(
-                                                                              padding: const EdgeInsets.all(4),
-                                                                              constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                                                                              tooltip: task.scheduledAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!) : 'set schedule',
-                                                                              icon: Icon(Icons.calendar_today, size: 18, color: task.scheduledAt != null ? _scheduleIconColor(task.scheduledAt!) : _iconColor),
-                                                                              onPressed: () => _pickSchedule(i),
+                                                                            Row(
+                                                                              mainAxisSize: MainAxisSize.min,
+                                                                              children: [
+                                                                                IconButton(
+                                                                                  padding: const EdgeInsets.all(1),
+                                                                                  constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                                                                  iconSize: 11,
+                                                                                  tooltip: task.scheduledAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!) : 'set schedule',
+                                                                                  icon: Icon(Icons.calendar_today, size: 11, color: task.scheduledAt != null ? _scheduleIconColor(task.scheduledAt!) : _iconColor),
+                                                                                  onPressed: () => _pickSchedule(i),
+                                                                                ),
+                                                                                if (task.scheduledAt != null)
+                                                                                  Padding(
+                                                                                    padding: const EdgeInsets.only(left: 4.0),
+                                                                                    child: Text(
+                                                                                      DateFormat('HH:mm').format(task.scheduledAt!),
+                                                                                      style: TextStyle(fontSize: 11, color: _scheduleIconColor(task.scheduledAt!)),
+                                                                                    ),
+                                                                                  ),
+                                                                              ],
                                                                             ),
                                                                             if (task.scheduledAt !=
                                                                                 null)
@@ -8411,10 +8425,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 child: Column(
                                                                                   mainAxisSize: MainAxisSize.min,
                                                                                   children: [
-                                                                                    Text(
-                                                                                      DateFormat('HH:mm').format(task.scheduledAt!),
-                                                                                      style: TextStyle(fontSize: 11, color: _scheduleIconColor(task.scheduledAt!)),
-                                                                                    ),
                                                                                     // Show full date in Backlog, or in Today when the scheduled date is not today and is in the past
                                                                                     if (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json') || (task.scheduledAt != null && !_isSameDay(task.scheduledAt!, DateTime.now()) && task.scheduledAt!.isBefore(DateTime.now())))
                                                                                       Text(
