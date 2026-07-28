@@ -8667,17 +8667,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                   onChanged: (value) => _updateSubtask(i, step.id, done: value ?? false),
                                                                                 ),
                                                                                 title: step.done
-                                                                                    ? Text(
-                                                                                        step.text,
-                                                                                        style: TextStyle(
-                                                                                          decoration: TextDecoration.none,
-                                                                                          color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
+                                                                                    ? Tooltip(
+                                                                                        message: step.text,
+                                                                                        child: Text(
+                                                                                          step.text,
+                                                                                          maxLines: 1,
+                                                                                          overflow: TextOverflow.ellipsis,
+                                                                                          style: TextStyle(
+                                                                                            decoration: TextDecoration.none,
+                                                                                            color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
+                                                                                          ),
                                                                                         ),
                                                                                       )
-                                                                                    : TextFormField(
-                                                                                        initialValue: step.text,
-                                                                                        decoration: const InputDecoration(border: InputBorder.none, isDense: true),
-                                                                                        onChanged: (value) => _updateSubtask(i, step.id, text: value),
+                                                                                    : Tooltip(
+                                                                                        message: step.text,
+                                                                                        child: TextFormField(
+                                                                                          initialValue: step.text,
+                                                                                          decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+                                                                                          onChanged: (value) => _updateSubtask(i, step.id, text: value),
+                                                                                        ),
                                                                                       ),
                                                                                 trailing: Row(
                                                                                   mainAxisSize: MainAxisSize.min,

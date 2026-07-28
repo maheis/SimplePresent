@@ -76,10 +76,11 @@
       dopplung von aufgaben...
       dauer kringel an aufgabe (vorzugsweise völkerball, oder die apache- aufgabe, ggf. notes an den aufgaben?)
 - [x] Aufklappen von Aufgabe soll ins Textfeld der Aufgabe springen.
-- [ ] Anzeigen wenn es Notes gibt
+- [ ] Anzeigen wenn es Notes gibt?
 - [ ] Checklisten / Notes
-- [ ] Unteraufgaben Tooltip wenn Text zu lang!
+- [x] Unteraufgaben Tooltip wenn Text zu lang!
 - [ ] aufgaben fenster position und größe merken
+- [ ] 
 
 ## notes
 
