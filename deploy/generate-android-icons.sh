@@ -9,8 +9,8 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SVG_DIR="$PROJECT_ROOT/assets/icons"
 ANDROID_RES="$PROJECT_ROOT/android/app/src/main/res"
 
-SVG_BACKGROUND="$SVG_DIR/color_teal_icon.svg"
-SVG_FOREGROUND="$SVG_DIR/color_transparent_icon.svg"
+SVG_BACKGROUND="$SVG_DIR/color_teal_icon_android.svg"
+SVG_FOREGROUND="$SVG_DIR/color_transparent_icon_android.svg"
 SVG_NOTIFICATION="$SVG_DIR/white_transparent_icon.svg"
 
 # Background color for adaptive launcher icon (user requested)
@@ -105,13 +105,5 @@ else
   convert -size 1x1 xc:"$SPLASH_COLOR" "$ANDROID_RES/drawable-v21/launch_background.png"
 fi
 echo "Splash PNGs generated (8-bit if possible): $SPLASH_COLOR"
-
-# --- Remove any stale XMLs that have been superseded by PNGs ---
-rm -f "$ANDROID_RES/drawable/ic_launcher_background.xml"
-rm -f "$ANDROID_RES/drawable/ic_launcher_foreground.xml"
-rm -f "$ANDROID_RES/drawable/ic_stat_notify.xml"
-rm -f "$ANDROID_RES/drawable/launch_background.xml"
-rm -f "$ANDROID_RES/drawable-v21/launch_background.xml"
-rm -rf "$ANDROID_RES/mipmap-anydpi-v26"
 
 echo "Icon generation finished. Review files under $ANDROID_RES/* and commit them."

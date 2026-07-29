@@ -71,16 +71,20 @@
 - [ ] Zeiterfassung muss granularer sein, damit die Zeiten pro Tag passen!
 - [ ] SimplePresent -> simple present | dateinamen: simple-present
 - [ ] ausführliches sync testen! kommt ständig zu fehlern, die nicht reproduzierbar sind!
-      z.b. move von backlog zu today wird nicht synchronisiert
-      sachen die ins backlog gehen, bleiben in today...
-      dopplung von aufgaben...
-      dauer kringel an aufgabe (vorzugsweise völkerball, oder die apache- aufgabe, ggf. notes an den aufgaben?)
+      - [ ] move von backlog zu today wird nicht synchronisiert?
+      - [ ] sachen die ins backlog gehen, bleiben in today...
+      - [ ] dopplung von aufgaben...
+      - [ ] dauer kringel an aufgabe
+      - [ ] aufgaben am handy gemanaged, das erste mal am tag am pc aufgemacht, die aufgaben von "yesterday" bleiben in today, aber die follow ups vom handy werden ins backlog gelegt! = dopplung
 - [x] Aufklappen von Aufgabe soll ins Textfeld der Aufgabe springen.
 - [ ] Anzeigen wenn es Notes gibt?
 - [ ] Checklisten / Notes
 - [x] Unteraufgaben Tooltip wenn Text zu lang!
 - [?] aufgaben fenster position und größe merken
 - [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
+  - [ ] kalendericon unter android komiglisch
+- [?] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
+- sortierung sproingt ständig!
 
 ## notes
 
