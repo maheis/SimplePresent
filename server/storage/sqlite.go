@@ -23,8 +23,13 @@ func NewSQLite(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Keep SQLite access serialized. This also ensures connection-local PRAGMAs
+	// such as foreign_keys apply consistently to every operation.
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 	s := &Store{db: db}
 	if err := s.initSchema(); err != nil {
+		db.Close()
 		return nil, err
 	}
 	return s, nil
@@ -60,6 +65,12 @@ func (s *Store) initSchema() error {
 	if _, err := s.db.Exec(`PRAGMA journal_mode = WAL;`); err != nil {
 		return fmt.Errorf("set wal mode: %w", err)
 	}
+	if _, err := s.db.Exec(`PRAGMA busy_timeout = 5000;`); err != nil {
+		return fmt.Errorf("set busy timeout: %w", err)
+	}
+	if _, err := s.db.Exec(`PRAGMA synchronous = NORMAL;`); err != nil {
+		return fmt.Errorf("set synchronous mode: %w", err)
+	}
 
 	// Migration: remove obsolete redo_items table if present (clean up old schema)
 	if _, err := s.db.Exec(`DROP TABLE IF EXISTS redo_items;`); err != nil {
@@ -70,7 +81,7 @@ func (s *Store) initSchema() error {
 		`PRAGMA foreign_keys = ON;`,
 		`CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, created_at INTEGER, max_devices INTEGER DEFAULT 5, max_items INTEGER DEFAULT 10000, max_bytes INTEGER DEFAULT 10485760, pairing_public_key TEXT DEFAULT '', pin_hash TEXT DEFAULT '', last_active_at INTEGER DEFAULT 0, archived INTEGER DEFAULT 0, archived_at INTEGER DEFAULT 0);`,
 		`CREATE TABLE IF NOT EXISTS devices (id TEXT PRIMARY KEY, account_id TEXT, name TEXT, created_at INTEGER, revoked INTEGER DEFAULT 0, token_version INTEGER DEFAULT 1, FOREIGN KEY(account_id) REFERENCES accounts(id));`,
-		`CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, account_id TEXT, payload TEXT, modified_at INTEGER, tombstone INTEGER DEFAULT 0, origin_device_id TEXT, version INTEGER, FOREIGN KEY(account_id) REFERENCES accounts(id));`,
+		`CREATE TABLE IF NOT EXISTS items (id TEXT NOT NULL, account_id TEXT NOT NULL, payload TEXT, modified_at INTEGER, tombstone INTEGER DEFAULT 0, origin_device_id TEXT, version INTEGER, PRIMARY KEY(account_id, id), FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE);`,
 		`CREATE TABLE IF NOT EXISTS system_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);`,
 		`CREATE INDEX IF NOT EXISTS idx_devices_account_active ON devices(account_id, revoked);`,
 		`CREATE INDEX IF NOT EXISTS idx_items_account_modified ON items(account_id, modified_at);`,
@@ -100,7 +111,62 @@ func (s *Store) initSchema() error {
 			return fmt.Errorf("init schema: %w", err)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if err := s.migrateItemsPrimaryKey(); err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_items_account_modified ON items(account_id, modified_at);`)
+	return err
+}
+
+func (s *Store) migrateItemsPrimaryKey() error {
+	rows, err := s.db.Query(`PRAGMA table_info(items);`)
+	if err != nil {
+		return fmt.Errorf("inspect items schema: %w", err)
+	}
+	defer rows.Close()
+
+	primaryKeys := map[string]int{}
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue interface{}
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			return fmt.Errorf("inspect items column: %w", err)
+		}
+		if primaryKey > 0 {
+			primaryKeys[name] = primaryKey
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("inspect items schema: %w", err)
+	}
+	if primaryKeys["account_id"] > 0 && primaryKeys["id"] > 0 {
+		return nil
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin items migration: %w", err)
+	}
+	defer tx.Rollback()
+	statements := []string{
+		`CREATE TABLE items_v2 (id TEXT NOT NULL, account_id TEXT NOT NULL, payload TEXT, modified_at INTEGER, tombstone INTEGER DEFAULT 0, origin_device_id TEXT, version INTEGER, PRIMARY KEY(account_id, id), FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE);`,
+		`INSERT INTO items_v2 (id, account_id, payload, modified_at, tombstone, origin_device_id, version) SELECT id, account_id, payload, modified_at, tombstone, origin_device_id, version FROM items;`,
+		`DROP TABLE items;`,
+		`ALTER TABLE items_v2 RENAME TO items;`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.Exec(statement); err != nil {
+			return fmt.Errorf("migrate items schema: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit items migration: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) Close() error {

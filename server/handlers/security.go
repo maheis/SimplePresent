@@ -88,7 +88,7 @@ func (s *Server) SecureOnly(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if s.TrustProxyHeaders && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		if s.requestFromTrustedProxy(r) && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -103,6 +103,13 @@ func (s *Server) RateLimitByIP(next http.Handler) http.Handler {
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func LimitRequestBody(maxBytes int64, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -214,11 +221,16 @@ func authFromContext(ctx context.Context) (AuthInfo, bool) {
 }
 
 func (s *Server) clientIP(r *http.Request) string {
-	if s.TrustProxyHeaders {
+	if s.requestFromTrustedProxy(r) {
 		forwardedFor := r.Header.Get("X-Forwarded-For")
 		if forwardedFor != "" {
 			parts := strings.Split(forwardedFor, ",")
-			return strings.TrimSpace(parts[0])
+			for i := len(parts) - 1; i >= 0; i-- {
+				candidate := net.ParseIP(strings.TrimSpace(parts[i]))
+				if candidate != nil && !s.isTrustedProxyIP(candidate) {
+					return candidate.String()
+				}
+			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -226,4 +238,28 @@ func (s *Server) clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func (s *Server) requestFromTrustedProxy(r *http.Request) bool {
+	if !s.TrustProxyHeaders {
+		return false
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(strings.TrimSpace(host))
+	return ip != nil && s.isTrustedProxyIP(ip)
+}
+
+func (s *Server) isTrustedProxyIP(ip net.IP) bool {
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, network := range s.TrustedProxyNets {
+		if network != nil && network.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

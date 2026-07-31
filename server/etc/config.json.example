@@ -1,5 +1,5 @@
 {
-  "bind": "0.0.0.0:8080",
+  "bind": "127.0.0.1:8080",
   "database_path": "/var/lib/simplepresent/simplepresent.db",
   "tls": {
     "enabled": false,
@@ -9,6 +9,7 @@
   "security": {
     "require_tls": true,
     "trust_proxy_headers": true,
+    "trusted_proxy_cidrs": [],
     "jwt_secret": "change-me-in-production",
     "account_policy": {
       "max_accounts": 200,
