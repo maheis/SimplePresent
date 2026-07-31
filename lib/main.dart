@@ -5125,6 +5125,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ..addAll(inProgressFirst)
       ..addAll(restFinal);
 
+    final currentOrderIds = _today.map((t) => t.id).toList();
+    final finalOrderIds = finalOrder.map((t) => t.id).toList();
+    if (listEquals(currentOrderIds, finalOrderIds)) {
+      if (kDebugMode) {
+        print('_performDelayedReorder: skipped, order unchanged');
+      }
+      return;
+    }
+
     // Debug: print classification & ordering to console in debug builds.
     if (kDebugMode) {
       final buf = StringBuffer();

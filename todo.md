@@ -84,7 +84,7 @@
 - [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
   - [ ] kalendericon unter android komiglisch
 - [?] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
-- sortierung sproingt ständig!
+- [?] sortierung springt ständig!
 
 ## notes
 
