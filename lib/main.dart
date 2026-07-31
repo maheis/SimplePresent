@@ -8421,6 +8421,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 IconButton(
                                                                                   padding: const EdgeInsets.all(1),
                                                                                   constraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                                                                  visualDensity: VisualDensity.compact,
+                                                                                  style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                                                                                   iconSize: 11,
                                                                                   tooltip: task.scheduledAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(task.scheduledAt!) : 'set schedule',
                                                                                   icon: Icon(Icons.calendar_today, size: 11, color: task.scheduledAt != null ? _scheduleIconColor(task.scheduledAt!) : _iconColor),
@@ -8428,7 +8430,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 ),
                                                                                 if (task.scheduledAt != null)
                                                                                   Padding(
-                                                                                    padding: const EdgeInsets.only(left: 4.0),
+                                                                                    padding: const EdgeInsets.only(left: 1.0),
                                                                                     child: Text(
                                                                                       DateFormat('HH:mm').format(task.scheduledAt!),
                                                                                       style: TextStyle(fontSize: 11, color: _scheduleIconColor(task.scheduledAt!)),
