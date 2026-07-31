@@ -5,8 +5,12 @@ import 'dart:math';
 import 'package:cryptography/cryptography.dart';
 
 class CloudSyncException implements Exception {
-  CloudSyncException(this.message);
+  CloudSyncException(this.message, {this.statusCode, this.path});
   final String message;
+  final int? statusCode;
+  final String? path;
+
+  bool get isConflict => statusCode == HttpStatus.conflict;
 
   @override
   String toString() => 'CloudSyncException: $message';
@@ -644,6 +648,8 @@ class CloudSyncClient {
     if (response.statusCode < 200 || response.statusCode > 299) {
       throw CloudSyncException(
         'Server error ${response.statusCode} on $path: $body',
+        statusCode: response.statusCode,
+        path: path,
       );
     }
 
@@ -670,6 +676,8 @@ class CloudSyncClient {
     if (response.statusCode < 200 || response.statusCode > 299) {
       throw CloudSyncException(
         'Server error ${response.statusCode} on $path: $body',
+        statusCode: response.statusCode,
+        path: path,
       );
     }
 

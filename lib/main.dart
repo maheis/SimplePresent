@@ -2681,6 +2681,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // Suppress toasts originating from sync operations.
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
+    var pullAfterConflict = false;
     try {
       final client = CloudSyncClient(
         serverBaseUrl: _cloudServerUrl.trim(),
@@ -2765,11 +2766,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await _saveSettings();
       _onCloudSyncSuccess();
     } catch (e) {
+      pullAfterConflict = e is CloudSyncException && e.isConflict;
       _onCloudSyncError(e);
     } finally {
       _cloudSyncBusy = false;
       _suppressSyncToasts = false;
       _flushPendingCloudTimeEntrySync();
+      if (pullAfterConflict && mounted) {
+        unawaited(_debugLog(
+            'syncPushToCloud: conflict detected, pulling remote state'));
+        unawaited(_syncPullFromCloud());
+      }
     }
   }
 
@@ -2883,9 +2890,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ? 'Sync: Authentifizierung fehlgeschlagen (Authorization-Header fehlt, Proxy-Konfiguration pruefen).'
                 : msg.contains('401') || msg.contains('403')
                     ? 'Sync: Authentifizierung fehlgeschlagen.'
-                    : msg.contains('Server error')
-                        ? 'Sync: Server-Fehler.'
-                        : 'Sync fehlgeschlagen.';
+                    : msg.contains('409')
+                        ? 'Sync-Konflikt: Serverstand wird geladen.'
+                        : msg.contains('Server error')
+                            ? 'Sync: Server-Fehler.'
+                            : 'Sync fehlgeschlagen.';
     _cloudSyncLastError = short;
     if (!_cloudSyncFailed && mounted) {
       _cloudSyncFailed = true;
