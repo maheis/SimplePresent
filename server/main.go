@@ -262,19 +262,7 @@ func main() {
 		AccountLimiters: handlers.NewAccountLimiters(cfg.Security.RateLimit.RequestsPerMinute, cfg.Security.RateLimit.Burst),
 	}
 
-	r := mux.NewRouter()
-	r.Handle("/register", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Register))))).Methods("POST")
-	r.Handle("/pair/challenge", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.PairChallenge))))).Methods("POST")
-	r.Handle("/pair", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Pair))))).Methods("POST")
-	r.Handle("/push", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(pushRequestBodyLimit, http.HandlerFunc(srv.Push)))))).Methods("POST")
-	r.Handle("/pull", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.Pull))))).Methods("GET")
-	r.Handle("/devices", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.DevicesList))))).Methods("GET")
-	r.Handle("/account/status", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.AccountStatus))))).Methods("GET")
-	r.Handle("/devices/{id}/revoke", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.RevokeDevice)))))).Methods("POST")
-	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"version": ServerVersion, "status": "ok"})
-	}).Methods("GET")
+	r := newRouter(srv)
 
 	addr := cfg.Bind
 	srv.StartMaintenanceLoop()
@@ -293,6 +281,23 @@ func main() {
 	} else {
 		log.Fatal(httpServer.ListenAndServe())
 	}
+}
+
+func newRouter(srv *handlers.Server) http.Handler {
+	r := mux.NewRouter()
+	r.Handle("/register", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Register))))).Methods("POST")
+	r.Handle("/pair/challenge", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.PairChallenge))))).Methods("POST")
+	r.Handle("/pair", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Pair))))).Methods("POST")
+	r.Handle("/push", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(pushRequestBodyLimit, http.HandlerFunc(srv.Push)))))).Methods("POST")
+	r.Handle("/pull", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.Pull))))).Methods("GET")
+	r.Handle("/devices", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.DevicesList))))).Methods("GET")
+	r.Handle("/account/status", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.AccountStatus))))).Methods("GET")
+	r.Handle("/devices/{id}/revoke", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.RevokeDevice)))))).Methods("POST")
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"version": ServerVersion, "status": "ok"})
+	}).Methods("GET")
+	return r
 }
 
 func parseTrustedProxyCIDRs(values []string) ([]*net.IPNet, error) {
