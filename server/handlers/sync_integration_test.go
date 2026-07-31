@@ -176,3 +176,46 @@ func TestPushConflictRollsBackEntireSnapshot(t *testing.T) {
 		t.Fatal("conflicting snapshot was partially committed")
 	}
 }
+
+func TestConcurrentReorderKeepsNewestSnapshot(t *testing.T) {
+	server := newSyncTestServer(t)
+	response := pushAsDevice(t, server, "device-a", `{
+		"items":[
+			{"id":"task:one","payload":{"position":0},"modified_at":100,"version":1},
+			{"id":"task:two","payload":{"position":1},"modified_at":100,"version":1}
+		]
+	}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("initial order push failed: %d %s", response.Code, response.Body.String())
+	}
+
+	response = pushAsDevice(t, server, "device-b", `{
+		"items":[
+			{"id":"task:one","payload":{"position":1},"modified_at":200,"version":2},
+			{"id":"task:two","payload":{"position":0},"modified_at":200,"version":2}
+		]
+	}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("newer reorder push failed: %d %s", response.Code, response.Body.String())
+	}
+
+	response = pushAsDevice(t, server, "device-a", `{
+		"items":[
+			{"id":"task:one","payload":{"position":0},"modified_at":150,"version":2},
+			{"id":"task:two","payload":{"position":1},"modified_at":150,"version":2}
+		]
+	}`)
+	if response.Code != http.StatusConflict {
+		t.Fatalf("expected stale reorder conflict, got %d %s", response.Code, response.Body.String())
+	}
+
+	items := pullAsDevice(t, server, "device-a")
+	positions := map[string]int{}
+	for _, item := range items {
+		payload := item["payload"].(map[string]interface{})
+		positions[item["id"].(string)] = int(payload["position"].(float64))
+	}
+	if positions["task:one"] != 1 || positions["task:two"] != 0 {
+		t.Fatalf("stale reorder changed newest positions: %#v", positions)
+	}
+}

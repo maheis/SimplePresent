@@ -693,7 +693,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // A dedicated drain loop processes them sequentially to prevent drops when
   // multiple lists change in the same operation (e.g. move today→backlog).
   final Map<String, List<TaskItem>> _pendingCloudPushes = {};
+  final Map<String, List<TaskItem>> _conflictingCloudPushes = {};
   bool _cloudPushDrainRunning = false;
+  bool _cloudConflictDialogOpen = false;
   final Map<String, TaskItem> _cloudPendingTimeEntrySync = <String, TaskItem>{};
   Set<String> _cloudKnownTodayIds = <String>{};
   Set<String> _cloudKnownBacklogIds = <String>{};
@@ -1829,47 +1831,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  /// Replace the contents of [filename] with [items] using per-task queue
-  /// operations, but serialized file operations to avoid races. This keeps
-  /// sync semantics similar to a full replace while ensuring per-task
-  /// operations are atomic and debuggable.
+  /// Replace the complete list atomically while preserving server order.
   Future<void> _queueReplaceList(String filename, List<TaskItem> items) async {
     try {
-      // First, ensure each incoming item is upserted via its task queue.
-      for (final it in items) {
-        unawaited(
-            _debugLog('queueReplace: scheduling upsert ${it.id} -> $filename'));
-        await _queueTaskAction(it.id, () async {
-          await _serializedFileOp(filename, () async {
-            final List<TaskItem> cur = [];
-            await _loadList(filename, cur);
-            // Remove any existing entry with same id
-            cur.removeWhere((t) => t.id == it.id);
-            // Insert at top
-            cur.insert(0, it);
-            await _saveList(filename, cur);
-          });
-        });
-      }
-
-      // Then, remove any tasks that are not present in the new set.
-      final newIds = items.map((e) => e.id).toSet();
       await _serializedFileOp(filename, () async {
-        final List<TaskItem> cur = [];
-        await _loadList(filename, cur);
-        final toRemove = cur.where((t) => !newIds.contains(t.id)).toList();
-        for (final r in toRemove) {
-          unawaited(_debugLog(
-              'queueReplace: scheduling remove ${r.id} from $filename'));
-          await _queueTaskAction(r.id, () async {
-            await _serializedFileOp(filename, () async {
-              final List<TaskItem> now = [];
-              await _loadList(filename, now);
-              now.removeWhere((t) => t.id == r.id);
-              await _saveList(filename, now);
-            });
-          });
-        }
+        await _saveList(filename, List<TaskItem>.from(items));
       });
     } catch (e, st) {
       unawaited(_debugLog('queueReplaceList failed for $filename: $e\n$st'));
@@ -2631,6 +2597,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!_cloudSyncConfigured || _applyingCloudState || _suppressCloudPushes)
       return;
     if (_cloudListNameForFilename(filename) == null) return;
+    if (_conflictingCloudPushes.containsKey(filename)) {
+      _conflictingCloudPushes[filename] = List<TaskItem>.from(source);
+      return;
+    }
     _pendingCloudPushes[filename] = List<TaskItem>.from(source);
     if (!_cloudPushDrainRunning) {
       unawaited(_drainPushQueue());
@@ -2767,6 +2737,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _onCloudSyncSuccess();
     } catch (e) {
       pullAfterConflict = e is CloudSyncException && e.isConflict;
+      if (pullAfterConflict) {
+        final latestSnapshot = _pendingCloudPushes.remove(filename) ?? source;
+        _conflictingCloudPushes[filename] = List<TaskItem>.from(latestSnapshot);
+      }
       _onCloudSyncError(e);
     } finally {
       _cloudSyncBusy = false;
@@ -2775,8 +2749,60 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (pullAfterConflict && mounted) {
         unawaited(_debugLog(
             'syncPushToCloud: conflict detected, pulling remote state'));
-        unawaited(_syncPullFromCloud());
+        await _syncPullFromCloud();
       }
+    }
+  }
+
+  Future<void> _resolveCloudPushConflicts() async {
+    if (_conflictingCloudPushes.isEmpty || _cloudConflictDialogOpen || !mounted)
+      return;
+    _cloudConflictDialogOpen = true;
+    try {
+      final useLocal = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Sync conflict'),
+          content: const Text(
+            'Another device changed the same task list. The server version '
+            'has been loaded. Keep it, or restore and upload your local changes?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Keep server version'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Use local changes'),
+            ),
+          ],
+        ),
+      );
+
+      if (useLocal != true) {
+        _conflictingCloudPushes.clear();
+        _showTopToast('Server version kept.');
+        return;
+      }
+
+      final localSnapshots = Map<String, List<TaskItem>>.fromEntries(
+        _conflictingCloudPushes.entries.map(
+          (entry) => MapEntry(entry.key, List<TaskItem>.from(entry.value)),
+        ),
+      );
+      _conflictingCloudPushes.clear();
+      for (final entry in localSnapshots.entries) {
+        await _queueReplaceList(entry.key, entry.value);
+      }
+      await _loadToday();
+      unawaited(_updateListCounts());
+      _showTopToast('Local changes restored and queued for sync.');
+    } catch (e, st) {
+      unawaited(_debugLog('cloud conflict resolution failed: $e\n$st'));
+    } finally {
+      _cloudConflictDialogOpen = false;
     }
   }
 
@@ -3099,13 +3125,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       );
       final pulledItems = await client.pullChangedItems(
         token: _cloudToken.trim(),
-        since: _cloudLastSyncModifiedAt,
+        since:
+            _conflictingCloudPushes.isNotEmpty ? 0 : _cloudLastSyncModifiedAt,
         idPrefix: '',
       );
       await _refreshCloudAccountStatus(showToastIfWarning: true);
       if (pulledItems.isEmpty) {
         // Nothing new from server — still counts as a successful contact.
         _onCloudSyncSuccess();
+        await _resolveCloudPushConflicts();
         return;
       }
 
@@ -3253,6 +3281,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _cloudLastSyncModifiedAt = maxModifiedAt;
       await _saveSettings();
       _onCloudSyncSuccess();
+      await _resolveCloudPushConflicts();
     } catch (e, st) {
       unawaited(_debugLog('syncPullFromCloud: error $e\n$st'));
       _onCloudSyncError(e);
