@@ -9293,11 +9293,8 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
         setState(() {});
       }
     });
-    _geometryTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => unawaited(_persistWindowGeometryIfNeeded()),
-    );
     unawaited(_loadAppearanceSettings());
+    unawaited(_initializeWindowGeometry());
     unawaited(_loadTask());
   }
 
@@ -9407,15 +9404,24 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
           _fontFamily = font;
         }
       });
-      if (!_windowGeometryRestoreScheduled) {
-        _windowGeometryRestoreScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            unawaited(_restoreWindowGeometryFromSettings());
-          }
-        });
-      }
     } catch (_) {}
+  }
+
+  Future<void> _initializeWindowGeometry() async {
+    if (_windowGeometryRestoreScheduled) return;
+    _windowGeometryRestoreScheduled = true;
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      await _restoreWindowGeometryFromSettings();
+    } finally {
+      if (mounted) {
+        _geometryTimer = Timer.periodic(
+          const Duration(seconds: 1),
+          (_) => unawaited(_persistWindowGeometryIfNeeded()),
+        );
+      }
+    }
   }
 
   Map<String, dynamic>? _taskWindowGeometryFromSettings(
@@ -9445,7 +9451,11 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
     try {
       final geom = await _readTaskWindowGeometry();
       if (geom == null) return;
-      await _nativeWindowChannel.invokeMethod('setWindowGeometry', geom);
+      final restored = await _nativeWindowChannel.invokeMethod<bool>(
+          'setWindowGeometry', geom);
+      if (restored == true) {
+        _lastWindowGeometrySignature = _geometrySignature(geom);
+      }
     } catch (_) {}
   }
 
