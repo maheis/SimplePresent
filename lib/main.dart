@@ -2832,7 +2832,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (pullAfterConflict) {
         _cloudConflictResolutionCount += 1;
         final latestSnapshot = _pendingCloudPushes.remove(filename) ?? source;
-        _conflictingCloudPushes[filename] = List<TaskItem>.from(latestSnapshot);
+        final snapshotToRetry = List<TaskItem>.from(latestSnapshot);
+        _conflictingCloudPushes[filename] = snapshotToRetry;
         await _persistCloudConflicts();
         await _persistPendingCloudPushes();
       }
@@ -2845,6 +2846,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         unawaited(_debugLog(
             'syncPushToCloud: conflict detected, pulling remote state'));
         await _syncPullFromCloud();
+        final retrySnapshot = _conflictingCloudPushes.remove(filename);
+        if (retrySnapshot != null) {
+          await _enqueuePush(filename, retrySnapshot);
+        }
       }
     }
     return pushed || pullAfterConflict;

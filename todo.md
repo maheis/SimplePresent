@@ -85,6 +85,7 @@
   - [x] kalendericon unter android komiglisch
 - [?] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
 - [?] sortierung springt ständig!
+- [ ] 
 
 ## notes
 
