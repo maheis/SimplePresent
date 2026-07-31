@@ -83,7 +83,7 @@
 - [?] aufgaben fenster position und größe merken
 - [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
   - [x] kalendericon unter android komiglisch
-- [?] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
+- [x] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
 - [?] sortierung springt ständig!
 - [ ] 
 

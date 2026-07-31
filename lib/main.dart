@@ -2846,9 +2846,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         unawaited(_debugLog(
             'syncPushToCloud: conflict detected, pulling remote state'));
         await _syncPullFromCloud();
-        final retrySnapshot = _conflictingCloudPushes.remove(filename);
-        if (retrySnapshot != null) {
-          await _enqueuePush(filename, retrySnapshot);
+        final conflictSnapshot = _conflictingCloudPushes[filename];
+        if (conflictSnapshot != null) {
+          final currentList = <TaskItem>[];
+          await _loadList(filename, currentList);
+          if (_taskListsEquivalent(currentList, conflictSnapshot)) {
+            _conflictingCloudPushes.remove(filename);
+            await _persistCloudConflicts();
+            unawaited(_debugLog(
+                'syncPushToCloud: conflict auto-cleared for $filename (server == local snapshot)'));
+          } else {
+            unawaited(_resolveCloudPushConflicts());
+          }
         }
       }
     }
@@ -2942,6 +2951,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return ['today', 'backlog', 'done', 'trash']
         .where((n) => n != listName)
         .toList();
+  }
+
+  bool _taskListsEquivalent(List<TaskItem> a, List<TaskItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+      if (jsonEncode(a[i].toJson()) != jsonEncode(b[i].toJson())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Cloud syncing of redo-log entries has been removed.
