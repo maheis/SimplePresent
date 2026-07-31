@@ -26,7 +26,8 @@ func (s *Server) DevicesList(w http.ResponseWriter, r *http.Request) {
 		var revoked int
 		var tokenVersion int
 		if err := rows.Scan(&id, &name, &created, &revoked, &tokenVersion); err != nil {
-			continue
+			http.Error(w, "device row decode failed", http.StatusInternalServerError)
+			return
 		}
 		out = append(out, map[string]interface{}{
 			"id":            id,
@@ -35,6 +36,10 @@ func (s *Server) DevicesList(w http.ResponseWriter, r *http.Request) {
 			"revoked":       revoked == 1,
 			"token_version": tokenVersion,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "device rows failed", http.StatusInternalServerError)
+		return
 	}
 
 	s.touchAccountActivity(auth.AccountID)

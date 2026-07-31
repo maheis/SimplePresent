@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"golang.org/x/time/rate"
 	_ "modernc.org/sqlite"
 )
 
@@ -43,6 +45,62 @@ func TestClientIPUsesRightmostUntrustedForwardedAddress(t *testing.T) {
 	request.Header.Set("X-Forwarded-For", "198.51.100.40, 203.0.113.25")
 	if got := server.clientIP(request); got != "203.0.113.25" {
 		t.Fatalf("expected nearest untrusted client address, got %q", got)
+	}
+}
+
+func TestCleanupEphemeralStateRemovesOnlyExpiredEntries(t *testing.T) {
+	now := time.Now()
+	ipLimiters := NewIPLimiters(60, 20)
+	accountLimiters := NewAccountLimiters(60, 20)
+	ipLimiters.limiters["old"] = limiterEntry{
+		limiter:  rate.NewLimiter(ipLimiters.limit, ipLimiters.burst),
+		lastSeen: now.Add(-2 * time.Hour),
+	}
+	ipLimiters.limiters["active"] = limiterEntry{
+		limiter:  rate.NewLimiter(ipLimiters.limit, ipLimiters.burst),
+		lastSeen: now,
+	}
+	accountLimiters.limiters["old"] = limiterEntry{
+		limiter:  rate.NewLimiter(accountLimiters.limit, accountLimiters.burst),
+		lastSeen: now.Add(-2 * time.Hour),
+	}
+
+	server := &Server{
+		IPLimiters:      ipLimiters,
+		AccountLimiters: accountLimiters,
+		PairingChallenges: map[string]pairingChallenge{
+			"expired": {ExpiresAt: now.Add(-time.Minute)},
+			"active":  {ExpiresAt: now.Add(time.Minute)},
+		},
+	}
+	server.cleanupEphemeralState(now)
+
+	if _, ok := server.PairingChallenges["expired"]; ok {
+		t.Fatal("expired pairing challenge was not removed")
+	}
+	if _, ok := server.PairingChallenges["active"]; !ok {
+		t.Fatal("active pairing challenge was removed")
+	}
+	if _, ok := ipLimiters.limiters["old"]; ok {
+		t.Fatal("idle IP limiter was not removed")
+	}
+	if _, ok := ipLimiters.limiters["active"]; !ok {
+		t.Fatal("active IP limiter was removed")
+	}
+	if _, ok := accountLimiters.limiters["old"]; ok {
+		t.Fatal("idle account limiter was not removed")
+	}
+}
+
+func TestMaintenanceLoopStopsOnContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := (&Server{}).StartMaintenanceLoop(ctx)
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("maintenance loop did not stop after context cancellation")
 	}
 }
 

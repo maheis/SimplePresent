@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -217,5 +218,64 @@ func TestConcurrentReorderKeepsNewestSnapshot(t *testing.T) {
 	}
 	if positions["task:one"] != 1 || positions["task:two"] != 0 {
 		t.Fatalf("stale reorder changed newest positions: %#v", positions)
+	}
+}
+
+func TestPullRejectsCorruptStoredPayload(t *testing.T) {
+	server := newSyncTestServer(t)
+	if _, err := server.DB.Exec(`INSERT INTO items (id, account_id, payload, modified_at, tombstone, origin_device_id, version) VALUES ('task:broken', 'account-a', '{', 100, 0, 'device-a', 1)`); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/pull?since=0", nil)
+	request = request.WithContext(context.WithValue(request.Context(), authContextKey, AuthInfo{
+		AccountID: "account-a",
+		DeviceID:  "device-a",
+	}))
+	response := httptest.NewRecorder()
+	server.Pull(response, request)
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("expected corrupt payload to fail pull, got %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestDevicesListRejectsUnscannableRow(t *testing.T) {
+	server := newSyncTestServer(t)
+	if _, err := server.DB.Exec(`INSERT INTO devices (id, account_id, name, created_at, revoked, token_version) VALUES ('device-broken', 'account-a', NULL, 1, 0, 1)`); err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/devices", nil)
+	request = request.WithContext(context.WithValue(request.Context(), authContextKey, AuthInfo{
+		AccountID: "account-a",
+		DeviceID:  "device-a",
+	}))
+	response := httptest.NewRecorder()
+	server.DevicesList(response, request)
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("expected invalid device row to fail list, got %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestRegisterRollsBackAccountWhenDeviceInsertFails(t *testing.T) {
+	server := newSyncTestServer(t)
+	if _, err := server.DB.Exec(`CREATE TRIGGER fail_device_insert BEFORE INSERT ON devices BEGIN SELECT RAISE(ABORT, 'forced device failure'); END`); err != nil {
+		t.Fatal(err)
+	}
+	publicKey := base64.StdEncoding.EncodeToString(make([]byte, 32))
+	body := `{"name":"owner","pairing_public_key":"` + publicKey + `","pin":"1234"}`
+	request := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(body))
+	response := httptest.NewRecorder()
+	server.Register(response, request)
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("expected forced device failure, got %d %s", response.Code, response.Body.String())
+	}
+
+	var accountCount int
+	if err := server.DB.QueryRow(`SELECT COUNT(*) FROM accounts`).Scan(&accountCount); err != nil {
+		t.Fatal(err)
+	}
+	if accountCount != 1 {
+		t.Fatalf("failed registration left an account behind: count=%d", accountCount)
 	}
 }

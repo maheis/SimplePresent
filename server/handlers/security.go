@@ -42,7 +42,12 @@ type limiterStore struct {
 	mu       sync.Mutex
 	limit    rate.Limit
 	burst    int
-	limiters map[string]*rate.Limiter
+	limiters map[string]limiterEntry
+}
+
+type limiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 func newLimiterStore(requestsPerMinute, burst int) *limiterStore {
@@ -55,7 +60,7 @@ func newLimiterStore(requestsPerMinute, burst int) *limiterStore {
 	return &limiterStore{
 		limit:    rate.Every(time.Minute / time.Duration(requestsPerMinute)),
 		burst:    burst,
-		limiters: make(map[string]*rate.Limiter),
+		limiters: make(map[string]limiterEntry),
 	}
 }
 
@@ -70,12 +75,26 @@ func NewAccountLimiters(requestsPerMinute, burst int) *limiterStore {
 func (s *limiterStore) get(key string) *rate.Limiter {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	limiter, ok := s.limiters[key]
+	entry, ok := s.limiters[key]
 	if !ok {
-		limiter = rate.NewLimiter(s.limit, s.burst)
-		s.limiters[key] = limiter
+		entry.limiter = rate.NewLimiter(s.limit, s.burst)
 	}
-	return limiter
+	entry.lastSeen = time.Now()
+	s.limiters[key] = entry
+	return entry.limiter
+}
+
+func (s *limiterStore) removeIdleBefore(cutoff time.Time) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, entry := range s.limiters {
+		if entry.lastSeen.Before(cutoff) {
+			delete(s.limiters, key)
+		}
+	}
 }
 
 func (s *Server) SecureOnly(next http.Handler) http.Handler {

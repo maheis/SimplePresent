@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -117,9 +121,6 @@ func loadConfig(path string) (*Config, error) {
 	var c Config
 	if err := json.NewDecoder(f).Decode(&c); err != nil {
 		return nil, err
-	}
-	if c.Security.RequireTLS == false {
-		// keep explicit false if user set it; defaults are applied below only when values are empty
 	}
 	if c.Security.JWTSecret == "" {
 		c.Security.JWTSecret = os.Getenv("SIMPLEPRESENT_JWT_SECRET")
@@ -265,7 +266,9 @@ func main() {
 	r := newRouter(srv)
 
 	addr := cfg.Bind
-	srv.StartMaintenanceLoop()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	maintenanceDone := srv.StartMaintenanceLoop(ctx)
 	fmt.Printf("listening on %s\n", addr)
 	httpServer := &http.Server{
 		Addr:              addr,
@@ -276,10 +279,33 @@ func main() {
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    64 * 1024,
 	}
-	if cfg.TLS.Enabled {
-		log.Fatal(httpServer.ListenAndServeTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile))
-	} else {
-		log.Fatal(httpServer.ListenAndServe())
+	serverErrors := make(chan error, 1)
+	go func() {
+		if cfg.TLS.Enabled {
+			serverErrors <- httpServer.ListenAndServeTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+			return
+		}
+		serverErrors <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErrors:
+		stop()
+		<-maintenanceDone
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server stopped: %v", err)
+		}
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+			_ = httpServer.Close()
+		}
+		if err := <-serverErrors; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server stopped: %v", err)
+		}
+		<-maintenanceDone
 	}
 }
 

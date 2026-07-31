@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -251,23 +252,46 @@ func (s *Server) registrationNotice() string {
 	)
 }
 
-func (s *Server) StartMaintenanceLoop() {
+func (s *Server) StartMaintenanceLoop(ctx context.Context) <-chan struct{} {
 	interval := s.AccountPolicy.SweepIntervalMinutes
 	if interval <= 0 {
 		interval = 60
 	}
 	ticker := time.NewTicker(time.Duration(interval) * time.Minute)
+	done := make(chan struct{})
 	go func() {
-		for range ticker.C {
-			archived, err := s.archiveInactiveAccounts(time.Now())
-			if err != nil {
-				log.Printf("archive sweep failed: %v", err)
-				continue
+		defer close(done)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				s.cleanupEphemeralState(now)
+				archived, err := s.archiveInactiveAccounts(now)
+				if err != nil {
+					log.Printf("archive sweep failed: %v", err)
+					continue
+				}
+				if archived > 0 {
+					log.Printf("archived %d inactive accounts", archived)
+				}
 			}
-			if archived > 0 {
-				log.Printf("archived %d inactive accounts", archived)
-			}
-
 		}
 	}()
+	return done
+}
+
+func (s *Server) cleanupEphemeralState(now time.Time) {
+	s.ChallengeMu.Lock()
+	for id, challenge := range s.PairingChallenges {
+		if now.After(challenge.ExpiresAt) {
+			delete(s.PairingChallenges, id)
+		}
+	}
+	s.ChallengeMu.Unlock()
+
+	cutoff := now.Add(-time.Hour)
+	s.IPLimiters.removeIdleBefore(cutoff)
+	s.AccountLimiters.removeIdleBefore(cutoff)
 }
