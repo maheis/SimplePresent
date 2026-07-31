@@ -84,6 +84,8 @@ class CloudSyncClient {
     this.allowInsecureCertificates = false,
     HttpClient? httpClient,
   }) : _http = httpClient ?? HttpClient() {
+    _http.connectionTimeout = const Duration(seconds: 15);
+    _http.idleTimeout = const Duration(seconds: 30);
     // Configure certificate verification for HTTPS connections.
     //
     // Default behavior (allowInsecureCertificates=false):
@@ -127,9 +129,14 @@ class CloudSyncClient {
   final bool allowInsecureCertificates;
   final HttpClient _http;
 
+  void close() {
+    _http.close(force: false);
+  }
+
   static final Ed25519 _ed25519 = Ed25519();
   static final Sha256 _sha256 = Sha256();
   static final AesGcm _aesGcm = AesGcm.with256bits();
+  static const Duration _responseTimeout = Duration(seconds: 30);
 
   static const List<String> _suggestionWords = <String>[
     'apple',
@@ -494,13 +501,21 @@ class CloudSyncClient {
       );
 
       final current = latestById[id];
-      if (current == null || candidate.modifiedAt > current.modifiedAt) {
+      if (current == null ||
+          candidate.version > current.version ||
+          (candidate.version == current.version &&
+              candidate.modifiedAt > current.modifiedAt)) {
         latestById[id] = candidate;
       }
     }
 
     final out = latestById.values.toList();
-    out.sort((a, b) => a.modifiedAt.compareTo(b.modifiedAt));
+    out.sort((a, b) {
+      final byModifiedAt = a.modifiedAt.compareTo(b.modifiedAt);
+      if (byModifiedAt != 0) return byModifiedAt;
+      final byVersion = a.version.compareTo(b.version);
+      return byVersion != 0 ? byVersion : a.id.compareTo(b.id);
+    });
     return out;
   }
 
@@ -508,8 +523,11 @@ class CloudSyncClient {
     try {
       final uri = Uri.parse('$serverBaseUrl/health');
       final request = await _http.getUrl(uri);
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
+      final response = await request.close().timeout(_responseTimeout);
+      final body = await response
+          .transform(utf8.decoder)
+          .join()
+          .timeout(_responseTimeout);
       if (response.statusCode < 200 || response.statusCode > 299) {
         return null;
       }
@@ -642,8 +660,9 @@ class CloudSyncClient {
     }
     request.write(jsonEncode(payload));
 
-    final response = await request.close();
-    final body = await response.transform(utf8.decoder).join();
+    final response = await request.close().timeout(_responseTimeout);
+    final body =
+        await response.transform(utf8.decoder).join().timeout(_responseTimeout);
 
     if (response.statusCode < 200 || response.statusCode > 299) {
       throw CloudSyncException(
@@ -671,8 +690,9 @@ class CloudSyncClient {
     request.headers.set('X-Authorization', authValue);
     request.headers.set('X-Forwarded-Authorization', authValue);
 
-    final response = await request.close();
-    final body = await response.transform(utf8.decoder).join();
+    final response = await request.close().timeout(_responseTimeout);
+    final body =
+        await response.transform(utf8.decoder).join().timeout(_responseTimeout);
     if (response.statusCode < 200 || response.statusCode > 299) {
       throw CloudSyncException(
         'Server error ${response.statusCode} on $path: $body',
