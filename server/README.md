@@ -22,6 +22,11 @@ Pairing model (server never stores word phrase):
 
 When running behind a reverse proxy that terminates TLS (e.g. Apache with a valid Let's Encrypt certificate), set `require_tls: true` and `trust_proxy_headers: true` in your config. The server binds plain HTTP locally; the proxy forwards HTTPS traffic.
 
+Forwarded headers are accepted only from loopback or an address listed in
+`trusted_proxy_cidrs`. Keep the backend bound to `127.0.0.1` when Apache runs
+on the same machine. For a proxy on another host, add only that proxy's IP or
+network; never add an unrestricted network such as `0.0.0.0/0`.
+
 For this to work, Apache **must** set `X-Forwarded-Proto: https` — otherwise the server returns `426 Upgrade Required`.
 
 Minimal Apache VirtualHost snippet:
@@ -55,9 +60,16 @@ Example `config.json` for this setup:
   "security": {
     "require_tls": true,
     "trust_proxy_headers": true,
+    "trusted_proxy_cidrs": [],
     "jwt_secret": "change-me-in-production"
   }
 }
+```
+
+Example for a separate proxy at `10.20.0.5`:
+
+```json
+"trusted_proxy_cidrs": ["10.20.0.5/32"]
 ```
 
 ## Account policy and admin alerts

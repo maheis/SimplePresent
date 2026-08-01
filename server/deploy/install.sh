@@ -4,7 +4,9 @@ set -euo pipefail
 # Simple install script for SimplePresent server (requires sudo)
 # Installs binary to /usr/local/bin, config to /etc/simplepresent, creates data dir and systemd unit.
 
-BIN=./simplepresent-server
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+BIN="${SCRIPT_DIR}/simplepresent-server"
 INSTALL_BIN=/usr/local/bin/simplepresent-server
 
 DATA_DIR=/var/lib/simplepresent
@@ -12,7 +14,7 @@ DATA_DIR=/var/lib/simplepresent
 ETC_DIR=/etc/simplepresent
 ETC_CONFIG=${ETC_DIR}/config.json
 
-SYSTEMD_UNIT=./simplepresent-server.service
+SYSTEMD_UNIT="${SCRIPT_DIR}/simplepresent-server.service"
 SYSTEMD_TARGET=/etc/systemd/system/simplepresent-server.service
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -22,6 +24,16 @@ fi
 
 if [ ! -f "$BIN" ]; then
   echo "Binary $BIN not found." >&2
+  exit 1
+fi
+
+if [ ! -f "${SCRIPT_DIR}/config.json.example" ]; then
+  echo "Example config ${SCRIPT_DIR}/config.json.example not found." >&2
+  exit 1
+fi
+
+if [ ! -f "$SYSTEMD_UNIT" ]; then
+  echo "Systemd unit $SYSTEMD_UNIT not found." >&2
   exit 1
 fi
 
@@ -45,11 +57,25 @@ chmod 0755 "$DATA_DIR"
 echo "Installing config to ${ETC_CONFIG} (only if missing)"
 mkdir -p "$ETC_DIR"
 if [ ! -f "$ETC_CONFIG" ]; then
-  install -m 0644 ./etc/config.json.example "$ETC_CONFIG"
+  install -m 0644 "${SCRIPT_DIR}/config.json.example" "$ETC_CONFIG"
+  JWT_SECRET="$(openssl rand -hex 32)"
+  sed -i "s/change-me-in-production/${JWT_SECRET}/g" "$ETC_CONFIG"
   echo "Wrote example config to $ETC_CONFIG - edit as needed"
 else
   echo "$ETC_CONFIG already exists - leaving it in place -> check and edit as needed"
 fi
+
+echo "Would you like to edit ${ETC_CONFIG} now before the service starts? [y/N]"
+read -r edit_config_answer || true
+case "${edit_config_answer:-}" in
+  y|Y|yes|YES)
+    if ! command -v nano >/dev/null 2>&1; then
+      echo "nano is not installed, cannot edit ${ETC_CONFIG}" >&2
+      exit 1
+    fi
+    nano "$ETC_CONFIG"
+    ;;
+esac
 
 echo "Installing systemd unit to ${SYSTEMD_TARGET}"
 if [ -f "$SYSTEMD_TARGET" ] || systemctl list-unit-files --type=service | grep -q "^simplepresent-server.service" 2>/dev/null; then

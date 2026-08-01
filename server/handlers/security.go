@@ -42,7 +42,12 @@ type limiterStore struct {
 	mu       sync.Mutex
 	limit    rate.Limit
 	burst    int
-	limiters map[string]*rate.Limiter
+	limiters map[string]limiterEntry
+}
+
+type limiterEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
 func newLimiterStore(requestsPerMinute, burst int) *limiterStore {
@@ -55,7 +60,7 @@ func newLimiterStore(requestsPerMinute, burst int) *limiterStore {
 	return &limiterStore{
 		limit:    rate.Every(time.Minute / time.Duration(requestsPerMinute)),
 		burst:    burst,
-		limiters: make(map[string]*rate.Limiter),
+		limiters: make(map[string]limiterEntry),
 	}
 }
 
@@ -70,12 +75,26 @@ func NewAccountLimiters(requestsPerMinute, burst int) *limiterStore {
 func (s *limiterStore) get(key string) *rate.Limiter {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	limiter, ok := s.limiters[key]
+	entry, ok := s.limiters[key]
 	if !ok {
-		limiter = rate.NewLimiter(s.limit, s.burst)
-		s.limiters[key] = limiter
+		entry.limiter = rate.NewLimiter(s.limit, s.burst)
 	}
-	return limiter
+	entry.lastSeen = time.Now()
+	s.limiters[key] = entry
+	return entry.limiter
+}
+
+func (s *limiterStore) removeIdleBefore(cutoff time.Time) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for key, entry := range s.limiters {
+		if entry.lastSeen.Before(cutoff) {
+			delete(s.limiters, key)
+		}
+	}
 }
 
 func (s *Server) SecureOnly(next http.Handler) http.Handler {
@@ -88,7 +107,7 @@ func (s *Server) SecureOnly(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if s.TrustProxyHeaders && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
+		if s.requestFromTrustedProxy(r) && strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -103,6 +122,13 @@ func (s *Server) RateLimitByIP(next http.Handler) http.Handler {
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func LimitRequestBody(maxBytes int64, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -214,11 +240,16 @@ func authFromContext(ctx context.Context) (AuthInfo, bool) {
 }
 
 func (s *Server) clientIP(r *http.Request) string {
-	if s.TrustProxyHeaders {
+	if s.requestFromTrustedProxy(r) {
 		forwardedFor := r.Header.Get("X-Forwarded-For")
 		if forwardedFor != "" {
 			parts := strings.Split(forwardedFor, ",")
-			return strings.TrimSpace(parts[0])
+			for i := len(parts) - 1; i >= 0; i-- {
+				candidate := net.ParseIP(strings.TrimSpace(parts[i]))
+				if candidate != nil && !s.isTrustedProxyIP(candidate) {
+					return candidate.String()
+				}
+			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -226,4 +257,28 @@ func (s *Server) clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+func (s *Server) requestFromTrustedProxy(r *http.Request) bool {
+	if !s.TrustProxyHeaders {
+		return false
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(strings.TrimSpace(host))
+	return ip != nil && s.isTrustedProxyIP(ip)
+}
+
+func (s *Server) isTrustedProxyIP(ip net.IP) bool {
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, network := range s.TrustedProxyNets {
+		if network != nil && network.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }

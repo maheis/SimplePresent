@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:simple_present/sync/cloud_sync_client.dart';
+import 'package:simple_present/sync/positioned_snapshot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
@@ -693,8 +694,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // A dedicated drain loop processes them sequentially to prevent drops when
   // multiple lists change in the same operation (e.g. move today→backlog).
   final Map<String, List<TaskItem>> _pendingCloudPushes = {};
+  final Map<String, List<TaskItem>> _conflictingCloudPushes = {};
   bool _cloudPushDrainRunning = false;
+  Timer? _cloudPushRetryTimer;
+  int _cloudPushRetryAttempt = 0;
+  bool _cloudConflictDialogOpen = false;
+  int _cloudConflictResolutionCount = 0;
+  CloudSyncClient? _cachedCloudSyncClient;
   final Map<String, TaskItem> _cloudPendingTimeEntrySync = <String, TaskItem>{};
+  Timer? _cloudTimeEntryRetryTimer;
+  int _cloudTimeEntryRetryAttempt = 0;
+  String? _cloudPendingNotesSync;
+  Timer? _cloudNotesRetryTimer;
+  int _cloudNotesRetryAttempt = 0;
   Set<String> _cloudKnownTodayIds = <String>{};
   Set<String> _cloudKnownBacklogIds = <String>{};
   Set<String> _cloudKnownDoneIds = <String>{};
@@ -1034,6 +1046,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     await _loadSettings();
     await _ensureInitialFiles();
     await _loadCloudKnownIdsFromDb();
+    await _loadCloudPendingPushesFromDb();
+    await _loadCloudConflictsFromDb();
+    await _loadCloudPendingAuxiliarySyncFromDb();
     await _runDailyMigrationIfNeeded();
 
     // Start auto-export timers and perform export on-start if configured
@@ -1095,8 +1110,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
     } catch (_) {}
 
-    // Start cloud pull in background so startup is never blocked by network.
-    unawaited(_syncPullFromCloud());
+    // Deliver durable local work before pulling remote state on startup.
+    unawaited(_resumeCloudSyncAfterStartup());
     await _promoteDueBacklogToToday(showToast: true);
     await _loadToday();
     // Request Android 13+ notification permission on startup via native channel.
@@ -1829,50 +1844,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  /// Replace the contents of [filename] with [items] using per-task queue
-  /// operations, but serialized file operations to avoid races. This keeps
-  /// sync semantics similar to a full replace while ensuring per-task
-  /// operations are atomic and debuggable.
+  /// Replace the complete list atomically while preserving server order.
   Future<void> _queueReplaceList(String filename, List<TaskItem> items) async {
     try {
-      // First, ensure each incoming item is upserted via its task queue.
-      for (final it in items) {
-        unawaited(
-            _debugLog('queueReplace: scheduling upsert ${it.id} -> $filename'));
-        await _queueTaskAction(it.id, () async {
-          await _serializedFileOp(filename, () async {
-            final List<TaskItem> cur = [];
-            await _loadList(filename, cur);
-            // Remove any existing entry with same id
-            cur.removeWhere((t) => t.id == it.id);
-            // Insert at top
-            cur.insert(0, it);
-            await _saveList(filename, cur);
-          });
-        });
-      }
-
-      // Then, remove any tasks that are not present in the new set.
-      final newIds = items.map((e) => e.id).toSet();
       await _serializedFileOp(filename, () async {
-        final List<TaskItem> cur = [];
-        await _loadList(filename, cur);
-        final toRemove = cur.where((t) => !newIds.contains(t.id)).toList();
-        for (final r in toRemove) {
-          unawaited(_debugLog(
-              'queueReplace: scheduling remove ${r.id} from $filename'));
-          await _queueTaskAction(r.id, () async {
-            await _serializedFileOp(filename, () async {
-              final List<TaskItem> now = [];
-              await _loadList(filename, now);
-              now.removeWhere((t) => t.id == r.id);
-              await _saveList(filename, now);
-            });
-          });
-        }
+        await _saveList(filename, List<TaskItem>.from(items));
       });
     } catch (e, st) {
       unawaited(_debugLog('queueReplaceList failed for $filename: $e\n$st'));
+      rethrow;
     }
   }
 
@@ -2169,7 +2149,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // Use push queue to ensure sequential delivery.
           // This prevents the second push being silently dropped during move
           // operations (today + backlog both change in the same action).
-          _enqueuePush(filename, source);
+          await _enqueuePush(filename, source);
         }
         unawaited(_debugLog('saveList completed: $filename'));
         if (_listDirBase(filename) == 'today') {
@@ -2532,15 +2512,49 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _cloudWordPhrase.trim().isNotEmpty;
   }
 
+  CloudSyncClient _cloudClientForSync() {
+    final serverUrl = _cloudServerUrl.trim();
+    final cached = _cachedCloudSyncClient;
+    if (cached != null &&
+        cached.serverBaseUrl == serverUrl &&
+        cached.allowInsecureCertificates == _cloudAllowInsecureTls) {
+      return cached;
+    }
+    cached?.close();
+    return _cachedCloudSyncClient = CloudSyncClient(
+      serverBaseUrl: serverUrl,
+      allowInsecureCertificates: _cloudAllowInsecureTls,
+    );
+  }
+
   void _queueCloudTimeEntrySync(TaskItem task) {
     if (!_cloudSyncConfigured || _applyingCloudState) return;
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _cloudPendingTimeEntrySync['$date:${task.id}'] = task;
+    unawaited(_persistPendingAuxiliarySync());
     _flushPendingCloudTimeEntrySync();
   }
 
+  Future<void> _resumeCloudSyncAfterStartup() async {
+    if (!_cloudSyncConfigured) return;
+    if (_pendingCloudPushes.isNotEmpty) {
+      await _drainPushQueue();
+      if (_pendingCloudPushes.isNotEmpty) return;
+    }
+    final pendingNotes = _cloudPendingNotesSync;
+    if (pendingNotes != null && !await _syncPushNotes(pendingNotes)) return;
+    if (_cloudPendingTimeEntrySync.isNotEmpty) {
+      await _runPendingCloudTimeEntrySync();
+      if (_cloudPendingTimeEntrySync.isNotEmpty) return;
+    }
+    await _syncPullFromCloud();
+  }
+
   void _flushPendingCloudTimeEntrySync() {
-    if (!_cloudSyncConfigured || _cloudSyncBusy || _applyingCloudState) return;
+    if (!_cloudSyncConfigured ||
+        _cloudSyncBusy ||
+        _applyingCloudState ||
+        _cloudTimeEntryRetryTimer != null) return;
     if (_cloudPendingTimeEntrySync.isEmpty) return;
     unawaited(_runPendingCloudTimeEntrySync());
   }
@@ -2551,16 +2565,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         !_cloudSyncBusy &&
         !_applyingCloudState) {
       final entry = _cloudPendingTimeEntrySync.entries.first;
-      _cloudPendingTimeEntrySync.remove(entry.key);
-      final ok = await _syncPushTimeEntryToCloud(entry.value);
+      final ok = await _syncPushTimeEntryToCloud(
+        entry.value,
+        date: entry.key.split(':').first,
+      );
       if (!ok) {
-        _cloudPendingTimeEntrySync[entry.key] = entry.value;
+        _scheduleCloudTimeEntryRetry();
         break;
       }
+      if (identical(_cloudPendingTimeEntrySync[entry.key], entry.value)) {
+        _cloudPendingTimeEntrySync.remove(entry.key);
+        await _persistPendingAuxiliarySync();
+      }
+      _cloudTimeEntryRetryAttempt = 0;
     }
   }
 
-  Future<bool> _syncPushTimeEntryToCloud(TaskItem task) async {
+  void _scheduleCloudTimeEntryRetry() {
+    if (_cloudTimeEntryRetryTimer != null || _cloudPendingTimeEntrySync.isEmpty)
+      return;
+    _cloudTimeEntryRetryAttempt = math.min(_cloudTimeEntryRetryAttempt + 1, 7);
+    final retrySeconds =
+        math.min(300, 5 * (1 << (_cloudTimeEntryRetryAttempt - 1)));
+    _cloudTimeEntryRetryTimer = Timer(Duration(seconds: retrySeconds), () {
+      _cloudTimeEntryRetryTimer = null;
+      _flushPendingCloudTimeEntrySync();
+    });
+  }
+
+  Future<bool> _syncPushTimeEntryToCloud(TaskItem task, {String? date}) async {
     if (!_cloudSyncConfigured ||
         _cloudSyncBusy ||
         _applyingCloudState ||
@@ -2568,18 +2601,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
-      final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final client = _cloudClientForSync();
+      final entryDate = date ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
       final modifiedAt = DateTime.now().millisecondsSinceEpoch;
       _cloudStateVersion += 1;
 
       final encryptedPayload = await CloudSyncClient.encryptStatePayload(
         payload: <String, dynamic>{
           'kind': 'time_entry',
-          'date': date,
+          'date': entryDate,
           'entry': <String, dynamic>{
             'task_id': task.id,
             'task_text': task.text,
@@ -2598,7 +2628,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         token: _cloudToken.trim(),
         items: <Map<String, dynamic>>[
           <String, dynamic>{
-            'id': 'time:$date:${task.id}',
+            'id': 'time:$entryDate:${task.id}',
             'payload': encryptedPayload,
             'modified_at': modifiedAt,
             'tombstone': false,
@@ -2617,7 +2647,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return false;
     } finally {
       _cloudSyncBusy = false;
-      _flushPendingCloudTimeEntrySync();
     }
   }
 
@@ -2627,11 +2656,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // (last-write-wins per list), so rapid successive saves are collapsed.
   // A sequential drain loop then sends each pending list to the server
   // one at a time to avoid races.
-  void _enqueuePush(String filename, List<TaskItem> source) {
+  Future<void> _enqueuePush(String filename, List<TaskItem> source) async {
+    await _enqueuePushBatch(<String, List<TaskItem>>{filename: source});
+  }
+
+  Future<void> _enqueuePushBatch(Map<String, List<TaskItem>> snapshots) async {
     if (!_cloudSyncConfigured || _applyingCloudState || _suppressCloudPushes)
       return;
-    if (_cloudListNameForFilename(filename) == null) return;
-    _pendingCloudPushes[filename] = List<TaskItem>.from(source);
+    for (final entry in snapshots.entries) {
+      if (_cloudListNameForFilename(entry.key) == null) continue;
+      if (_conflictingCloudPushes.containsKey(entry.key)) {
+        _conflictingCloudPushes[entry.key] = List<TaskItem>.from(entry.value);
+      } else {
+        _pendingCloudPushes[entry.key] = List<TaskItem>.from(entry.value);
+      }
+    }
+    await Future.wait([
+      _persistPendingCloudPushes(),
+      _persistCloudConflicts(),
+    ]);
     if (!_cloudPushDrainRunning) {
       unawaited(_drainPushQueue());
     }
@@ -2656,36 +2699,55 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
 
         final entry = _pendingCloudPushes.entries.first;
-        _pendingCloudPushes.remove(entry.key);
-        await _syncPushToCloud(entry.key, entry.value);
+        final pushed = await _syncPushToCloud(entry.key, entry.value);
+        if (!pushed) {
+          _cloudPushRetryAttempt = math.min(_cloudPushRetryAttempt + 1, 7);
+          final retrySeconds =
+              math.min(300, 5 * (1 << (_cloudPushRetryAttempt - 1)));
+          _cloudPushRetryTimer?.cancel();
+          _cloudPushRetryTimer = Timer(Duration(seconds: retrySeconds), () {
+            _cloudPushRetryTimer = null;
+            if (mounted && _cloudSyncConfigured) {
+              unawaited(_drainPushQueue());
+            }
+          });
+          break;
+        }
+        _cloudPushRetryAttempt = 0;
+        if (identical(_pendingCloudPushes[entry.key], entry.value)) {
+          _pendingCloudPushes.remove(entry.key);
+          await _persistPendingCloudPushes();
+        }
       }
     } catch (e) {
       await _debugLog('_drainPushQueue error: $e');
     } finally {
       _cloudPushDrainRunning = false;
       // Restart drain if new items arrived while we were finishing.
-      if (_pendingCloudPushes.isNotEmpty && mounted && _cloudSyncConfigured) {
+      if (_pendingCloudPushes.isNotEmpty &&
+          _cloudPushRetryTimer == null &&
+          mounted &&
+          _cloudSyncConfigured) {
         unawaited(_drainPushQueue());
       }
     }
   }
   // -----------------------------------------------------------------------
 
-  Future<void> _syncPushToCloud(String filename, List<TaskItem> source) async {
+  Future<bool> _syncPushToCloud(String filename, List<TaskItem> source) async {
     if (!_cloudSyncConfigured ||
         _cloudSyncBusy ||
         _applyingCloudState ||
-        _suppressCloudPushes) return;
+        _suppressCloudPushes) return false;
     final listName = _cloudListNameForFilename(filename);
-    if (listName == null) return;
+    if (listName == null) return false;
     // Suppress toasts originating from sync operations.
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
+    var pullAfterConflict = false;
+    var pushed = false;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
+      final client = _cloudClientForSync();
       final modifiedAt = DateTime.now().millisecondsSinceEpoch;
       _cloudStateVersion += 1;
 
@@ -2764,12 +2826,95 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // skip changes from other devices that happened before our push.
       await _saveSettings();
       _onCloudSyncSuccess();
+      pushed = true;
     } catch (e) {
+      pullAfterConflict = e is CloudSyncException && e.isConflict;
+      if (pullAfterConflict) {
+        _cloudConflictResolutionCount += 1;
+        final latestSnapshot = _pendingCloudPushes.remove(filename) ?? source;
+        final snapshotToRetry = List<TaskItem>.from(latestSnapshot);
+        _conflictingCloudPushes[filename] = snapshotToRetry;
+        await _persistCloudConflicts();
+        await _persistPendingCloudPushes();
+      }
       _onCloudSyncError(e);
     } finally {
       _cloudSyncBusy = false;
       _suppressSyncToasts = false;
       _flushPendingCloudTimeEntrySync();
+      if (pullAfterConflict && mounted) {
+        unawaited(_debugLog(
+            'syncPushToCloud: conflict detected, pulling remote state'));
+        await _syncPullFromCloud();
+        final conflictSnapshot = _conflictingCloudPushes[filename];
+        if (conflictSnapshot != null) {
+          final currentList = <TaskItem>[];
+          await _loadList(filename, currentList);
+          if (_taskListsEquivalent(currentList, conflictSnapshot)) {
+            _conflictingCloudPushes.remove(filename);
+            await _persistCloudConflicts();
+            unawaited(_debugLog(
+                'syncPushToCloud: conflict auto-cleared for $filename (server == local snapshot)'));
+          } else {
+            unawaited(_resolveCloudPushConflicts());
+          }
+        }
+      }
+    }
+    return pushed || pullAfterConflict;
+  }
+
+  Future<void> _resolveCloudPushConflicts() async {
+    if (_conflictingCloudPushes.isEmpty || _cloudConflictDialogOpen || !mounted)
+      return;
+    _cloudConflictDialogOpen = true;
+    try {
+      final useLocal = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Sync conflict'),
+          content: const Text(
+            'Another device changed the same task list. The server version '
+            'has been loaded. Keep it, or restore and upload your local changes?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Keep server version'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Use local changes'),
+            ),
+          ],
+        ),
+      );
+
+      if (useLocal != true) {
+        _conflictingCloudPushes.clear();
+        await _persistCloudConflicts();
+        _showTopToast('Server version kept.');
+        return;
+      }
+
+      final localSnapshots = Map<String, List<TaskItem>>.fromEntries(
+        _conflictingCloudPushes.entries.map(
+          (entry) => MapEntry(entry.key, List<TaskItem>.from(entry.value)),
+        ),
+      );
+      _conflictingCloudPushes.clear();
+      for (final entry in localSnapshots.entries) {
+        await _queueReplaceList(entry.key, entry.value);
+      }
+      await _persistCloudConflicts();
+      await _loadToday();
+      unawaited(_updateListCounts());
+      _showTopToast('Local changes restored and queued for sync.');
+    } catch (e, st) {
+      unawaited(_debugLog('cloud conflict resolution failed: $e\n$st'));
+    } finally {
+      _cloudConflictDialogOpen = false;
     }
   }
 
@@ -2808,20 +2953,34 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         .toList();
   }
 
+  bool _taskListsEquivalent(List<TaskItem> a, List<TaskItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+      if (jsonEncode(a[i].toJson()) != jsonEncode(b[i].toJson())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // Cloud syncing of redo-log entries has been removed.
 
   Future<bool> _syncPushNotes(String text) async {
     if (!_cloudSyncConfigured ||
         _cloudSyncBusy ||
         _applyingCloudState ||
-        _suppressCloudPushes) return false;
+        _suppressCloudPushes) {
+      _cloudPendingNotesSync = text;
+      await _persistPendingAuxiliarySync();
+      _scheduleCloudNotesRetry();
+      return false;
+    }
 
     _cloudSyncBusy = true;
+    var pushed = false;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
+      final client = _cloudClientForSync();
       final modifiedAt = DateTime.now().millisecondsSinceEpoch;
       _cloudStateVersion += 1;
 
@@ -2851,14 +3010,40 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Note: do NOT update _cloudLastSyncModifiedAt here (see _syncPushToCloud).
       await _saveSettings();
       _onCloudSyncSuccess();
+      if (_cloudPendingNotesSync == text) {
+        _cloudPendingNotesSync = null;
+        await _persistPendingAuxiliarySync();
+      }
+      _cloudNotesRetryAttempt = 0;
+      pushed = true;
       return true;
     } catch (e) {
+      _cloudPendingNotesSync = text;
+      await _persistPendingAuxiliarySync();
       _onCloudSyncError(e);
       return false;
     } finally {
       _cloudSyncBusy = false;
       _suppressSyncToasts = false;
+      if (!pushed || _cloudPendingNotesSync != null) {
+        _scheduleCloudNotesRetry();
+      }
     }
+  }
+
+  void _scheduleCloudNotesRetry() {
+    if (_cloudNotesRetryTimer != null || _cloudPendingNotesSync == null) return;
+    _cloudNotesRetryAttempt = math.min(_cloudNotesRetryAttempt + 1, 7);
+    final retrySeconds =
+        math.min(300, 5 * (1 << (_cloudNotesRetryAttempt - 1)));
+    _cloudNotesRetryTimer = Timer(Duration(seconds: retrySeconds), () async {
+      _cloudNotesRetryTimer = null;
+      final text = _cloudPendingNotesSync;
+      if (text == null || !mounted || !_cloudSyncConfigured) return;
+      if (!await _syncPushNotes(text)) {
+        _scheduleCloudNotesRetry();
+      }
+    });
   }
 
   void _onCloudSyncSuccess() {
@@ -2883,9 +3068,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ? 'Sync: Authentifizierung fehlgeschlagen (Authorization-Header fehlt, Proxy-Konfiguration pruefen).'
                 : msg.contains('401') || msg.contains('403')
                     ? 'Sync: Authentifizierung fehlgeschlagen.'
-                    : msg.contains('Server error')
-                        ? 'Sync: Server-Fehler.'
-                        : 'Sync fehlgeschlagen.';
+                    : msg.contains('409')
+                        ? 'Sync-Konflikt: Serverstand wird geladen.'
+                        : msg.contains('Server error')
+                            ? 'Sync: Server-Fehler.'
+                            : 'Sync fehlgeschlagen.';
     _cloudSyncLastError = short;
     if (!_cloudSyncFailed && mounted) {
       _cloudSyncFailed = true;
@@ -2940,6 +3127,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     // Cancel any pending debounced auto-pushes – we're doing a full sync now.
     _pendingCloudPushes.clear();
+    await _persistPendingCloudPushes();
 
     // Finalize any open edits so they get logged as a single entry.
     try {
@@ -2954,16 +3142,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final todayFile = _storage('simplepresent_today.json');
       final backlogFile = _storage('simplepresent_backlog.json');
       final doneFile = _storage('simplepresent_done.json');
+      final trashFile = _storage('simplepresent_trash.json');
       final notesFile = await _fileFor(_storage('simplepresent_notes.txt'));
 
       final todayList = <TaskItem>[];
       final backlogList = <TaskItem>[];
       final doneList = <TaskItem>[];
+      final trashList = <TaskItem>[];
 
       await Future.wait([
         _loadList(todayFile, todayList),
         _loadList(backlogFile, backlogList),
         _loadList(doneFile, doneList),
+        _loadList(trashFile, trashList),
       ]);
 
       String notesText = '';
@@ -2973,27 +3164,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       } catch (_) {}
 
-      // Step 2: Push all 3 lists SEQUENTIALLY.
+      // Step 2: Push all lists SEQUENTIALLY.
       // Parallel pushes are broken because _cloudSyncBusy blocks the 2nd + 3rd.
-      await _syncPushToCloud(todayFile, todayList);
-      await _syncPushToCloud(backlogFile, backlogList);
-      await _syncPushToCloud(doneFile, doneList);
+      final listSnapshots = <String, List<TaskItem>>{
+        todayFile: todayList,
+        backlogFile: backlogList,
+        doneFile: doneList,
+        trashFile: trashList,
+      };
+      for (final entry in listSnapshots.entries) {
+        final conflictsBeforePush = _cloudConflictResolutionCount;
+        if (!await _syncPushToCloud(entry.key, entry.value)) {
+          await _enqueuePush(entry.key, entry.value);
+          throw CloudSyncException('List push failed: ${entry.key}');
+        }
+        if (_cloudConflictResolutionCount != conflictsBeforePush) {
+          if (!suppressToasts) {
+            _showTopToast('Sync conflict resolved. Synchronize again.');
+          }
+          return;
+        }
+      }
 
-      // Step 3: Push notes if non-empty.
-      if (notesText.isNotEmpty) {
-        await _syncPushNotes(notesText);
+      // Step 3: Push notes, including an empty value that clears remote notes.
+      if (!await _syncPushNotes(notesText)) {
+        throw CloudSyncException('Notes push failed.');
       }
 
       // Step 4: Push all pending time-entries (drain the queue completely).
       while (_cloudPendingTimeEntrySync.isNotEmpty) {
         final entry = _cloudPendingTimeEntrySync.entries.first;
-        _cloudPendingTimeEntrySync.remove(entry.key);
-        try {
-          await _syncPushTimeEntryToCloud(entry.value);
-        } catch (_) {
-          // Re-enqueue on failure, will retry on next manual sync.
-          _cloudPendingTimeEntrySync[entry.key] = entry.value;
-          break;
+        final pushed = await _syncPushTimeEntryToCloud(
+          entry.value,
+          date: entry.key.split(':').first,
+        );
+        if (!pushed) {
+          _scheduleCloudTimeEntryRetry();
+          throw CloudSyncException('Time-entry push failed.');
+        }
+        if (identical(_cloudPendingTimeEntrySync[entry.key], entry.value)) {
+          _cloudPendingTimeEntrySync.remove(entry.key);
+          await _persistPendingAuxiliarySync();
         }
       }
 
@@ -3010,6 +3221,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
       if (!suppressToasts) _showTopToast('synchronization completed');
     } catch (e) {
+      _onCloudSyncError(e);
       if (!suppressToasts) _showTopToast('synchronization failed');
     } finally {
       _suppressSyncToasts = false;
@@ -3019,10 +3231,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _fetchServerVersion() async {
     if (_cloudServerUrl.trim().isEmpty) return;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
+      final client = _cloudClientForSync();
       final health = await client.getHealth();
       if (health != null && mounted) {
         final isOutdated = _isClientOlderThanServer(kClientVersion, health);
@@ -3042,10 +3251,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }) async {
     if (!_cloudSyncConfigured) return;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
+      final client = _cloudClientForSync();
       final status = await client.getAccountStatus(token: _cloudToken.trim());
       final days = status.daysUntilArchive;
 
@@ -3074,44 +3280,56 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       unawaited(_debugLog('syncPullFromCloud: skip - already busy'));
       return;
     }
+    if (_conflictingCloudPushes.isEmpty && _hasPendingLocalCloudWork) {
+      unawaited(_debugLog('syncPullFromCloud: skip - local pushes pending'));
+      return;
+    }
     unawaited(_debugLog('syncPullFromCloud: start'));
     final sw = Stopwatch()..start();
     // Finalize any open edits before applying remote state
     try {
       await _finalizeAllEdits();
     } catch (_) {}
+    if (_conflictingCloudPushes.isEmpty && _hasPendingLocalCloudWork) {
+      unawaited(_debugLog('syncPullFromCloud: skip - finalized edits pending'));
+      return;
+    }
     // Suppress toasts triggered by cloud sync actions while applying state.
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
     try {
-      final client = CloudSyncClient(
-        serverBaseUrl: _cloudServerUrl.trim(),
-        allowInsecureCertificates: _cloudAllowInsecureTls,
-      );
+      final client = _cloudClientForSync();
       final pulledItems = await client.pullChangedItems(
         token: _cloudToken.trim(),
-        since: _cloudLastSyncModifiedAt,
+        since: _conflictingCloudPushes.isNotEmpty
+            ? 0
+            : math.max(0, _cloudLastSyncModifiedAt - 1),
         idPrefix: '',
       );
       await _refreshCloudAccountStatus(showToastIfWarning: true);
       if (pulledItems.isEmpty) {
         // Nothing new from server — still counts as a successful contact.
         _onCloudSyncSuccess();
+        await _resolveCloudPushConflicts();
         return;
       }
 
       final today = <TaskItem>[];
       final backlog = <TaskItem>[];
       final done = <TaskItem>[];
+      final trash = <TaskItem>[];
       await _loadList(_storage('simplepresent_today.json'), today);
       await _loadList(_storage('simplepresent_backlog.json'), backlog);
       await _loadList(_storage('simplepresent_done.json'), done);
+      await _loadList(_storage('simplepresent_trash.json'), trash);
 
       final listMap = <String, List<TaskItem>>{
         'today': today,
         'backlog': backlog,
         'done': done,
+        'trash': trash,
       };
+      final pulledTasks = <({TaskItem task, String listName, int position})>[];
 
       _applyingCloudState = true;
       var maxModifiedAt = _cloudLastSyncModifiedAt;
@@ -3133,6 +3351,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               _cloudKnownTodayIds.remove(taskId);
               _cloudKnownBacklogIds.remove(taskId);
               _cloudKnownDoneIds.remove(taskId);
+              _cloudKnownTrashIds.remove(taskId);
             }
             continue;
           }
@@ -3153,15 +3372,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             try {
               final notesFile =
                   await _fileFor(_storage('simplepresent_notes.txt'));
-              final localModified = await (await notesFile.exists())
-                  ? (await notesFile.lastModified()).millisecondsSinceEpoch
-                  : 0;
-              if (item.modifiedAt > localModified ||
-                  (localModified == 0 && incomingText.isNotEmpty)) {
-                try {
-                  await notesFile.writeAsString(incomingText);
-                  if (mounted) _showTopToast('notes updated from cloud');
-                } catch (_) {}
+              final currentText = await notesFile.exists()
+                  ? await notesFile.readAsString()
+                  : '';
+              if (currentText != incomingText) {
+                await notesFile.writeAsString(incomingText);
+                if (mounted) _showTopToast('notes updated from cloud');
               }
             } catch (_) {}
             continue;
@@ -3204,25 +3420,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           if (taskRaw is! Map || !listMap.containsKey(listName)) continue;
 
           final task = TaskItem.fromJson(Map<String, dynamic>.from(taskRaw));
+          pulledTasks.add((task: task, listName: listName, position: position));
+        }
 
-          for (final list in listMap.values) {
-            list.removeWhere((t) => t.id == task.id);
-          }
-
+        final pulledTaskIds = pulledTasks.map((item) => item.task.id).toSet();
+        for (final list in listMap.values) {
+          list.removeWhere((task) => pulledTaskIds.contains(task.id));
+        }
+        for (final taskId in pulledTaskIds) {
+          _cloudKnownTodayIds.remove(taskId);
+          _cloudKnownBacklogIds.remove(taskId);
+          _cloudKnownDoneIds.remove(taskId);
+          _cloudKnownTrashIds.remove(taskId);
+        }
+        for (final listName in listMap.keys) {
+          final placements = pulledTasks
+              .where((item) => item.listName == listName)
+              .map((item) => PositionedSnapshotItem<TaskItem>(
+                    value: item.task,
+                    id: item.task.id,
+                    position: item.position,
+                  ))
+              .toList();
           final target = listMap[listName]!;
-          final insertPos = position.clamp(0, target.length);
-          target.insert(insertPos, task);
-
-          _cloudKnownTodayIds.remove(task.id);
-          _cloudKnownBacklogIds.remove(task.id);
-          _cloudKnownDoneIds.remove(task.id);
-          _knownIdSetForList(listName).add(task.id);
+          final merged = mergePositionedSnapshot(
+            existing: target,
+            incoming: placements,
+            idOf: (task) => task.id,
+          );
+          target
+            ..clear()
+            ..addAll(merged);
+          for (final placement in placements) {
+            _knownIdSetForList(listName).add(placement.id);
+          }
         }
 
         await _queueReplaceList(_storage('simplepresent_today.json'), today);
         await _queueReplaceList(
             _storage('simplepresent_backlog.json'), backlog);
         await _queueReplaceList(_storage('simplepresent_done.json'), done);
+        await _queueReplaceList(_storage('simplepresent_trash.json'), trash);
         await _loadToday();
         _cloudKnownTodayIds
           ..clear()
@@ -3233,6 +3471,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _cloudKnownDoneIds
           ..clear()
           ..addAll(done.map((t) => t.id));
+        _cloudKnownTrashIds
+          ..clear()
+          ..addAll(trash.map((t) => t.id));
         await _saveCloudKnownIdsToDb();
         try {
           await _saveSettings();
@@ -3244,6 +3485,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _cloudLastSyncModifiedAt = maxModifiedAt;
       await _saveSettings();
       _onCloudSyncSuccess();
+      await _resolveCloudPushConflicts();
     } catch (e, st) {
       unawaited(_debugLog('syncPullFromCloud: error $e\n$st'));
       _onCloudSyncError(e);
@@ -3262,6 +3504,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           'syncPullFromCloud: finished in ${sw.elapsedMilliseconds}ms'));
     }
   }
+
+  bool get _hasPendingLocalCloudWork =>
+      _pendingCloudPushes.isNotEmpty ||
+      _cloudPendingNotesSync != null ||
+      _cloudPendingTimeEntrySync.isNotEmpty;
 
   void _startCloudPullTimer() {
     _cloudPullTimer?.cancel();
@@ -3705,15 +3952,139 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _saveCloudKnownIdsToDb() async {
     if (!_useSembast) return;
     try {
-      _sembastStorage.write(
-          'cloudKnownTodayIds', jsonEncode(_cloudKnownTodayIds.toList()));
-      _sembastStorage.write(
-          'cloudKnownBacklogIds', jsonEncode(_cloudKnownBacklogIds.toList()));
-      _sembastStorage.write(
-          'cloudKnownDoneIds', jsonEncode(_cloudKnownDoneIds.toList()));
-      _sembastStorage.write(
-          'cloudKnownTrashIds', jsonEncode(_cloudKnownTrashIds.toList()));
+      await Future.wait([
+        _sembastStorage.writeAsync(
+            'cloudKnownTodayIds', jsonEncode(_cloudKnownTodayIds.toList())),
+        _sembastStorage.writeAsync(
+            'cloudKnownBacklogIds', jsonEncode(_cloudKnownBacklogIds.toList())),
+        _sembastStorage.writeAsync(
+            'cloudKnownDoneIds', jsonEncode(_cloudKnownDoneIds.toList())),
+        _sembastStorage.writeAsync(
+            'cloudKnownTrashIds', jsonEncode(_cloudKnownTrashIds.toList())),
+      ]);
     } catch (_) {}
+  }
+
+  Future<void> _loadCloudConflictsFromDb() async {
+    if (!_useSembast) return;
+    try {
+      final raw = _sembastStorage.read('cloudConflictingPushes');
+      if (raw == null || raw.trim().isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      for (final entry in decoded.entries) {
+        final listName = entry.key.toString();
+        final items = entry.value;
+        if (items is! List ||
+            !const ['today', 'backlog', 'done', 'trash'].contains(listName)) {
+          continue;
+        }
+        _conflictingCloudPushes[_storage('simplepresent_$listName.json')] =
+            items
+                .whereType<Map>()
+                .map((item) =>
+                    TaskItem.fromJson(Map<String, dynamic>.from(item)))
+                .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCloudPendingPushesFromDb() async {
+    if (!_useSembast) return;
+    try {
+      final raw = _sembastStorage.read('cloudPendingPushes');
+      if (raw == null || raw.trim().isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      for (final entry in decoded.entries) {
+        final listName = entry.key.toString();
+        final items = entry.value;
+        if (items is! List ||
+            !const ['today', 'backlog', 'done', 'trash'].contains(listName)) {
+          continue;
+        }
+        _pendingCloudPushes[_storage('simplepresent_$listName.json')] = items
+            .whereType<Map>()
+            .map((item) => TaskItem.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistPendingCloudPushes() async {
+    if (!_useSembast) return;
+    if (_pendingCloudPushes.isEmpty) {
+      await _sembastStorage.deleteRawAsync('cloudPendingPushes');
+      return;
+    }
+    final encoded = <String, dynamic>{};
+    for (final entry in _pendingCloudPushes.entries) {
+      final listName = _cloudListNameForFilename(entry.key);
+      if (listName == null) continue;
+      encoded[listName] = entry.value.map((task) => task.toJson()).toList();
+    }
+    await _sembastStorage.writeAsync(
+      'cloudPendingPushes',
+      jsonEncode(encoded),
+    );
+  }
+
+  Future<void> _loadCloudPendingAuxiliarySyncFromDb() async {
+    if (!_useSembast) return;
+    try {
+      final raw = _sembastStorage.read('cloudPendingAuxiliarySync');
+      if (raw == null || raw.trim().isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      if (decoded.containsKey('notes')) {
+        _cloudPendingNotesSync = decoded['notes']?.toString() ?? '';
+      }
+      final timeEntries = decoded['timeEntries'];
+      if (timeEntries is Map) {
+        for (final entry in timeEntries.entries) {
+          if (entry.value is Map) {
+            _cloudPendingTimeEntrySync[entry.key.toString()] =
+                TaskItem.fromJson(
+                    Map<String, dynamic>.from(entry.value as Map));
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistPendingAuxiliarySync() async {
+    if (!_useSembast) return;
+    if (_cloudPendingNotesSync == null && _cloudPendingTimeEntrySync.isEmpty) {
+      await _sembastStorage.deleteRawAsync('cloudPendingAuxiliarySync');
+      return;
+    }
+    await _sembastStorage.writeAsync(
+      'cloudPendingAuxiliarySync',
+      jsonEncode(<String, dynamic>{
+        if (_cloudPendingNotesSync != null) 'notes': _cloudPendingNotesSync,
+        'timeEntries': _cloudPendingTimeEntrySync.map(
+          (key, task) => MapEntry(key, task.toJson()),
+        ),
+      }),
+    );
+  }
+
+  Future<void> _persistCloudConflicts() async {
+    if (!_useSembast) return;
+    if (_conflictingCloudPushes.isEmpty) {
+      await _sembastStorage.deleteRawAsync('cloudConflictingPushes');
+      return;
+    }
+    final encoded = <String, dynamic>{};
+    for (final entry in _conflictingCloudPushes.entries) {
+      final listName = _cloudListNameForFilename(entry.key);
+      if (listName == null) continue;
+      encoded[listName] = entry.value.map((task) => task.toJson()).toList();
+    }
+    await _sembastStorage.writeAsync(
+      'cloudConflictingPushes',
+      jsonEncode(encoded),
+    );
   }
 
   @override
@@ -3761,6 +4132,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _scheduledCheckTimer?.cancel();
     _cloudPullTimer?.cancel();
     _cloudBackgroundSyncTimer?.cancel();
+    _cloudPushRetryTimer?.cancel();
+    _cloudTimeEntryRetryTimer?.cancel();
+    _cloudNotesRetryTimer?.cancel();
+    _cachedCloudSyncClient?.close();
     for (final c in _editControllers.values) {
       c.dispose();
     }
@@ -5671,11 +6046,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Update header counts
       unawaited(_updateListCounts());
 
-      // Push both lists to cloud after local state is stable (run in background)
-      try {
-        unawaited(_syncPushToCloud(backlogFile, backlogList));
-        unawaited(_syncPushToCloud(todayFile, todayList));
-      } catch (_) {}
+      // Queue both snapshots so the move is delivered sequentially.
+      await _enqueuePushBatch({
+        backlogFile: backlogList,
+        todayFile: todayList,
+      });
     } catch (_) {
       _showTopToast('failed to move task to today');
     }

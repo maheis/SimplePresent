@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ type Server struct {
 	JWTSecret         []byte
 	RequireTLS        bool
 	TrustProxyHeaders bool
+	TrustedProxyNets  []*net.IPNet
 	DefaultQuotas     Quotas
 	AccountPolicy     AccountPolicy
 	IPLimiters        *limiterStore
@@ -85,7 +87,13 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New().String()
 	now := time.Now().Unix()
 	pinHash := hashPIN(id, req.PIN)
-	_, err = s.DB.Exec(
+	tx, err := s.DB.Begin()
+	if err != nil {
+		http.Error(w, "registration transaction failed", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(
 		"INSERT INTO accounts (id, created_at, max_devices, max_items, max_bytes, pairing_public_key, pin_hash, last_active_at, archived, archived_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)",
 		id,
 		now,
@@ -102,7 +110,7 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	deviceID := uuid.New().String()
-	_, err = s.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO devices (id, account_id, name, created_at, revoked, token_version) VALUES (?, ?, ?, ?, 0, 1)",
 		deviceID,
 		id,
@@ -116,6 +124,10 @@ func (s *Server) Register(w http.ResponseWriter, r *http.Request) {
 	token, err := s.issueToken(id, deviceID, 1)
 	if err != nil {
 		http.Error(w, "token issue failed", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "registration commit failed", http.StatusInternalServerError)
 		return
 	}
 	s.maybeSendCapacityAlerts()
@@ -156,9 +168,15 @@ func (s *Server) PairChallenge(w http.ResponseWriter, r *http.Request) {
 	if s.PairingChallenges == nil {
 		s.PairingChallenges = make(map[string]pairingChallenge)
 	}
+	now := time.Now()
+	for id, challenge := range s.PairingChallenges {
+		if now.After(challenge.ExpiresAt) {
+			delete(s.PairingChallenges, id)
+		}
+	}
 	s.PairingChallenges[challengeID] = pairingChallenge{
 		AccountID: req.AccountID,
-		ExpiresAt: time.Now().Add(5 * time.Minute),
+		ExpiresAt: now.Add(5 * time.Minute),
 	}
 	s.ChallengeMu.Unlock()
 
@@ -302,11 +320,19 @@ func (s *Server) Pull(w http.ResponseWriter, r *http.Request) {
 		var tomb int
 		var version int
 		if err := rows.Scan(&id, &payload, &modified, &tomb, &origin, &version); err != nil {
-			continue
+			http.Error(w, "item row decode failed", http.StatusInternalServerError)
+			return
 		}
 		var payloadObj interface{}
-		json.Unmarshal([]byte(payload), &payloadObj)
+		if err := json.Unmarshal([]byte(payload), &payloadObj); err != nil {
+			http.Error(w, "item payload decode failed", http.StatusInternalServerError)
+			return
+		}
 		out = append(out, map[string]interface{}{"id": id, "payload": payloadObj, "modified_at": modified, "tombstone": tomb, "origin_device_id": origin, "version": version})
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "item rows failed", http.StatusInternalServerError)
+		return
 	}
 
 	// redo-items removed server-side; nothing to include here.
@@ -336,6 +362,10 @@ func (s *Server) Push(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	if len(req.Items) > s.DefaultQuotas.MaxItems {
+		http.Error(w, "too many items in one push", http.StatusRequestEntityTooLarge)
+		return
+	}
 	if req.AccountID != "" && req.AccountID != auth.AccountID {
 		http.Error(w, "account mismatch", http.StatusForbidden)
 		return
@@ -347,7 +377,16 @@ func (s *Server) Push(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	stmt, err := tx.Prepare("INSERT OR REPLACE INTO items (id, account_id, payload, modified_at, tombstone, origin_device_id, version) VALUES (?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := tx.Prepare(`
+		INSERT INTO items (id, account_id, payload, modified_at, tombstone, origin_device_id, version)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(account_id, id) DO UPDATE SET
+			payload = excluded.payload,
+			modified_at = excluded.modified_at,
+			tombstone = excluded.tombstone,
+			origin_device_id = excluded.origin_device_id,
+			version = excluded.version
+	`)
 	if err != nil {
 		tx.Rollback()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -355,13 +394,52 @@ func (s *Server) Push(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 	for _, it := range req.Items {
-		b, _ := json.Marshal(it.Payload)
+		if it.ID == "" || it.ModifiedAt <= 0 || it.Version < 0 {
+			tx.Rollback()
+			http.Error(w, "item id, modified_at and version are required", http.StatusBadRequest)
+			return
+		}
+		b, err := json.Marshal(it.Payload)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "invalid item payload", http.StatusBadRequest)
+			return
+		}
 		// Server no longer stores redo entries; treat all items uniformly.
 		tomb := 0
 		if it.Tombstone {
 			tomb = 1
 		}
-		if _, err := stmt.Exec(it.ID, req.AccountID, string(b), it.ModifiedAt, tomb, it.OriginDeviceID, it.Version); err != nil {
+
+		var storedPayload, storedOrigin string
+		var storedModifiedAt int64
+		var storedTombstone, storedVersion int
+		err = tx.QueryRow(
+			"SELECT payload, modified_at, tombstone, origin_device_id, version FROM items WHERE account_id = ? AND id = ?",
+			req.AccountID,
+			it.ID,
+		).Scan(&storedPayload, &storedModifiedAt, &storedTombstone, &storedOrigin, &storedVersion)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			tx.Rollback()
+			http.Error(w, "item conflict check failed", http.StatusInternalServerError)
+			return
+		}
+		if err == nil {
+			incomingIsOlder := it.Version < storedVersion ||
+				(it.Version == storedVersion && it.ModifiedAt < storedModifiedAt)
+			sameRevision := it.Version == storedVersion && it.ModifiedAt == storedModifiedAt
+			sameContent := storedPayload == string(b) && storedTombstone == tomb
+			if incomingIsOlder || (sameRevision && !sameContent) {
+				tx.Rollback()
+				http.Error(w, "item conflict", http.StatusConflict)
+				return
+			}
+			if sameRevision && sameContent {
+				continue
+			}
+		}
+
+		if _, err := stmt.Exec(it.ID, req.AccountID, string(b), it.ModifiedAt, tomb, auth.DeviceID, it.Version); err != nil {
 			tx.Rollback()
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
