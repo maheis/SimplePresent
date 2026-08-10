@@ -1,14 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/simplepresent/server/handlers"
@@ -16,6 +22,11 @@ import (
 )
 
 const ServerVersion = "0.1.0"
+
+const (
+	smallRequestBodyLimit = 64 * 1024
+	pushRequestBodyLimit  = 16 * 1024 * 1024
+)
 
 type Config struct {
 	Bind         string `json:"bind"`
@@ -26,9 +37,10 @@ type Config struct {
 		KeyFile  string `json:"key_file"`
 	} `json:"tls"`
 	Security struct {
-		RequireTLS        bool   `json:"require_tls"`
-		TrustProxyHeaders bool   `json:"trust_proxy_headers"`
-		JWTSecret         string `json:"jwt_secret"`
+		RequireTLS        bool     `json:"require_tls"`
+		TrustProxyHeaders bool     `json:"trust_proxy_headers"`
+		TrustedProxyCIDRs []string `json:"trusted_proxy_cidrs"`
+		JWTSecret         string   `json:"jwt_secret"`
 		AccountPolicy     struct {
 			MaxAccounts          int    `json:"max_accounts"`
 			AdminEmail           string `json:"admin_email"`
@@ -109,9 +121,6 @@ func loadConfig(path string) (*Config, error) {
 	var c Config
 	if err := json.NewDecoder(f).Decode(&c); err != nil {
 		return nil, err
-	}
-	if c.Security.RequireTLS == false {
-		// keep explicit false if user set it; defaults are applied below only when values are empty
 	}
 	if c.Security.JWTSecret == "" {
 		c.Security.JWTSecret = os.Getenv("SIMPLEPRESENT_JWT_SECRET")
@@ -201,10 +210,6 @@ func loadConfig(path string) (*Config, error) {
 		"SIMPLEPRESENT_SMTP_FROM",
 		c.Security.AccountPolicy.SMTP.From,
 	)
-	if !c.TLS.Enabled && c.Security.RequireTLS == false {
-		// explicit insecure local mode remains possible
-	} else if !c.TLS.Enabled && c.Security.RequireTLS == false {
-	}
 	return &c, nil
 }
 
@@ -218,6 +223,10 @@ func main() {
 	if cfg.Security.JWTSecret == "" {
 		log.Fatal("security.jwt_secret is required")
 	}
+	trustedProxyNets, err := parseTrustedProxyCIDRs(cfg.Security.TrustedProxyCIDRs)
+	if err != nil {
+		log.Fatalf("invalid trusted proxy configuration: %v", err)
+	}
 	st, err := storage.NewSQLite(cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
@@ -230,6 +239,7 @@ func main() {
 		JWTSecret:         []byte(cfg.Security.JWTSecret),
 		RequireTLS:        cfg.Security.RequireTLS,
 		TrustProxyHeaders: cfg.Security.TrustProxyHeaders,
+		TrustedProxyNets:  trustedProxyNets,
 		AccountPolicy: handlers.AccountPolicy{
 			MaxAccounts:          cfg.Security.AccountPolicy.MaxAccounts,
 			AdminEmail:           cfg.Security.AccountPolicy.AdminEmail,
@@ -253,26 +263,89 @@ func main() {
 		AccountLimiters: handlers.NewAccountLimiters(cfg.Security.RateLimit.RequestsPerMinute, cfg.Security.RateLimit.Burst),
 	}
 
+	r := newRouter(srv)
+
+	addr := cfg.Bind
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	maintenanceDone := srv.StartMaintenanceLoop(ctx)
+	fmt.Printf("listening on %s\n", addr)
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    64 * 1024,
+	}
+	serverErrors := make(chan error, 1)
+	go func() {
+		if cfg.TLS.Enabled {
+			serverErrors <- httpServer.ListenAndServeTLS(cfg.TLS.CertFile, cfg.TLS.KeyFile)
+			return
+		}
+		serverErrors <- httpServer.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErrors:
+		stop()
+		<-maintenanceDone
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server stopped: %v", err)
+		}
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+			_ = httpServer.Close()
+		}
+		if err := <-serverErrors; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server stopped: %v", err)
+		}
+		<-maintenanceDone
+	}
+}
+
+func newRouter(srv *handlers.Server) http.Handler {
 	r := mux.NewRouter()
-	r.Handle("/register", srv.SecureOnly(srv.RateLimitByIP(http.HandlerFunc(srv.Register)))).Methods("POST")
-	r.Handle("/pair/challenge", srv.SecureOnly(srv.RateLimitByIP(http.HandlerFunc(srv.PairChallenge)))).Methods("POST")
-	r.Handle("/pair", srv.SecureOnly(srv.RateLimitByIP(http.HandlerFunc(srv.Pair)))).Methods("POST")
-	r.Handle("/push", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.Push))))).Methods("POST")
+	r.Handle("/register", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Register))))).Methods("POST")
+	r.Handle("/pair/challenge", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.PairChallenge))))).Methods("POST")
+	r.Handle("/pair", srv.SecureOnly(srv.RateLimitByIP(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.Pair))))).Methods("POST")
+	r.Handle("/push", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(pushRequestBodyLimit, http.HandlerFunc(srv.Push)))))).Methods("POST")
 	r.Handle("/pull", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.Pull))))).Methods("GET")
 	r.Handle("/devices", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.DevicesList))))).Methods("GET")
 	r.Handle("/account/status", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.AccountStatus))))).Methods("GET")
-	r.Handle("/devices/{id}/revoke", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(http.HandlerFunc(srv.RevokeDevice))))).Methods("POST")
+	r.Handle("/devices/{id}/revoke", srv.SecureOnly(srv.RateLimitByIP(srv.AuthMiddleware(handlers.LimitRequestBody(smallRequestBodyLimit, http.HandlerFunc(srv.RevokeDevice)))))).Methods("POST")
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"version": ServerVersion, "status": "ok"})
 	}).Methods("GET")
+	return r
+}
 
-	addr := cfg.Bind
-	srv.StartMaintenanceLoop()
-	fmt.Printf("listening on %s\n", addr)
-	if cfg.TLS.Enabled {
-		log.Fatal(http.ListenAndServeTLS(addr, cfg.TLS.CertFile, cfg.TLS.KeyFile, r))
-	} else {
-		log.Fatal(http.ListenAndServe(addr, r))
+func parseTrustedProxyCIDRs(values []string) ([]*net.IPNet, error) {
+	result := make([]*net.IPNet, 0, len(values))
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if value == "" {
+			continue
+		}
+		if ip := net.ParseIP(value); ip != nil {
+			bits := 128
+			if ip.To4() != nil {
+				bits = 32
+			}
+			result = append(result, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+			continue
+		}
+		_, network, err := net.ParseCIDR(value)
+		if err != nil {
+			return nil, fmt.Errorf("%q: %w", value, err)
+		}
+		result = append(result, network)
 	}
+	return result, nil
 }

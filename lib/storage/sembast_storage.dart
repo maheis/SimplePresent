@@ -167,13 +167,13 @@ class SembastStorage {
   }
 
   void write(String name, String content) {
+    unawaited(writeAsync(name, content).catchError((_) {}));
+  }
+
+  Future<void> writeAsync(String name, String content) async {
     final key = _canonicalKey(name);
     _rawCache[key] = content;
-    unawaited(() async {
-      try {
-        await _rawStore.record(key).put(_db!, content);
-      } catch (_) {}
-    }());
+    await _rawStore.record(key).put(_db!, content);
   }
 
   bool exists(String name) {
@@ -223,7 +223,18 @@ class SembastStorage {
         'work_minutes': workMinutes,
         'recorded_at': now,
       };
-      final newList = List<Map<String, dynamic>>.from(list)..add(entry);
+      final newList = List<Map<String, dynamic>>.from(list);
+      final existingIndex =
+          newList.indexWhere((item) => item['task_id']?.toString() == taskId);
+      if (existingIndex >= 0) {
+        final existingRecordedAt = int.tryParse(
+                newList[existingIndex]['recorded_at']?.toString() ?? '') ??
+            0;
+        if (existingRecordedAt > now) return;
+        newList[existingIndex] = entry;
+      } else {
+        newList.add(entry);
+      }
       _timeCache[date] = newList;
       try {
         await _timeStore.record(date).put(_db!, newList);
