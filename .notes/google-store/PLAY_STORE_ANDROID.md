@@ -2,6 +2,14 @@
 
 Kurz und präzise Anleitung, um eine Android-Version in den Google Play Store zu bringen.
 
+## 0) Change Parameter
+- in `android/app/build.gradle.kts`
+
+```bash
+namespace = "de.deinname.volleyace"
+applicationId = "de.deinname.volleyace"
+```
+
 ## 1) Versioning
 - Erhöhe die `version` in `pubspec.yaml`, z.B. `1.2.0+5` (`+5` = `versionCode`).
 
@@ -13,6 +21,8 @@ keytool -genkeypair -v \
   -keystore ~/.keystores/simplepresent.jks \
   -alias simplepresent_key \
   -keyalg RSA -keysize 2048 -validity 10000
+
+CN=Manfred Heister,OU=ALLSTAR,O=maheis,L=Dietfurt,ST=BY,C=DE
 ```
 
 ## 3) Play Console — Vorbereitung
