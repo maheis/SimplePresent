@@ -11982,6 +11982,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           DropdownMenuItem(
                               value: 'CourierPrime',
                               child: Text('CourierPrime')),
+                          DropdownMenuItem(
+                              value: 'Ubuntu', child: Text('Ubuntu')),
+                          DropdownMenuItem(
+                              value: 'UbuntuMono', child: Text('Ubuntu Mono')),
                         ],
                         onChanged: (value) {
                           if (value != null) {

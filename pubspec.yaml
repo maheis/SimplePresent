@@ -47,6 +47,14 @@ flutter:
       fonts:
         - asset: assets/fonts/Courier_Prime/CourierPrime-Regular.ttf
         - asset: assets/fonts/Courier_Prime/CourierPrime-Bold.ttf
+    - family: Ubuntu
+      fonts:
+        - asset: assets/fonts/Ubuntu/Ubuntu-Regular.ttf
+        - asset: assets/fonts/Ubuntu/Ubuntu-Bold.ttf
+    - family: UbuntuMono
+      fonts:
+        - asset: assets/fonts/Ubuntu/UbuntuMono-Regular.ttf
+        - asset: assets/fonts/Ubuntu/UbuntuMono-Bold.ttf
           weight: 700
 
 flutter_icons:
