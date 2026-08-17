@@ -1791,7 +1791,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!scheduledDay.isBefore(today)) return null;
 
     final days = today.difference(scheduledDay).inDays;
-    return 'Aufgeschoben seit $days Tagen';
+    return 'Seit $days Tagen überfällig';
+  }
+
+  String? _overdueCardLabel(DateTime scheduledAt) {
+    final now = DateTime.now();
+    final scheduledDay = DateTime(
+      scheduledAt.year,
+      scheduledAt.month,
+      scheduledAt.day,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    if (!scheduledDay.isBefore(today)) return null;
+
+    final days = today.difference(scheduledDay).inDays;
+    if (days > 7) {
+      return DateFormat('dd.MM.').format(scheduledAt);
+    }
+    return DateFormat('EEEE').format(scheduledAt);
   }
 
   String _formatBacklogScheduleLabel(DateTime scheduledAt) {
@@ -8863,15 +8880,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 child: Column(
                                                                                   mainAxisSize: MainAxisSize.min,
                                                                                   children: [
-                                                                                    // Show the original schedule label in the card; postponement hints stay in notifications.
+                                                                                    // Show weekday for recent overdue tasks, date for older ones; notifications stay separate.
                                                                                     if (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json'))
                                                                                       Text(
                                                                                         _formatBacklogScheduleLabel(task.scheduledAt!),
                                                                                         style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                                                                       )
-                                                                                    else if (task.scheduledAt != null && !_isSameDay(task.scheduledAt!, DateTime.now()) && task.scheduledAt!.isBefore(DateTime.now()))
+                                                                                    else if (_overdueCardLabel(task.scheduledAt!) != null)
                                                                                       Text(
-                                                                                        (_isSameDay(task.scheduledAt!, DateTime.now().subtract(const Duration(days: 1))) ? 'yesterday' : DateFormat('EEEE').format(task.scheduledAt!)),
+                                                                                        _overdueCardLabel(task.scheduledAt!)!,
                                                                                         style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                                                                       ),
                                                                                   ],
