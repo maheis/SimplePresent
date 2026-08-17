@@ -83,7 +83,8 @@
   - [x] kalendericon unter android komiglisch
 - [x] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
 - [x] sortierung springt ständig!
-- [ ] android icon
+- [x] android icon
+- [x] Aufgaben in der Vergangenheit müssen today zu ihrer Uhrzeit erinnern! Mit dem Hinweis Text "Aufgeschoben seit n Tagen"
 
 ## notes
 

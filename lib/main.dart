@@ -1755,6 +1755,45 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  DateTime _effectiveReminderAt(TaskItem task, DateTime now) {
+    final scheduledAt = task.scheduledAt;
+    if (scheduledAt == null) return now;
+
+    final scheduledDay = DateTime(
+      scheduledAt.year,
+      scheduledAt.month,
+      scheduledAt.day,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    if (scheduledDay.isBefore(today)) {
+      return DateTime(
+        now.year,
+        now.month,
+        now.day,
+        scheduledAt.hour,
+        scheduledAt.minute,
+        scheduledAt.second,
+        scheduledAt.millisecond,
+        scheduledAt.microsecond,
+      );
+    }
+    return scheduledAt;
+  }
+
+  String? _postponedSinceLabel(DateTime scheduledAt) {
+    final now = DateTime.now();
+    final scheduledDay = DateTime(
+      scheduledAt.year,
+      scheduledAt.month,
+      scheduledAt.day,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    if (!scheduledDay.isBefore(today)) return null;
+
+    final days = today.difference(scheduledDay).inDays;
+    return 'Aufgeschoben seit $days Tagen';
+  }
+
   String _formatBacklogScheduleLabel(DateTime scheduledAt) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -4181,16 +4220,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         // Do not remind for tasks without schedule or already completed
         if (t.scheduledAt == null) continue;
         if (t.done) continue;
-        final diff = t.scheduledAt!.difference(now);
+        final effectiveAt = _effectiveReminderAt(t, now);
+        final diff = effectiveAt.difference(now);
         final key = _taskNotifyKey(t);
         // 15-minute warning removed per user request
         // At due time or overdue (first time)
         // Do not fire reminders for tasks that were already due before the
         // application was started (avoid popping reminders on app start).
-        if (t.scheduledAt!.isBefore(_appStartedAt)) continue;
+        if (effectiveAt.isBefore(_appStartedAt)) continue;
 
         if (diff.inSeconds <= 0 && !_notifiedDue.contains(key)) {
           _notifiedDue.add(key);
+          final postponedLabel = _postponedSinceLabel(t.scheduledAt!);
+          final body =
+              postponedLabel == null ? t.text : '${t.text}\n$postponedLabel';
           try {
             if (_scheduledReminderSoundEnabled) {
               await _playShortSound('sounds/pop.mp3', alert: false);
@@ -4200,7 +4243,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             await _nativeWindowChannel.invokeMethod('notify', <String, String>{
               //'title': _appTitle,
               'title': '',
-              'body': '${t.text}',
+              'body': body,
               'icon': 'assets/icons/color_transparent_icon.png',
               'taskId': t.id,
             });
@@ -8820,10 +8863,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 child: Column(
                                                                                   mainAxisSize: MainAxisSize.min,
                                                                                   children: [
-                                                                                    // Show full date in Backlog, or in Today when the scheduled date is not today and is in the past
-                                                                                    if (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json') || (task.scheduledAt != null && !_isSameDay(task.scheduledAt!, DateTime.now()) && task.scheduledAt!.isBefore(DateTime.now())))
+                                                                                    // Show backlog dates in Backlog, and a postponement hint in Today for past-due tasks.
+                                                                                    if (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json'))
                                                                                       Text(
-                                                                                        (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json')) ? _formatBacklogScheduleLabel(task.scheduledAt!) : (_isSameDay(task.scheduledAt!, DateTime.now().subtract(const Duration(days: 1))) ? 'yesterday' : DateFormat('EEEE').format(task.scheduledAt!)),
+                                                                                        _formatBacklogScheduleLabel(task.scheduledAt!),
+                                                                                        style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                                                                      )
+                                                                                    else if (_postponedSinceLabel(task.scheduledAt!) != null)
+                                                                                      Text(
+                                                                                        _postponedSinceLabel(task.scheduledAt!)!,
                                                                                         style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                                                                       ),
                                                                                   ],
