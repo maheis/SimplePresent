@@ -8863,15 +8863,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 child: Column(
                                                                                   mainAxisSize: MainAxisSize.min,
                                                                                   children: [
-                                                                                    // Show backlog dates in Backlog, and a postponement hint in Today for past-due tasks.
+                                                                                    // Show the original schedule label in the card; postponement hints stay in notifications.
                                                                                     if (_showingBacklog || _currentFile == _storage('simplepresent_backlog.json'))
                                                                                       Text(
                                                                                         _formatBacklogScheduleLabel(task.scheduledAt!),
                                                                                         style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                                                                       )
-                                                                                    else if (_postponedSinceLabel(task.scheduledAt!) != null)
+                                                                                    else if (task.scheduledAt != null && !_isSameDay(task.scheduledAt!, DateTime.now()) && task.scheduledAt!.isBefore(DateTime.now()))
                                                                                       Text(
-                                                                                        _postponedSinceLabel(task.scheduledAt!)!,
+                                                                                        (_isSameDay(task.scheduledAt!, DateTime.now().subtract(const Duration(days: 1))) ? 'yesterday' : DateFormat('EEEE').format(task.scheduledAt!)),
                                                                                         style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                                                                       ),
                                                                                   ],
