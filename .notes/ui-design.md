@@ -15,8 +15,9 @@ Minimalistisch, dunkel, zugänglich. Die App tritt visuell zurück — Inhalte (
 | Eigenschaft | Wert |
 |---|---|
 | Helligkeit | Dark only (`Brightness.dark`) |
-| Seed-Farbe | `Colors.teal` |
-| Erzeugung | `ColorScheme.fromSeed(seedColor: Colors.teal, brightness: Brightness.dark)` |
+| Primärfarbe | Rot (`#e57373`) |
+| Highlight-Akzent | Orange (`#ffb74d`) |
+| Erzeugung | `ColorScheme.fromSeed(seedColor: red, brightness: Brightness.dark)` mit Rot als `primary`, Orange als `secondary` und Mint als `tertiary` |
 | Flutter-Widget | `ThemeData` mit `colorScheme`, kein `primarySwatch` |
 
 Das Theme wird komplett über `ColorScheme.fromSeed` generiert — keine einzelnen Farb-Overrides. Die App hat keinen Light Mode.
@@ -24,6 +25,15 @@ Das Theme wird komplett über `ColorScheme.fromSeed` generiert — keine einzeln
 ---
 
 ## Farben
+### Farbpalette
+
+aed581 - grün
+fff176 - gelb
+64b5f6 - blau
+e57373 - rot
+8bedde - mint
+9575cd - lila
+ffb74d - orange
 
 ### Strukturfarben (aus ColorScheme)
 
@@ -42,14 +52,14 @@ Diese Farben haben eine feste Bedeutung und werden konsistent über die ganze Ap
 
 | Bedeutung | Farbe | Flutter-Wert |
 |---|---|---|
-| Aufgabe: wichtig | Amber | `Colors.amber` |
-| Aufgabe: in Bearbeitung | Hellgrün | `Color(0xFF9EEB9E)` |
+| Aufgabe: wichtig | Gelb | `Color(0xFFFFF176)` |
+| Aufgabe: in Bearbeitung | Grün | `Color(0xFFAED581)` |
 | Aufgabe: erledigt | Gedimmt | `cs.onSurface.withAlpha((0.6 * 255).round())` |
-| Status: OK / Sync erfolgreich | Hellgrün | `Colors.lightGreenAccent` / `Colors.greenAccent` |
-| Status: Warnung / Beschäftigt | Amber/Orange | `Colors.amberAccent` / `Colors.orangeAccent` |
-| Status: Fehler | Rot | `Colors.redAccent` |
-| Termin: rechtzeitig | Grün | `Colors.green` |
-| Termin: überfällig | Rot | `Colors.red` |
+| Status: OK / Sync erfolgreich | Grün | `Color(0xFFAED581)` |
+| Status: Warnung / Beschäftigt | Orange | `Color(0xFFFFB74D)` |
+| Status: Fehler | Rot | `Color(0xFFE57373)` |
+| Termin: rechtzeitig | Grün | `Color(0xFFAED581)` |
+| Termin: überfällig | Rot | `Color(0xFFE57373)` |
 | Transparent / kein Hintergrund | — | `Colors.transparent` |
 
 **Regel:** Statusfarben niemals als Hintergrundfarbe — immer als Textfarbe oder Icon-Farbe einsetzen.

@@ -23,6 +23,18 @@ const _noChange = Object();
 
 const String kClientVersion = '0.1.0';
 
+abstract final class _AppPalette {
+  static const green = Color(0xFFAED581);
+  static const yellow = Color(0xFFFFF176);
+  static const blue = Color(0xFF64B5F6);
+  static const red = Color(0xFFE57373);
+  static const mint = Color(0xFF8BEDDE);
+  static const purple = Color(0xFF9575CD);
+  static const orange = Color(0xFFFFB74D);
+}
+
+final ValueNotifier<bool> _useLightThemeNotifier = ValueNotifier<bool>(false);
+
 String? _parseDesktopTaskWindowId(List<String> args) {
   for (final arg in args) {
     if (arg.startsWith('--desktop-task-window=')) {
@@ -214,33 +226,49 @@ class SimplePresentApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SimplePresent',
-      // Default to English for broader settings readability
-      locale: const Locale('en', 'US'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: [
-        Locale('en', 'US'),
-        Locale('en', 'GB'),
-        Locale('de', 'DE'),
-      ],
-      theme: ThemeData(
-        fontFamily: 'OpenDyslexic',
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.teal, brightness: Brightness.dark),
+    return ValueListenableBuilder<bool>(
+      valueListenable: _useLightThemeNotifier,
+      builder: (context, useLightTheme, _) => MaterialApp(
+        title: 'SimplePresent',
+        // Default to English for broader settings readability
+        locale: const Locale('en', 'US'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en', 'US'),
+          Locale('en', 'GB'),
+          Locale('de', 'DE'),
+        ],
+        theme: _buildTheme(Brightness.light),
+        darkTheme: _buildTheme(Brightness.dark),
+        themeMode: useLightTheme ? ThemeMode.light : ThemeMode.dark,
+        home: desktopTaskWindowId == null
+            ? const HomePage()
+            : TaskWindowPage(
+                taskId: desktopTaskWindowId!,
+                closeAppOnExit: true,
+              ),
       ),
-      home: desktopTaskWindowId == null
-          ? const HomePage()
-          : TaskWindowPage(
-              taskId: desktopTaskWindowId!,
-              closeAppOnExit: true,
-            ),
+    );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    return ThemeData(
+      fontFamily: 'OpenDyslexic',
+      brightness: brightness,
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: _AppPalette.red,
+        brightness: brightness,
+      ).copyWith(
+        primary: _AppPalette.red,
+        secondary: _AppPalette.orange,
+        tertiary: _AppPalette.mint,
+        surfaceTint: _AppPalette.purple,
+      ),
     );
   }
 }
@@ -3165,9 +3193,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Color _cloudSyncStatusColor(ColorScheme scheme) {
     if (!_cloudSyncConfigured) return scheme.outline;
-    if (_cloudSyncBusy) return Colors.amberAccent;
-    if (_cloudSyncFailed) return Colors.redAccent;
-    if (_cloudLastSyncSuccessAt > 0) return Colors.lightGreenAccent;
+    if (_cloudSyncBusy) return _AppPalette.orange;
+    if (_cloudSyncFailed) return _AppPalette.red;
+    if (_cloudLastSyncSuccessAt > 0) return _AppPalette.green;
     return scheme.outline;
   }
 
@@ -3709,6 +3737,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         // persisted fontScale ignored (task zoom disabled)
       }
       setState(() {
+        _useLightThemeNotifier.value =
+            readBool('useLightTheme', _useLightThemeNotifier.value);
         _idleMinutes = readInt('idleMinutes', _idleMinutes);
         _attentionMinutes = readInt('attentionMinutes', _attentionMinutes);
         _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
@@ -3896,6 +3926,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     try {
       final existingSettings = await _readSettingsMap();
       final out = <String, dynamic>{
+        'useLightTheme': _useLightThemeNotifier.value,
         'tileHeight': _tileHeight,
         'idleMinutes': _idleMinutes,
         'attentionMinutes': _attentionMinutes,
@@ -4644,6 +4675,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       MaterialPageRoute(
         builder: (ctx) => SettingsPage(
           initial: <String, dynamic>{
+            'useLightTheme': _useLightThemeNotifier.value,
             'idleMinutes': _idleMinutes,
             'attentionMinutes': _attentionMinutes,
             'reminderMinutes': _reminderMinutes,
@@ -4733,6 +4765,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     setState(() {
+      _useLightThemeNotifier.value = result['useLightTheme'] == true;
       _idleMinutes = clampMin(result['idleMinutes'], _idleMinutes);
       _attentionMinutes =
           clampMin(result['attentionMinutes'], _attentionMinutes);
@@ -7039,15 +7072,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final now = DateTime.now();
     final diffSec = scheduledAt.difference(now).inSeconds.toDouble();
     const threeHours = 3 * 3600.0;
-    if (diffSec >= threeHours) return Colors.green;
+    if (diffSec >= threeHours) return _AppPalette.green;
     if (diffSec >= 0) {
       final r = 1.0 - (diffSec / threeHours); // 0 at 3h, 1 at 0h
-      return Color.lerp(Colors.green, Colors.blue, r) ?? Colors.blue;
+      return Color.lerp(_AppPalette.green, _AppPalette.blue, r) ??
+          _AppPalette.blue;
     }
     final overdueSec = diffSec.abs();
     if (overdueSec >= threeHours) return Colors.red;
     final r2 = math.min(1.0, overdueSec / threeHours);
-    return Color.lerp(Colors.blue, Colors.red, r2) ?? Colors.red;
+    return Color.lerp(_AppPalette.blue, _AppPalette.red, r2) ?? _AppPalette.red;
   }
 
   void _startIdleTimer() {
@@ -8688,7 +8722,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                               .radio_button_unchecked,
                                                                       color: ((task.important &&
                                                                               !task.done)
-                                                                          ? Colors.amber
+                                                                          ? _AppPalette.yellow
                                                                           : _iconColor),
                                                                       size: 18),
                                                                   onPressed:
@@ -8761,7 +8795,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 fontSize: _baseFontSize,
                                                                                 fontWeight: FontWeight.normal,
                                                                                 decoration: TextDecoration.none,
-                                                                                color: task.done ? _primaryTextColor.withAlpha((0.6 * 255).round()) : (task.inProgress ? const Color(0xFF9EEB9E) : (task.important ? Colors.amber : _primaryTextColor)),
+                                                                                color: task.done ? _primaryTextColor.withAlpha((0.6 * 255).round()) : (task.inProgress ? _AppPalette.green : (task.important ? _AppPalette.yellow : _primaryTextColor)),
                                                                               ),
                                                                             ),
                                                                           ),
@@ -9479,7 +9513,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                                 .star_border,
                                                                         color: (_stagedImportant[task.id] ??
                                                                                 task.important)
-                                                                            ? Colors.amber
+                                                                            ? _AppPalette.yellow
                                                                             : Theme.of(context).colorScheme.onSurfaceVariant),
                                                                     onPressed:
                                                                         () {
@@ -10780,7 +10814,7 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
                                                   ? Icons.star
                                                   : Icons.star_border,
                                               color: _task!.important
-                                                  ? Colors.amber
+                                                  ? _AppPalette.yellow
                                                   : Theme.of(context)
                                                       .colorScheme
                                                       .onSurfaceVariant,
@@ -10847,6 +10881,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  late bool useLightTheme;
   late int idleMinutes;
   late int attentionMinutes;
   late int reminderMinutes;
@@ -11061,6 +11096,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _cloudArchiveWarning = false;
   int _cloudArchiveLastWarnedDays = -1;
   bool _cloudBusy = false;
+  late bool _initialUseLightTheme;
   late int _initialIdleMinutes;
   late int _initialAttentionMinutes;
   late int _initialReminderMinutes;
@@ -11139,6 +11175,7 @@ class _SettingsPageState extends State<SettingsPage> {
       return double.tryParse(v?.toString() ?? '') ?? fallback;
     }
 
+    useLightTheme = readBool('useLightTheme', false);
     idleMinutes = readInt('idleMinutes', 45).clamp(1, 720);
     attentionMinutes = readInt('attentionMinutes', 60).clamp(1, 720);
     reminderMinutes = readInt('reminderMinutes', 75).clamp(1, 720);
@@ -11200,6 +11237,7 @@ class _SettingsPageState extends State<SettingsPage> {
     cloudSyncFailed = readBool('cloudSyncFailed', false);
     cloudSyncLastError = readString('cloudSyncLastError', '');
     // Save initial values to detect changes
+    _initialUseLightTheme = useLightTheme;
     _initialIdleMinutes = idleMinutes;
     _initialAttentionMinutes = attentionMinutes;
     _initialReminderMinutes = reminderMinutes;
@@ -11419,7 +11457,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _hasChanges() {
-    return idleMinutes != _initialIdleMinutes ||
+    return useLightTheme != _initialUseLightTheme ||
+        idleMinutes != _initialIdleMinutes ||
         attentionMinutes != _initialAttentionMinutes ||
         reminderMinutes != _initialReminderMinutes ||
         urgentMinutes != _initialUrgentMinutes ||
@@ -11908,6 +11947,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop(<String, dynamic>{
+                      'useLightTheme': useLightTheme,
                       'idleMinutes': safe(idleMinutes),
                       'attentionMinutes': safe(attentionMinutes),
                       'reminderMinutes': safe(reminderMinutes),
@@ -12029,6 +12069,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 const Text('range: 50% to 160%'),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: useLightTheme,
+                  title: const Text('light design'),
+                  subtitle: const Text(
+                    'switch between light and dark design.',
+                  ),
+                  onChanged: (value) => setState(() => useLightTheme = value),
+                ),
                 const SizedBox(height: 8),
                 const Divider(thickness: 1),
                 const SizedBox(height: 8),
