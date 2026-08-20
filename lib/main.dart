@@ -31,9 +31,30 @@ abstract final class _AppPalette {
   static const mint = Color(0xFF8BEDDE);
   static const purple = Color(0xFF9575CD);
   static const orange = Color(0xFFFFB74D);
+
+  static const accentColors = <Color>[
+    red,
+    orange,
+    green,
+    yellow,
+    blue,
+    mint,
+    purple
+  ];
+  static const accentNames = <String>[
+    'Red',
+    'Orange',
+    'Green',
+    'Yellow',
+    'Blue',
+    'Mint',
+    'Purple',
+  ];
 }
 
 final ValueNotifier<bool> _useLightThemeNotifier = ValueNotifier<bool>(false);
+final ValueNotifier<int> _accentColorNotifier =
+    ValueNotifier<int>(_AppPalette.red.toARGB32());
 
 String? _parseDesktopTaskWindowId(List<String> args) {
   for (final arg in args) {
@@ -228,43 +249,46 @@ class SimplePresentApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
       valueListenable: _useLightThemeNotifier,
-      builder: (context, useLightTheme, _) => MaterialApp(
-        title: 'SimplePresent',
-        // Default to English for broader settings readability
-        locale: const Locale('en', 'US'),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en', 'US'),
-          Locale('en', 'GB'),
-          Locale('de', 'DE'),
-        ],
-        theme: _buildTheme(Brightness.light),
-        darkTheme: _buildTheme(Brightness.dark),
-        themeMode: useLightTheme ? ThemeMode.light : ThemeMode.dark,
-        home: desktopTaskWindowId == null
-            ? const HomePage()
-            : TaskWindowPage(
-                taskId: desktopTaskWindowId!,
-                closeAppOnExit: true,
-              ),
+      builder: (context, useLightTheme, _) => ValueListenableBuilder<int>(
+        valueListenable: _accentColorNotifier,
+        builder: (context, accentColorValue, _) => MaterialApp(
+          title: 'SimplePresent',
+          // Default to English for broader settings readability
+          locale: const Locale('en', 'US'),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en', 'US'),
+            Locale('en', 'GB'),
+            Locale('de', 'DE'),
+          ],
+          theme: _buildTheme(Brightness.light, Color(accentColorValue)),
+          darkTheme: _buildTheme(Brightness.dark, Color(accentColorValue)),
+          themeMode: useLightTheme ? ThemeMode.light : ThemeMode.dark,
+          home: desktopTaskWindowId == null
+              ? const HomePage()
+              : TaskWindowPage(
+                  taskId: desktopTaskWindowId!,
+                  closeAppOnExit: true,
+                ),
+        ),
       ),
     );
   }
 
-  ThemeData _buildTheme(Brightness brightness) {
+  ThemeData _buildTheme(Brightness brightness, Color accentColor) {
     return ThemeData(
       fontFamily: 'OpenDyslexic',
       brightness: brightness,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: _AppPalette.red,
+        seedColor: accentColor,
         brightness: brightness,
       ).copyWith(
-        primary: _AppPalette.red,
+        primary: accentColor,
         secondary: _AppPalette.orange,
         tertiary: _AppPalette.mint,
         surfaceTint: _AppPalette.purple,
@@ -3739,6 +3763,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       setState(() {
         _useLightThemeNotifier.value =
             readBool('useLightTheme', _useLightThemeNotifier.value);
+        final storedAccent = data['accentColorValue'];
+        if (storedAccent is num &&
+            _AppPalette.accentColors
+                .any((color) => color.toARGB32() == storedAccent.toInt())) {
+          _accentColorNotifier.value = storedAccent.toInt();
+        }
         _idleMinutes = readInt('idleMinutes', _idleMinutes);
         _attentionMinutes = readInt('attentionMinutes', _attentionMinutes);
         _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
@@ -3927,6 +3957,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final existingSettings = await _readSettingsMap();
       final out = <String, dynamic>{
         'useLightTheme': _useLightThemeNotifier.value,
+        'accentColorValue': _accentColorNotifier.value,
         'tileHeight': _tileHeight,
         'idleMinutes': _idleMinutes,
         'attentionMinutes': _attentionMinutes,
@@ -4676,6 +4707,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         builder: (ctx) => SettingsPage(
           initial: <String, dynamic>{
             'useLightTheme': _useLightThemeNotifier.value,
+            'accentColorValue': _accentColorNotifier.value,
             'idleMinutes': _idleMinutes,
             'attentionMinutes': _attentionMinutes,
             'reminderMinutes': _reminderMinutes,
@@ -4766,6 +4798,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     setState(() {
       _useLightThemeNotifier.value = result['useLightTheme'] == true;
+      _accentColorNotifier.value = result['accentColorValue'] as int;
       _idleMinutes = clampMin(result['idleMinutes'], _idleMinutes);
       _attentionMinutes =
           clampMin(result['attentionMinutes'], _attentionMinutes);
@@ -10882,6 +10915,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late bool useLightTheme;
+  late int accentColorValue;
   late int idleMinutes;
   late int attentionMinutes;
   late int reminderMinutes;
@@ -11097,6 +11131,7 @@ class _SettingsPageState extends State<SettingsPage> {
   int _cloudArchiveLastWarnedDays = -1;
   bool _cloudBusy = false;
   late bool _initialUseLightTheme;
+  late int _initialAccentColorValue;
   late int _initialIdleMinutes;
   late int _initialAttentionMinutes;
   late int _initialReminderMinutes;
@@ -11143,6 +11178,12 @@ class _SettingsPageState extends State<SettingsPage> {
   late String _initialAutoExportTimesCsv;
   late List<Map<String, dynamic>> _inactivityRemindersLocal;
 
+  int _readAccentColor(int value) {
+    return _AppPalette.accentColors.any((color) => color.toARGB32() == value)
+        ? value
+        : _AppPalette.red.toARGB32();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -11176,6 +11217,8 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     useLightTheme = readBool('useLightTheme', false);
+    accentColorValue = _readAccentColor(
+        readInt('accentColorValue', _AppPalette.red.toARGB32()));
     idleMinutes = readInt('idleMinutes', 45).clamp(1, 720);
     attentionMinutes = readInt('attentionMinutes', 60).clamp(1, 720);
     reminderMinutes = readInt('reminderMinutes', 75).clamp(1, 720);
@@ -11238,6 +11281,7 @@ class _SettingsPageState extends State<SettingsPage> {
     cloudSyncLastError = readString('cloudSyncLastError', '');
     // Save initial values to detect changes
     _initialUseLightTheme = useLightTheme;
+    _initialAccentColorValue = accentColorValue;
     _initialIdleMinutes = idleMinutes;
     _initialAttentionMinutes = attentionMinutes;
     _initialReminderMinutes = reminderMinutes;
@@ -11458,6 +11502,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _hasChanges() {
     return useLightTheme != _initialUseLightTheme ||
+        accentColorValue != _initialAccentColorValue ||
         idleMinutes != _initialIdleMinutes ||
         attentionMinutes != _initialAttentionMinutes ||
         reminderMinutes != _initialReminderMinutes ||
@@ -11948,6 +11993,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   onPressed: () {
                     Navigator.of(context).pop(<String, dynamic>{
                       'useLightTheme': useLightTheme,
+                      'accentColorValue': accentColorValue,
                       'idleMinutes': safe(idleMinutes),
                       'attentionMinutes': safe(attentionMinutes),
                       'reminderMinutes': safe(reminderMinutes),
@@ -12078,6 +12124,41 @@ class _SettingsPageState extends State<SettingsPage> {
                     'switch between light and dark design.',
                   ),
                   onChanged: (value) => setState(() => useLightTheme = value),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'accent color',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                DropdownButton<int>(
+                  isExpanded: true,
+                  value: accentColorValue,
+                  items: [
+                    for (var i = 0; i < _AppPalette.accentColors.length; i++)
+                      DropdownMenuItem<int>(
+                        value: _AppPalette.accentColors[i].toARGB32(),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: _AppPalette.accentColors[i],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(_AppPalette.accentNames[i]),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => accentColorValue = value);
+                    }
+                  },
                 ),
                 const SizedBox(height: 8),
                 const Divider(thickness: 1),
