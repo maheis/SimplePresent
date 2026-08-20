@@ -12119,7 +12119,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   value: useLightTheme,
-                  title: const Text('light design'),
+                  title: Text(useLightTheme ? 'dark design' : 'light design'),
                   subtitle: const Text(
                     'switch between light and dark design.',
                   ),
