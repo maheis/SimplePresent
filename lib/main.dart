@@ -296,7 +296,8 @@ class SimplePresentApp extends StatelessWidget {
         seedColor: accentColor,
         brightness: brightness,
       ).copyWith(
-        primary: accentColor,
+        primary: highlightColor,
+        onPrimary: Colors.black,
         secondary: _AppPalette.orange,
         tertiary: _AppPalette.mint,
         surfaceTint: _AppPalette.purple,
@@ -355,6 +356,24 @@ class SimplePresentApp extends StatelessWidget {
         thumbColor: highlightColor,
         activeTrackColor: highlightColor,
         inactiveTrackColor: highlightColor.withValues(alpha: 0.35),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: TextStyle(color: highlightColor),
+        inputDecorationTheme: InputDecorationTheme(
+          suffixIconColor: highlightColor,
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        iconColor: highlightColor,
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: highlightColor,
+        indicatorColor: highlightColor,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: highlightColor,
+        linearTrackColor: highlightColor.withValues(alpha: 0.25),
+        circularTrackColor: highlightColor.withValues(alpha: 0.25),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: highlightColor,
@@ -8528,15 +8547,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                         task.done;
                                                 final Color _iconColor =
                                                     _isDimmed
-                                                        ? Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurface
+                                                        ? (Theme.of(context)
+                                                                    .iconTheme
+                                                                    .color ??
+                                                                Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .primary)
                                                             .withAlpha(
                                                                 (0.30 * 255)
                                                                     .round())
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurface;
+                                                        : (Theme.of(context)
+                                                                .iconTheme
+                                                                .color ??
+                                                            Theme.of(context)
+                                                                .colorScheme
+                                                                .primary);
                                                 final Color _primaryTextColor =
                                                     _isDimmed
                                                         ? Theme.of(context)
@@ -8840,10 +8866,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                               .radio_button_checked
                                                                           : Icons
                                                                               .radio_button_unchecked,
-                                                                      color: ((task.important &&
-                                                                              !task.done)
-                                                                          ? _AppPalette.yellow
-                                                                          : _iconColor),
+                                                                      color:
+                                                                          _iconColor,
                                                                       size: 18),
                                                                   onPressed:
                                                                       () async {
@@ -9563,9 +9587,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                     icon: Icon(
                                                                         Icons
                                                                             .copy,
-                                                                        color: Theme.of(context)
-                                                                            .colorScheme
-                                                                            .onSurfaceVariant),
+                                                                        color:
+                                                                            _iconColor),
                                                                     onPressed:
                                                                         () async {
                                                                       await _duplicateTask(
@@ -9578,16 +9601,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                         ? 'remove in progress'
                                                                         : 'mark in progress',
                                                                     icon: Icon(
-                                                                      Icons
-                                                                          .construction,
-                                                                      color: ((_stagedInProgress[task.id] ?? task.inProgress) && !(_stagedDone[task.id] ?? task.done))
-                                                                          ? Colors
-                                                                              .greenAccent
-                                                                              .shade200
-                                                                          : Theme.of(context)
-                                                                              .colorScheme
-                                                                              .onSurfaceVariant,
-                                                                    ),
+                                                                        Icons
+                                                                            .construction,
+                                                                        color:
+                                                                            _iconColor),
                                                                     onPressed:
                                                                         () async {
                                                                       final was =
@@ -9626,15 +9643,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                     tooltip:
                                                                         'Important',
                                                                     icon: Icon(
-                                                                        (_stagedImportant[task.id] ?? task.important)
-                                                                            ? Icons
-                                                                                .star
-                                                                            : Icons
-                                                                                .star_border,
-                                                                        color: (_stagedImportant[task.id] ??
-                                                                                task.important)
-                                                                            ? _AppPalette.yellow
-                                                                            : Theme.of(context).colorScheme.onSurfaceVariant),
+                                                                      (_stagedImportant[task.id] ??
+                                                                              task
+                                                                                  .important)
+                                                                          ? Icons
+                                                                              .star
+                                                                          : Icons
+                                                                              .star_border,
+                                                                      color:
+                                                                          _iconColor,
+                                                                    ),
                                                                     onPressed:
                                                                         () {
                                                                       final newVal =
