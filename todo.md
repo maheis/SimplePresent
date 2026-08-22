@@ -86,7 +86,7 @@
 - [x] android icon
 - [x] Aufgaben in der Vergangenheit müssen today zu ihrer Uhrzeit erinnern! Mit dem Hinweis Text "Aufgeschoben seit n Tagen"
 - [x] highlight-color für icons, steuerelemente
-- [ ] icons im burger menü auch in highlight-color
+- [x] icons im burger menü auch in highlight-color
 
 ## notes
 

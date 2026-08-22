@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:simple_present/storage/json_storage.dart';
@@ -7223,6 +7224,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     return Color.lerp(_AppPalette.blue, _AppPalette.red, r2) ?? _AppPalette.red;
   }
 
+  Widget _menuSvgIcon(BuildContext context, String asset) {
+    final color = Theme.of(context).iconTheme.color ??
+        Theme.of(context).colorScheme.primary;
+    return SvgPicture.asset(
+      asset,
+      width: 18,
+      height: 18,
+      color: color,
+    );
+  }
+
   void _startIdleTimer() {
     _idleTimer = Timer(_idleDuration, () async {
       if (_idleFired) return;
@@ -8099,40 +8111,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                 items.add(PopupMenuItem(
                                                     value: 'stats',
                                                     child: Row(children: [
-                                                      Image.asset(
-                                                          'assets/icons/white_transparent_statistic.png',
-                                                          width: 18,
-                                                          height: 18),
+                                                      _menuSvgIcon(ctx,
+                                                          'assets/icons/color_transparent_statistic.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('statistics')
                                                     ])));
                                                 items.add(PopupMenuItem(
                                                     value: 'settings',
                                                     child: Row(children: [
-                                                      Image.asset(
-                                                          'assets/icons/white_transparent_settings.png',
-                                                          width: 18,
-                                                          height: 18),
+                                                      _menuSvgIcon(ctx,
+                                                          'assets/icons/color_transparent_settings.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('settings')
                                                     ])));
                                                 items.add(PopupMenuItem(
                                                     value: 'notes',
                                                     child: Row(children: [
-                                                      Image.asset(
-                                                          'assets/icons/white_transparent_notes.png',
-                                                          width: 18,
-                                                          height: 18),
+                                                      _menuSvgIcon(ctx,
+                                                          'assets/icons/color_transparent_notes.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('notes')
                                                     ])));
                                                 items.add(PopupMenuItem(
                                                     value: 'redo',
                                                     child: Row(children: [
-                                                      Image.asset(
-                                                          'assets/icons/white_transparent_redo.png',
-                                                          width: 18,
-                                                          height: 18),
+                                                      _menuSvgIcon(ctx,
+                                                          'assets/icons/color_transparent_redo.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('redo log')
                                                     ])));
@@ -8158,10 +8162,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   items.add(PopupMenuItem(
                                                       value: 'done',
                                                       child: Row(children: [
-                                                        Image.asset(
-                                                            'assets/icons/white_transparent_done.png',
-                                                            width: 18,
-                                                            height: 18),
+                                                        _menuSvgIcon(ctx,
+                                                            'assets/icons/color_transparent_done.svg'),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text('done')
@@ -8171,10 +8173,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   items.add(PopupMenuItem(
                                                       value: 'trash',
                                                       child: Row(children: [
-                                                        Image.asset(
-                                                            'assets/icons/white_transparent_trash.png',
-                                                            width: 18,
-                                                            height: 18),
+                                                        _menuSvgIcon(ctx,
+                                                            'assets/icons/color_transparent_trash.svg'),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text('trash')
