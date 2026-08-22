@@ -28,7 +28,7 @@ abstract final class _AppPalette {
   static const yellow = Color(0xFFFFF176);
   static const blue = Color(0xFF64B5F6);
   static const red = Color(0xFFE57373);
-  static const mint = Color(0xFF8BEDDE);
+  static const mint = Color(0xFF8fdcbe);
   static const purple = Color(0xFF9575CD);
   static const orange = Color(0xFFFFB74D);
 
@@ -55,6 +55,8 @@ abstract final class _AppPalette {
 final ValueNotifier<bool> _useLightThemeNotifier = ValueNotifier<bool>(false);
 final ValueNotifier<int> _accentColorNotifier =
     ValueNotifier<int>(_AppPalette.red.toARGB32());
+final ValueNotifier<int> _highlightColorNotifier =
+    ValueNotifier<int>(_AppPalette.orange.toARGB32());
 
 String? _parseDesktopTaskWindowId(List<String> args) {
   for (final arg in args) {
@@ -251,35 +253,41 @@ class SimplePresentApp extends StatelessWidget {
       valueListenable: _useLightThemeNotifier,
       builder: (context, useLightTheme, _) => ValueListenableBuilder<int>(
         valueListenable: _accentColorNotifier,
-        builder: (context, accentColorValue, _) => MaterialApp(
-          title: 'SimplePresent',
-          // Default to English for broader settings readability
-          locale: const Locale('en', 'US'),
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('en', 'US'),
-            Locale('en', 'GB'),
-            Locale('de', 'DE'),
-          ],
-          theme: _buildTheme(Brightness.light, Color(accentColorValue)),
-          darkTheme: _buildTheme(Brightness.dark, Color(accentColorValue)),
-          themeMode: useLightTheme ? ThemeMode.light : ThemeMode.dark,
-          home: desktopTaskWindowId == null
-              ? const HomePage()
-              : TaskWindowPage(
-                  taskId: desktopTaskWindowId!,
-                  closeAppOnExit: true,
-                ),
+        builder: (context, accentColorValue, _) => ValueListenableBuilder<int>(
+          valueListenable: _highlightColorNotifier,
+          builder: (context, highlightColorValue, _) => MaterialApp(
+            title: 'SimplePresent',
+            // Default to English for broader settings readability
+            locale: const Locale('en', 'US'),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en', 'US'),
+              Locale('en', 'GB'),
+              Locale('de', 'DE'),
+            ],
+            theme: _buildTheme(Brightness.light, Color(accentColorValue),
+                Color(highlightColorValue)),
+            darkTheme: _buildTheme(Brightness.dark, Color(accentColorValue),
+                Color(highlightColorValue)),
+            themeMode: useLightTheme ? ThemeMode.light : ThemeMode.dark,
+            home: desktopTaskWindowId == null
+                ? const HomePage()
+                : TaskWindowPage(
+                    taskId: desktopTaskWindowId!,
+                    closeAppOnExit: true,
+                  ),
+          ),
         ),
       ),
     );
   }
 
-  ThemeData _buildTheme(Brightness brightness, Color accentColor) {
+  ThemeData _buildTheme(
+      Brightness brightness, Color accentColor, Color highlightColor) {
     return ThemeData(
       fontFamily: 'OpenDyslexic',
       brightness: brightness,
@@ -292,6 +300,76 @@ class SimplePresentApp extends StatelessWidget {
         secondary: _AppPalette.orange,
         tertiary: _AppPalette.mint,
         surfaceTint: _AppPalette.purple,
+      ),
+      iconTheme: IconThemeData(color: highlightColor),
+      appBarTheme: AppBarTheme(
+        iconTheme: IconThemeData(color: highlightColor),
+        actionsIconTheme: IconThemeData(color: highlightColor),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(foregroundColor: highlightColor),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: highlightColor),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: highlightColor,
+          side: BorderSide(color: highlightColor),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: highlightColor,
+          foregroundColor: Colors.black,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: highlightColor,
+          foregroundColor: Colors.black,
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          return states.contains(WidgetState.selected) ? highlightColor : null;
+        }),
+        side: WidgetStateBorderSide.resolveWith(
+          (_) => BorderSide(color: highlightColor),
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStatePropertyAll(highlightColor),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          return states.contains(WidgetState.selected) ? highlightColor : null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          return states.contains(WidgetState.selected)
+              ? highlightColor.withValues(alpha: 0.5)
+              : null;
+        }),
+      ),
+      sliderTheme: SliderThemeData(
+        thumbColor: highlightColor,
+        activeTrackColor: highlightColor,
+        inactiveTrackColor: highlightColor.withValues(alpha: 0.35),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: highlightColor,
+        foregroundColor: Colors.black,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: highlightColor, width: 2),
+        ),
+        floatingLabelStyle: TextStyle(color: highlightColor),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: highlightColor,
+        selectionColor: highlightColor.withValues(alpha: 0.3),
+        selectionHandleColor: highlightColor,
       ),
     );
   }
@@ -3769,6 +3847,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 .any((color) => color.toARGB32() == storedAccent.toInt())) {
           _accentColorNotifier.value = storedAccent.toInt();
         }
+        final storedHighlight = data['highlightColorValue'];
+        if (storedHighlight is num &&
+            _AppPalette.accentColors
+                .any((color) => color.toARGB32() == storedHighlight.toInt())) {
+          _highlightColorNotifier.value = storedHighlight.toInt();
+        }
         _idleMinutes = readInt('idleMinutes', _idleMinutes);
         _attentionMinutes = readInt('attentionMinutes', _attentionMinutes);
         _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
@@ -3958,6 +4042,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final out = <String, dynamic>{
         'useLightTheme': _useLightThemeNotifier.value,
         'accentColorValue': _accentColorNotifier.value,
+        'highlightColorValue': _highlightColorNotifier.value,
         'tileHeight': _tileHeight,
         'idleMinutes': _idleMinutes,
         'attentionMinutes': _attentionMinutes,
@@ -4708,6 +4793,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           initial: <String, dynamic>{
             'useLightTheme': _useLightThemeNotifier.value,
             'accentColorValue': _accentColorNotifier.value,
+            'highlightColorValue': _highlightColorNotifier.value,
             'idleMinutes': _idleMinutes,
             'attentionMinutes': _attentionMinutes,
             'reminderMinutes': _reminderMinutes,
@@ -4799,6 +4885,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     setState(() {
       _useLightThemeNotifier.value = result['useLightTheme'] == true;
       _accentColorNotifier.value = result['accentColorValue'] as int;
+      _highlightColorNotifier.value = result['highlightColorValue'] as int;
       _idleMinutes = clampMin(result['idleMinutes'], _idleMinutes);
       _attentionMinutes =
           clampMin(result['attentionMinutes'], _attentionMinutes);
@@ -10916,6 +11003,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   late bool useLightTheme;
   late int accentColorValue;
+  late int highlightColorValue;
   late int idleMinutes;
   late int attentionMinutes;
   late int reminderMinutes;
@@ -11132,6 +11220,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _cloudBusy = false;
   late bool _initialUseLightTheme;
   late int _initialAccentColorValue;
+  late int _initialHighlightColorValue;
   late int _initialIdleMinutes;
   late int _initialAttentionMinutes;
   late int _initialReminderMinutes;
@@ -11184,6 +11273,12 @@ class _SettingsPageState extends State<SettingsPage> {
         : _AppPalette.red.toARGB32();
   }
 
+  int _readHighlightColor(int value) {
+    return _AppPalette.accentColors.any((color) => color.toARGB32() == value)
+        ? value
+        : _AppPalette.orange.toARGB32();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -11219,6 +11314,8 @@ class _SettingsPageState extends State<SettingsPage> {
     useLightTheme = readBool('useLightTheme', false);
     accentColorValue = _readAccentColor(
         readInt('accentColorValue', _AppPalette.red.toARGB32()));
+    highlightColorValue = _readHighlightColor(
+        readInt('highlightColorValue', _AppPalette.orange.toARGB32()));
     idleMinutes = readInt('idleMinutes', 45).clamp(1, 720);
     attentionMinutes = readInt('attentionMinutes', 60).clamp(1, 720);
     reminderMinutes = readInt('reminderMinutes', 75).clamp(1, 720);
@@ -11282,6 +11379,7 @@ class _SettingsPageState extends State<SettingsPage> {
     // Save initial values to detect changes
     _initialUseLightTheme = useLightTheme;
     _initialAccentColorValue = accentColorValue;
+    _initialHighlightColorValue = highlightColorValue;
     _initialIdleMinutes = idleMinutes;
     _initialAttentionMinutes = attentionMinutes;
     _initialReminderMinutes = reminderMinutes;
@@ -11503,6 +11601,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hasChanges() {
     return useLightTheme != _initialUseLightTheme ||
         accentColorValue != _initialAccentColorValue ||
+        highlightColorValue != _initialHighlightColorValue ||
         idleMinutes != _initialIdleMinutes ||
         attentionMinutes != _initialAttentionMinutes ||
         reminderMinutes != _initialReminderMinutes ||
@@ -11994,6 +12093,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     Navigator.of(context).pop(<String, dynamic>{
                       'useLightTheme': useLightTheme,
                       'accentColorValue': accentColorValue,
+                      'highlightColorValue': highlightColorValue,
                       'idleMinutes': safe(idleMinutes),
                       'attentionMinutes': safe(attentionMinutes),
                       'reminderMinutes': safe(reminderMinutes),
@@ -12157,6 +12257,41 @@ class _SettingsPageState extends State<SettingsPage> {
                   onChanged: (value) {
                     if (value != null) {
                       setState(() => accentColorValue = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'highlight color',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                DropdownButton<int>(
+                  isExpanded: true,
+                  value: highlightColorValue,
+                  items: [
+                    for (var i = 0; i < _AppPalette.accentColors.length; i++)
+                      DropdownMenuItem<int>(
+                        value: _AppPalette.accentColors[i].toARGB32(),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: _AppPalette.accentColors[i],
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(_AppPalette.accentNames[i]),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => highlightColorValue = value);
                     }
                   },
                 ),

@@ -31,7 +31,7 @@ aed581 - grün
 fff176 - gelb
 64b5f6 - blau
 e57373 - rot
-8bedde - mint
+8fdcbe - mint
 9575cd - lila
 ffb74d - orange
 
