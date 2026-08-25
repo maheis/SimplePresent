@@ -15,6 +15,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:simple_present/storage/json_storage.dart';
 import 'package:simple_present/storage/sembast_storage.dart';
 import 'package:file_selector/file_selector.dart' as fs;
@@ -151,6 +152,51 @@ class TimeEntry {
     if (taskDone) return 'fertig';
     if (taskInProgress) return 'in Arbeit';
     return 'offen';
+  }
+}
+
+class NoteItem {
+  NoteItem({
+    required this.id,
+    required this.title,
+    required this.text,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final String text;
+  final DateTime updatedAt;
+
+  NoteItem copyWith({
+    String? title,
+    String? text,
+    DateTime? updatedAt,
+  }) {
+    return NoteItem(
+      id: id,
+      title: title ?? this.title,
+      text: text ?? this.text,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'title': title,
+        'text': text,
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+
+  static NoteItem fromJson(Map<String, dynamic> json) {
+    final rawDate = DateTime.tryParse(json['updatedAt']?.toString() ?? '');
+    return NoteItem(
+      id: json['id']?.toString() ??
+          '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
+      title: json['title']?.toString() ?? 'note',
+      text: json['text']?.toString() ?? '',
+      updatedAt: rawDate ?? DateTime.now(),
+    );
   }
 }
 
@@ -390,6 +436,385 @@ class SimplePresentApp extends StatelessWidget {
         cursorColor: highlightColor,
         selectionColor: highlightColor.withValues(alpha: 0.3),
         selectionHandleColor: highlightColor,
+      ),
+    );
+  }
+}
+
+class NotesPage extends StatefulWidget {
+  const NotesPage({
+    super.key,
+    required this.initialNotes,
+    required this.notesFile,
+    required this.fontFamily,
+    required this.textScaleFactor,
+  });
+
+  final List<NoteItem> initialNotes;
+  final File notesFile;
+  final String fontFamily;
+  final double textScaleFactor;
+
+  @override
+  State<NotesPage> createState() => _NotesPageState();
+}
+
+class NoteEditorPage extends StatefulWidget {
+  const NoteEditorPage({
+    super.key,
+    this.note,
+    required this.fontFamily,
+    required this.textScaleFactor,
+    required this.onChanged,
+  });
+
+  final NoteItem? note;
+  final String fontFamily;
+  final double textScaleFactor;
+  final ValueChanged<NoteItem> onChanged;
+
+  @override
+  State<NoteEditorPage> createState() => _NoteEditorPageState();
+}
+
+class _NoteEditorPageState extends State<NoteEditorPage> {
+  late final TextEditingController _controller;
+  late final String _noteId;
+
+  @override
+  void initState() {
+    super.initState();
+    final note = widget.note;
+    _noteId = note?.id ??
+        '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}';
+    _controller = TextEditingController(
+      text: note == null ? '' : '${note.title}\n${note.text}',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _saveImmediately() {
+    final lines = _controller.text.replaceAll('\r\n', '\n').split('\n');
+    final title = lines.isEmpty ? '' : lines.first.trim();
+    final text = lines.length <= 1 ? '' : lines.skip(1).join('\n').trim();
+    if (title.isEmpty) return;
+    widget.onChanged(NoteItem(
+      id: _noteId,
+      title: title,
+      text: text,
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(widget.textScaleFactor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textTheme:
+              Theme.of(context).textTheme.apply(fontFamily: widget.fontFamily),
+        ),
+        child: Scaffold(
+          appBar: AppBar(
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/icons/color_transparent_notes.png',
+                    width: 28, height: 28),
+                const SizedBox(width: 8),
+                Text(widget.note == null ? 'new note' : 'edit note'),
+              ],
+            ),
+          ),
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                controller: _controller,
+                onChanged: (_) => _saveImmediately(),
+                autofocus: true,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                textAlign: TextAlign.left,
+                textAlignVertical: TextAlignVertical.top,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                decoration: const InputDecoration(
+                  hintText: 'name\n\nwrite your note here...',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotesPageState extends State<NotesPage> {
+  late List<NoteItem> _notes;
+  final TextEditingController _searchController = TextEditingController();
+  String _filter = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _notes = List<NoteItem>.from(widget.initialNotes);
+    _sortNotes();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _sortNotes() {
+    _notes.sort((a, b) {
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+  }
+
+  Future<void> _saveNotes() async {
+    await widget.notesFile.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(
+        _notes.map((note) => note.toJson()).toList(),
+      ),
+    );
+  }
+
+  Future<void> _editNote([NoteItem? existing]) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => NoteEditorPage(
+          note: existing,
+          fontFamily: widget.fontFamily,
+          textScaleFactor: widget.textScaleFactor,
+          onChanged: _upsertNote,
+        ),
+      ),
+    );
+  }
+
+  void _upsertNote(NoteItem updated) {
+    setState(() {
+      final index = _notes.indexWhere((note) => note.id == updated.id);
+      if (index < 0) {
+        _notes.add(updated);
+      } else {
+        _notes[index] = updated;
+      }
+      _sortNotes();
+    });
+    unawaited(_saveNotes());
+  }
+
+  Future<void> _deleteNote(NoteItem note) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('delete note?'),
+        content: Text(note.title),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('delete')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      setState(() => _notes.removeWhere((item) => item.id == note.id));
+      await _saveNotes();
+    }
+  }
+
+  Future<void> _shareNote(NoteItem note) async {
+    final jsonText = const JsonEncoder.withIndent('  ').convert({
+      'formatVersion': 1,
+      'type': 'note',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'note': note.toJson(),
+    });
+    final safeName = note.title.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
+    final fileName =
+        'simplepresent-note-${safeName.isEmpty ? 'note' : safeName}.json';
+    if (Platform.isAndroid || Platform.isIOS) {
+      final directory = await getTemporaryDirectory();
+      final file = File(p.join(directory.path, fileName));
+      await file.writeAsString(jsonText);
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path)],
+        subject: note.title,
+      ));
+      return;
+    }
+    final location = await fs.getSaveLocation(
+      suggestedName: fileName,
+      acceptedTypeGroups: const [
+        fs.XTypeGroup(label: 'JSON', extensions: ['json']),
+      ],
+    );
+    if (location != null) {
+      await File(location.path).writeAsString(jsonText);
+    }
+  }
+
+  Future<void> _importNote() async {
+    final typeGroup = fs.XTypeGroup(label: 'JSON', extensions: ['json']);
+    final selected = await fs.openFile(acceptedTypeGroups: [typeGroup]);
+    if (selected == null) return;
+    try {
+      final decoded = jsonDecode(await selected.readAsString());
+      if (decoded is! Map) return;
+      final rawNote = decoded['note'];
+      if (rawNote is! Map) return;
+      final imported = NoteItem.fromJson(Map<String, dynamic>.from(rawNote));
+      final note = NoteItem(
+        id: '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
+        title: imported.title,
+        text: imported.text,
+        updatedAt: DateTime.now(),
+      );
+      if (note.title.trim().isEmpty) return;
+      setState(() {
+        _notes.add(note);
+        _sortNotes();
+      });
+      await _saveNotes();
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final highlightColor = Color(_highlightColorNotifier.value);
+    final visibleNotes = _notes.where((note) {
+      final query = _filter.toLowerCase();
+      return query.isEmpty ||
+          note.title.toLowerCase().contains(query) ||
+          note.text.toLowerCase().contains(query);
+    }).toList();
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(widget.textScaleFactor),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textTheme:
+              Theme.of(context).textTheme.apply(fontFamily: widget.fontFamily),
+        ),
+        child: Scaffold(
+          appBar: AppBar(
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/icons/color_transparent_notes.png',
+                    width: 28, height: 28),
+                const SizedBox(width: 8),
+                const Text('notes'),
+              ],
+            ),
+            actions: [
+              IconButton(
+                tooltip: 'import note',
+                onPressed: _importNote,
+                icon: const Icon(Icons.upload_rounded),
+              ),
+              IconButton(
+                tooltip: 'new note',
+                onPressed: () => _editNote(),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      labelText: 'search notes',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => setState(() => _filter = value),
+                  ),
+                ),
+                Expanded(
+                  child: visibleNotes.isEmpty
+                      ? const Center(child: Text('no notes available'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: visibleNotes.length,
+                          itemBuilder: (ctx, index) {
+                            final note = visibleNotes[index];
+                            return Card(
+                              child: ListTile(
+                                leading: const Icon(Icons.notes),
+                                title: Text(note.title),
+                                subtitle: Text(
+                                  note.text,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () => _editNote(note),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'edit') _editNote(note);
+                                    if (value == 'share') _shareNote(note);
+                                    if (value == 'delete') _deleteNote(note);
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: ListTile(
+                                        leading: Icon(Icons.edit_outlined,
+                                            color: highlightColor),
+                                        title: Text('edit'),
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'share',
+                                      child: ListTile(
+                                        leading: Icon(Icons.ios_share,
+                                            color: highlightColor),
+                                        title: Text('share'),
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: ListTile(
+                                        leading: Icon(Icons.delete_outline,
+                                            color: highlightColor),
+                                        title: Text('delete'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1244,72 +1669,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _openNotes() async {
     try {
-      String text = '';
-      try {
-        final file = await _fileFor(_storage('simplepresent_notes.txt'));
-        if (await file.exists()) {
-          try {
-            text = await file.readAsString();
-          } catch (_) {}
-        }
-      } catch (_) {
-        text = '';
+      final notesFile = await _fileFor(_storage('simplepresent_notes.json'));
+      var notes = <NoteItem>[];
+      if (await notesFile.exists()) {
+        try {
+          final decoded = jsonDecode(await notesFile.readAsString());
+          if (decoded is List) {
+            notes = decoded
+                .whereType<Map>()
+                .map((item) =>
+                    NoteItem.fromJson(Map<String, dynamic>.from(item)))
+                .toList();
+          }
+        } catch (_) {}
       }
-      final controller = TextEditingController(text: text);
-      final original = text;
-      await Navigator.of(context).push(MaterialPageRoute(builder: (ctx) {
-        // ignore: deprecated_member_use
-        return WillPopScope(
-          onWillPop: () async {
-            try {
-              if (controller.text != original) {
-                final file =
-                    await _fileFor(_storage('simplepresent_notes.txt'));
-                await file.writeAsString(controller.text);
-                unawaited(_syncPushNotes(controller.text));
-              }
-            } catch (_) {}
-            return true;
-          },
-          child: Scaffold(
-            appBar: AppBar(
-              leadingWidth: 40,
-              titleSpacing: 0,
-              toolbarHeight: 62,
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Image.asset(
-                        'assets/icons/color_transparent_notes.png',
-                        width: 28,
-                        height: 28),
-                  ),
-                  const SizedBox(width: 8),
-                  Text('notes',
-                      style: const TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w700)
-                          .copyWith(fontFamily: _fontFamily)),
-                ],
+      if (notes.isEmpty) {
+        final legacyFile = await _fileFor(_storage('simplepresent_notes.txt'));
+        if (await legacyFile.exists()) {
+          final text = await legacyFile.readAsString();
+          if (text.trim().isNotEmpty) {
+            notes = [
+              NoteItem(
+                id: '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
+                title: 'notes',
+                text: text,
+                updatedAt: DateTime.now(),
               ),
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.multiline,
-                  maxLines: null,
-                  expands: true,
-                  decoration:
-                      const InputDecoration.collapsed(hintText: 'Notes...'),
-                ),
-              ),
-            ),
-          ),
-        );
-      }));
+            ];
+            await notesFile.writeAsString(const JsonEncoder.withIndent('  ')
+                .convert(notes.map((n) => n.toJson()).toList()));
+          }
+        }
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => NotesPage(
+          initialNotes: notes,
+          notesFile: notesFile,
+          fontFamily: _fontFamily,
+          textScaleFactor: _uiTextScaleFactor,
+        ),
+      ));
     } catch (_) {}
   }
 

@@ -338,7 +338,67 @@
 - [-] alle aktionen sollen task loading auslösen
 - [x] edit cloud url springt immer ans ende des textes, sollte aber am cursor bleiben!
 - [x] umbau auf sembast
-
+- [x] sync button macht immer noch nicht 100%
+- [x] aufgaben durcheinander
+  - [-] es kommt zu vielen dopplungen von aufgaben
+  - [-] today war auf einmal komplett leer!
+  - [-] aufgaben werden nicht automatisch aus dem backlog geholt wenn sie auf heute liegen!
+  - [-] verschieben zwischen listen (insbesondere durch status änderungen!)
+- [x] fertige aufgaben werden nicht mehr automatisch aus dem today entfernt
+- [x] settings in eine eigene sembast-db
+- [x] funktionen heißen immer noch alle sqlite...
+- [x] clean done
+- [x] android: widget funktioniert seit umstellung auf sembast nicht mehr bzw. zeigt nichts mehr an!
+- [x] aufgaben die ich im backlog auf heute oder in vergangenheit lege, sollen in today gemoved werden!
+- [x] default backup strategie: 90 Backups, alle 5 Minuten und beim Start
+- [x] cliens hängen häufiger im start loading fest, ich glaube tritt nur bei cloud sync clients auf!
+- [x] qr-code scan füllt nicht mehr die URL
+- [x] today migration funktioniert nicht mehr sauber. today soll beim ersten start leer sein. alle aufgaben die done sind sollen in done verschoben werden, alle aufaben die offen  sind sollen ins backlog geschoben werden. alle aufgaben die auf heute oder in der vergangenheit liegen, sollen danach vom backlog ins today verschoben werden!
+- [x] settings doppeln sich!
+- [x] settings wieder auf json zurueckgestellt
+- [x] warum braucht windows firebase? was ist firebase? wofür brauche ich firebase? -> Komplett entfernt!
+- [x] lastRunDate wird noch in der haupt db gespeichert!!
+- [x] .bak dateien nicht mehr erzeugen!
+- [x] dailymigration klappert!
+- [x] cloud sync (merken welche ids etc) aus den settings ruasnehmen und in die haupt db verschieben!
+- [-] erinnerungen deaktiveren können (z.b. bei aktiver app?) - erinnerung ist wichtig!
+- [x] sync: erster sync muss schneller, es muss beim öffnen geprüft werden bevor der client selbst aktionen ausführt. sonst kann es zu chaos kommen! (aufgaben die anm handy in heute lagen nd schon erledigt waren, wurden beim anderen in backlog verschoben und da liegengelassen...)
+- [x] papierkorb:
+        schiebt sync in den papierkorb?
+        papierkorb sichtbar machen (um wiederherstellen zu können)
+- [x] install server soll updaten können
+- [x] refresh widget - bei aktualisierung von today in der app!
+- [x] aufgaben reihenfolge optimisieren
+- [x] aufgaben von yesterday legen nach erledigung eine neue today aufgabe an. follow up soll auch bei vergangenen aufgaben wie today behandelt werden, also follow up vom heutigem tag aus generiert werden!
+- [x] widget funktioniert wieder nicht!
+- [x] qr-code nimmt url nicht mit!
+- [x] icon trash
+- [x] schrift im widget kleiner
+- [x] trash / done eintrag im menü ausblenden, wenn die liste jeweilige liste geöffnet ist!
+- [x] desktop-app erzeugt widget json-files, ist aber unnötig, soll nur android tun!
+- [x] widget nur einzeilig, hinten raus mit ... wenn zu lang
+- [x] in arbeit sichtbarerer!
+- [x] automatic backups und auto delete old trash settings werden nicht gespeichert
+- [x] auto delete old trash 90 tage default
+- [x] android verliert manchmal den text focus beim editieren und springt runter in "neue aufgaben"-feld
+- [x] Abhängigkeiten Reduzieren
+  - [x] sqlite3.dll
+- [x] aufgaben nicht aufklappen auf dem desktop, sondern in einem eigenen fenster öffnen (optional in den settings konfigurierbar)
+- [x] save button geht unter windows nicht bzw. schließt nicht!
+- [x] manchmal verschwinden aufgaben  beim verschieben zwischen listen (z.b. today -> backlog)
+- [x] import soll refresh der aufgabenliste auslösen, damit die neuen aufgaben auch angezeigt werden!
+- [x] trash durchsuchbar machen wie done, damit man auch gelöschte aufgaben wiederfinden kann!
+- [x] android hintergrund synchronisation implementieren
+      -> nutzt jetzt einen stillen Android-Hintergrund-Timer fuer Cloud-Sync, solange der Prozess laeuft
+- [x] android sound unterbricht musik wiedergaben...
+      -> nutzt jetzt SystemSound auf Android (unterbricht nicht, Audio-Focus-freundlich)
+- [x] android: icon fritte (muss es einen hintergrund haben?), was ist mit weißem icon für statusleiste z.b.?
+      notification funktioniert mit weißen icon.[text](about:blank#blocked)
+      kleines app icon in der taks auswahl und benachrichtigung klappt auchhttps://www.youtube.com/watch?v=rNPMETYAKYA&t=13s
+      app icon ist 4 eckig auf weißem grund (rund)
+      jetzt ist das icon wieder vermatscht, glaube muss transparentes icon mit gößerem transparenten rand sein, damit es rund passt
+      es wird besser! ich habe color_transparent_icon.png und color_teal_icon.png kleiner gemacht (stopwatch, background blieb gleich)
+      genau das ist es! die zwei bzw. vermutlich das transparent dürfte es sein! könnte noch ein µ kleiner sein, dann passt es endlich!
 
 ## Cloud Sync Improvements (Recent Fixes)
 
