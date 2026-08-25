@@ -161,23 +161,31 @@ class NoteItem {
     required this.title,
     required this.text,
     required this.updatedAt,
+    this.isChecklist = false,
+    this.checklistItems = const [],
   });
 
   final String id;
   final String title;
   final String text;
   final DateTime updatedAt;
+  final bool isChecklist;
+  final List<NoteChecklistItem> checklistItems;
 
   NoteItem copyWith({
     String? title,
     String? text,
     DateTime? updatedAt,
+    bool? isChecklist,
+    List<NoteChecklistItem>? checklistItems,
   }) {
     return NoteItem(
       id: id,
       title: title ?? this.title,
       text: text ?? this.text,
       updatedAt: updatedAt ?? this.updatedAt,
+      isChecklist: isChecklist ?? this.isChecklist,
+      checklistItems: checklistItems ?? this.checklistItems,
     );
   }
 
@@ -186,6 +194,8 @@ class NoteItem {
         'title': title,
         'text': text,
         'updatedAt': updatedAt.toIso8601String(),
+        'isChecklist': isChecklist,
+        'checklistItems': checklistItems.map((item) => item.toJson()).toList(),
       };
 
   static NoteItem fromJson(Map<String, dynamic> json) {
@@ -196,8 +206,39 @@ class NoteItem {
       title: json['title']?.toString() ?? 'note',
       text: json['text']?.toString() ?? '',
       updatedAt: rawDate ?? DateTime.now(),
+      isChecklist: json['isChecklist'] == true,
+      checklistItems: (json['checklistItems'] is List)
+          ? (json['checklistItems'] as List)
+              .whereType<Map>()
+              .map((item) =>
+                  NoteChecklistItem.fromJson(Map<String, dynamic>.from(item)))
+              .toList()
+          : const [],
     );
   }
+}
+
+class NoteChecklistItem {
+  const NoteChecklistItem({required this.text, this.done = false});
+
+  final String text;
+  final bool done;
+
+  NoteChecklistItem copyWith({String? text, bool? done}) => NoteChecklistItem(
+        text: text ?? this.text,
+        done: done ?? this.done,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'text': text,
+        'done': done,
+      };
+
+  static NoteChecklistItem fromJson(Map<String, dynamic> json) =>
+      NoteChecklistItem(
+        text: json['text']?.toString() ?? '',
+        done: json['done'] == true,
+      );
 }
 
 // `<Documents>/simplepresent/simplepresent_debug.log` (or the
@@ -479,7 +520,13 @@ class NoteEditorPage extends StatefulWidget {
 
 class _NoteEditorPageState extends State<NoteEditorPage> {
   late final TextEditingController _controller;
+  late final TextEditingController _titleController;
   late final String _noteId;
+  late bool _isChecklist;
+  late List<NoteChecklistItem> _checklistItems;
+  late List<TextEditingController> _checklistControllers;
+  late List<FocusNode> _checklistFocusNodes;
+  int? _activeChecklistIndex;
 
   @override
   void initState() {
@@ -487,18 +534,62 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     final note = widget.note;
     _noteId = note?.id ??
         '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}';
+    _isChecklist = note?.isChecklist ?? false;
+    _checklistItems = List<NoteChecklistItem>.from(note?.checklistItems ?? []);
     _controller = TextEditingController(
-      text: note == null ? '' : '${note.title}\n${note.text}',
+      text: note == null
+          ? ''
+          : note.isChecklist
+              ? [
+                  note.title,
+                  note.text,
+                  ...note.checklistItems.map(
+                    (item) => '- [${item.done ? 'x' : ' '}] ${item.text}',
+                  ),
+                ].join('\n')
+              : '${note.title}\n${note.text}',
     );
+    _titleController = TextEditingController(text: note?.title ?? '');
+    _checklistControllers = [
+      for (final item in _checklistItems)
+        TextEditingController(text: item.text),
+    ];
+    if (_isChecklist && _checklistControllers.isEmpty) {
+      _checklistItems = [const NoteChecklistItem(text: '')];
+      _checklistControllers = [TextEditingController()];
+    }
+    _checklistFocusNodes = [
+      for (var i = 0; i < _checklistItems.length; i++) FocusNode(),
+    ];
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _titleController.dispose();
+    for (final controller in _checklistControllers) {
+      controller.dispose();
+    }
+    for (final focusNode in _checklistFocusNodes) {
+      focusNode.dispose();
+    }
     super.dispose();
   }
 
   void _saveImmediately() {
+    if (_isChecklist) {
+      final title = _titleController.text.trim();
+      if (title.isEmpty) return;
+      widget.onChanged(NoteItem(
+        id: _noteId,
+        title: title,
+        text: '',
+        updatedAt: DateTime.now(),
+        isChecklist: true,
+        checklistItems: List<NoteChecklistItem>.from(_checklistItems),
+      ));
+      return;
+    }
     final lines = _controller.text.replaceAll('\r\n', '\n').split('\n');
     final title = lines.isEmpty ? '' : lines.first.trim();
     final text = lines.length <= 1 ? '' : lines.skip(1).join('\n').trim();
@@ -509,6 +600,197 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       text: text,
       updatedAt: DateTime.now(),
     ));
+  }
+
+  void _toggleChecklist() {
+    setState(() {
+      if (!_isChecklist) {
+        final lines = _controller.text.replaceAll('\r\n', '\n').split('\n');
+        _titleController.text = lines.isEmpty ? '' : lines.first;
+        for (final controller in _checklistControllers) {
+          controller.dispose();
+        }
+        for (final focusNode in _checklistFocusNodes) {
+          focusNode.dispose();
+        }
+        _checklistItems = lines.length > 1
+            ? lines
+                .skip(1)
+                .map((line) => NoteChecklistItem(text: line.trim()))
+                .toList()
+            : [const NoteChecklistItem(text: '')];
+        _checklistControllers = [
+          for (final item in _checklistItems)
+            TextEditingController(text: item.text),
+        ];
+        _checklistFocusNodes = [
+          for (var i = 0; i < _checklistItems.length; i++) FocusNode(),
+        ];
+        _isChecklist = true;
+      } else {
+        _controller.text = [
+          _titleController.text,
+          ..._checklistItems.map((item) => item.text),
+        ].join('\n');
+        _isChecklist = false;
+      }
+    });
+    _saveImmediately();
+  }
+
+  Widget _buildChecklistEditor() {
+    return Column(
+      children: [
+        TextField(
+          controller: _titleController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => _saveImmediately(),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ReorderableListView.builder(
+            itemCount: _checklistItems.length,
+            onReorder: _reorderChecklistItem,
+            buildDefaultDragHandles: false,
+            itemBuilder: (context, index) {
+              final item = _checklistItems[index];
+              return Row(
+                key: ValueKey(_checklistControllers[index]),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox(
+                    value: item.done,
+                    onChanged: (value) {
+                      setState(() {
+                        _activeChecklistIndex = index;
+                        _checklistItems[index] =
+                            item.copyWith(done: value ?? false);
+                      });
+                      _saveImmediately();
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      focusNode: _checklistFocusNodes[index],
+                      controller: _checklistControllers[index],
+                      decoration:
+                          const InputDecoration(border: InputBorder.none),
+                      style: TextStyle(
+                        color: item.done ? Colors.grey : null,
+                        decoration:
+                            item.done ? TextDecoration.lineThrough : null,
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onTap: () =>
+                          setState(() => _activeChecklistIndex = index),
+                      onChanged: (value) {
+                        _checklistItems[index] = item.copyWith(text: value);
+                        _saveImmediately();
+                      },
+                      onSubmitted: (_) {
+                        _activeChecklistIndex = index;
+                        _addChecklistItem(index);
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'delete item',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _removeChecklistItem(index),
+                  ),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: const Padding(
+                      padding: EdgeInsets.only(top: 12, left: 4),
+                      child: Icon(Icons.drag_handle),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _addChecklistItem(int index) {
+    final insertIndex = index + 1;
+    setState(() {
+      _checklistItems.insert(insertIndex, const NoteChecklistItem(text: ''));
+      _checklistControllers.insert(insertIndex, TextEditingController());
+      _checklistFocusNodes.insert(insertIndex, FocusNode());
+      _activeChecklistIndex = insertIndex;
+    });
+    _saveImmediately();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checklistFocusNodes[insertIndex].requestFocus();
+    });
+  }
+
+  void _removeChecklistItem(int index) {
+    setState(() {
+      _checklistControllers.removeAt(index).dispose();
+      _checklistFocusNodes.removeAt(index).dispose();
+      _checklistItems.removeAt(index);
+      if (_checklistItems.isEmpty) {
+        _checklistItems.add(const NoteChecklistItem(text: ''));
+        _checklistControllers.add(TextEditingController());
+        _checklistFocusNodes.add(FocusNode());
+      }
+      _activeChecklistIndex = null;
+    });
+    _saveImmediately();
+  }
+
+  void _removeCompletedChecklistItems() {
+    final remainingItems = _checklistItems.where((item) => !item.done).toList();
+    for (final controller in _checklistControllers) {
+      controller.dispose();
+    }
+    for (final focusNode in _checklistFocusNodes) {
+      focusNode.dispose();
+    }
+    setState(() {
+      _checklistItems = remainingItems.isEmpty
+          ? [const NoteChecklistItem(text: '')]
+          : remainingItems;
+      _checklistControllers = [
+        for (final item in _checklistItems)
+          TextEditingController(text: item.text),
+      ];
+      _checklistFocusNodes = [
+        for (var i = 0; i < _checklistItems.length; i++) FocusNode(),
+      ];
+      _activeChecklistIndex = null;
+    });
+    _saveImmediately();
+  }
+
+  void _reorderChecklistItem(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex -= 1;
+      final item = _checklistItems.removeAt(oldIndex);
+      final controller = _checklistControllers.removeAt(oldIndex);
+      final focusNode = _checklistFocusNodes.removeAt(oldIndex);
+      _checklistItems.insert(newIndex, item);
+      _checklistControllers.insert(newIndex, controller);
+      _checklistFocusNodes.insert(newIndex, focusNode);
+      if (_activeChecklistIndex == oldIndex) {
+        _activeChecklistIndex = newIndex;
+      } else if (_activeChecklistIndex != null &&
+          oldIndex < _activeChecklistIndex! &&
+          newIndex >= _activeChecklistIndex!) {
+        _activeChecklistIndex = _activeChecklistIndex! - 1;
+      } else if (_activeChecklistIndex != null &&
+          oldIndex > _activeChecklistIndex! &&
+          newIndex <= _activeChecklistIndex!) {
+        _activeChecklistIndex = _activeChecklistIndex! + 1;
+      }
+    });
+    _saveImmediately();
   }
 
   @override
@@ -533,27 +815,65 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                 Text(widget.note == null ? 'new note' : 'edit note'),
               ],
             ),
+            actions: [
+              IconButton(
+                tooltip:
+                    _isChecklist ? 'use note text' : 'convert to checklist',
+                onPressed: _toggleChecklist,
+                icon: Icon(_isChecklist ? Icons.notes : Icons.checklist),
+              ),
+              if (_isChecklist)
+                IconButton(
+                  tooltip: 'reopen all items',
+                  onPressed: () {
+                    setState(() {
+                      _checklistItems = _checklistItems
+                          .map((item) => item.copyWith(done: false))
+                          .toList();
+                    });
+                    _saveImmediately();
+                  },
+                  icon: const Icon(Icons.restart_alt),
+                ),
+              if (_isChecklist)
+                IconButton(
+                  tooltip: 'delete completed items',
+                  onPressed: _removeCompletedChecklistItems,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                ),
+            ],
           ),
+          floatingActionButton: _isChecklist
+              ? FloatingActionButton(
+                  tooltip: 'add checklist item below active item',
+                  onPressed: () => _addChecklistItem(
+                    _activeChecklistIndex ?? _checklistItems.length - 1,
+                  ),
+                  child: const Icon(Icons.add),
+                )
+              : null,
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: TextField(
-                controller: _controller,
-                onChanged: (_) => _saveImmediately(),
-                autofocus: true,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                textAlign: TextAlign.left,
-                textAlignVertical: TextAlignVertical.top,
-                expands: true,
-                maxLines: null,
-                minLines: null,
-                decoration: const InputDecoration(
-                  hintText: 'name\n\nwrite your note here...',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-              ),
+              child: _isChecklist
+                  ? _buildChecklistEditor()
+                  : TextField(
+                      controller: _controller,
+                      onChanged: (_) => _saveImmediately(),
+                      autofocus: true,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
+                      textAlign: TextAlign.left,
+                      textAlignVertical: TextAlignVertical.top,
+                      expands: true,
+                      maxLines: null,
+                      minLines: null,
+                      decoration: const InputDecoration(
+                        hintText: 'name\n\nwrite your note here...',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -688,6 +1008,8 @@ class _NotesPageState extends State<NotesPage> {
         title: imported.title,
         text: imported.text,
         updatedAt: DateTime.now(),
+        isChecklist: imported.isChecklist,
+        checklistItems: imported.checklistItems,
       );
       if (note.title.trim().isEmpty) return;
       setState(() {
@@ -768,7 +1090,9 @@ class _NotesPageState extends State<NotesPage> {
                                 leading: const Icon(Icons.notes),
                                 title: Text(note.title),
                                 subtitle: Text(
-                                  note.text,
+                                  note.isChecklist
+                                      ? '${note.text}${note.text.isEmpty ? '' : '\n'}${note.checklistItems.where((item) => item.done).length}/${note.checklistItems.length} checked'
+                                      : note.text,
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
