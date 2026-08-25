@@ -666,6 +666,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // Controller and query for Trash-list search
   final TextEditingController _trashSearchController = TextEditingController();
   String _trashSearchQuery = '';
+  String _newTaskSearchQuery = '';
+  Map<String, List<TaskItem>> _newTaskSearchResults = const {};
+  int _newTaskSearchGeneration = 0;
   final FocusNode _inputFocus = FocusNode();
   OverlayEntry? _toastEntry;
   Timer? _toastTimer;
@@ -684,6 +687,169 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, TextEditingController> _subtaskInputControllers = {};
   final Map<String, FocusNode> _subtaskFocusNodes = {};
   final Map<String, TextEditingController> _workControllers = {};
+
+  Future<void> _searchExistingTasksForNewTask(String value) async {
+    final query = value.trim().toLowerCase();
+    final generation = ++_newTaskSearchGeneration;
+    if (query.isEmpty || _showingDone) {
+      if (mounted) {
+        setState(() {
+          _newTaskSearchQuery = '';
+          _newTaskSearchResults = const {};
+        });
+      }
+      return;
+    }
+
+    final lists = <String, List<TaskItem>>{
+      'today': <TaskItem>[],
+      'backlog': <TaskItem>[],
+      'done': <TaskItem>[],
+      'trash': <TaskItem>[],
+    };
+    for (final entry in lists.entries) {
+      await _loadList(
+        _storage('simplepresent_${entry.key}.json'),
+        entry.value,
+      );
+    }
+    if (!mounted || generation != _newTaskSearchGeneration) return;
+
+    final matches = <String, List<TaskItem>>{};
+    for (final entry in lists.entries) {
+      final matchingTasks = entry.value.where((task) {
+        return task.text.toLowerCase().contains(query) ||
+            (task.notes ?? '').toLowerCase().contains(query);
+      }).toList();
+      if (matchingTasks.isNotEmpty) matches[entry.key] = matchingTasks;
+    }
+    setState(() {
+      _newTaskSearchQuery = query;
+      _newTaskSearchResults = matches;
+    });
+  }
+
+  String _newTaskSearchListTitle(String listKey) {
+    switch (listKey) {
+      case 'today':
+        return 'today';
+      case 'backlog':
+        return 'backlog';
+      case 'done':
+        return 'done';
+      case 'trash':
+        return 'trash';
+      default:
+        return listKey;
+    }
+  }
+
+  Future<void> _reactivateExistingTask(
+    String sourceList,
+    TaskItem task,
+  ) async {
+    final targetList = _showingBacklog ? 'backlog' : 'today';
+    if (sourceList == targetList) {
+      _clearNewTaskSearch();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final restored = task.copyWith(
+      done: false,
+      completedAt: null,
+      inProgress: false,
+      inProgressAt: null,
+      notes: (task.notes ?? '').replaceFirst(
+        RegExp(r'\n?\[deletedAt:[^\]]+\]'),
+        '',
+      ),
+    );
+    final sourceFile = _storage('simplepresent_$sourceList.json');
+    final targetFile = _storage('simplepresent_$targetList.json');
+    try {
+      await _queueRemoveFromList(sourceFile, task.id);
+      await _queueAppendToList(targetFile, restored, insertTop: true);
+      _clearNewTaskSearch();
+      if (_currentFile == sourceFile || _currentFile == targetFile) {
+        await _loadToday();
+      }
+      if (mounted) setState(() {});
+      _showTopToast('task reactivated in $targetList');
+      unawaited(_appendRedoLog(
+        'reopen',
+        taskId: restored.id,
+        details: {'text': restored.text, 'source': sourceList},
+      ));
+    } catch (_) {
+      _showTopToast('failed to reactivate task');
+    }
+  }
+
+  Widget _buildNewTaskSearchResults() {
+    if (_newTaskSearchQuery.isEmpty || _newTaskSearchResults.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 240),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        children: [
+          for (final entry in _newTaskSearchResults.entries) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: Text(
+                _newTaskSearchListTitle(entry.key),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            for (final task in entry.value)
+              Card(
+                margin: const EdgeInsets.fromLTRB(8, 2, 8, 4),
+                child: ListTile(
+                  dense: true,
+                  title: Text(
+                    task.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: task.notes?.trim().isNotEmpty == true
+                      ? Text(
+                          task.notes!.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : null,
+                  trailing: OutlinedButton.icon(
+                    icon: const Icon(Icons.replay, size: 17),
+                    label: Text(
+                      entry.key == (_showingBacklog ? 'backlog' : 'today')
+                          ? 'use here'
+                          : 'reactivate',
+                    ),
+                    onPressed: () => _reactivateExistingTask(entry.key, task),
+                  ),
+                  onTap: () => _reactivateExistingTask(entry.key, task),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _clearNewTaskSearch() {
+    _newTaskSearchGeneration++;
+    _newTaskSearchQuery = '';
+    _newTaskSearchResults = const {};
+  }
 
   void _requestInputFocusIfIdle() {
     try {
@@ -3734,6 +3900,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _switchFile(bool showDone) async {
+    _clearNewTaskSearch();
     _showingDone = showDone;
     _showingBacklog = false;
     _showingTrash = false;
@@ -3761,6 +3928,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _switchToBacklog() async {
+    _clearNewTaskSearch();
     _showingBacklog = true;
     _showingDone = false;
     _showingTrash = false;
@@ -3785,6 +3953,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _switchToTrash() async {
+    _clearNewTaskSearch();
     _showingBacklog = false;
     _showingDone = false;
     _showingTrash = true;
@@ -9689,86 +9858,100 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               top: false,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Row(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _controller,
-                                        focusNode: _inputFocus,
-                                        autofocus: !_showingDone &&
-                                            !Platform.isAndroid,
-                                        enabled: !_showingDone,
-                                        textInputAction: TextInputAction.done,
-                                        decoration: InputDecoration(
-                                          hintText: _showingDone
-                                              ? null
-                                              : (_showingBacklog
-                                                  ? 'new task for later'
-                                                  : 'new task for today'),
-                                          border: const OutlineInputBorder(),
-                                        ),
-                                        onSubmitted:
-                                            _showingDone ? null : _addToToday,
-                                        onTapOutside: (_) {
-                                          if (!Platform.isAndroid)
-                                            _requestInputFocusIfIdle();
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
+                                    _buildNewTaskSearchResults(),
+                                    Row(
                                       children: [
-                                        ElevatedButton(
-                                          onPressed: _showingDone
-                                              ? null
-                                              : () =>
-                                                  _addToToday(_controller.text),
-                                          child: const Icon(Icons.add),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _controller,
+                                            focusNode: _inputFocus,
+                                            autofocus: !_showingDone &&
+                                                !Platform.isAndroid,
+                                            enabled: !_showingDone,
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            decoration: InputDecoration(
+                                              hintText: _showingDone
+                                                  ? null
+                                                  : (_showingBacklog
+                                                      ? 'new task for later'
+                                                      : 'new task for today'),
+                                              border:
+                                                  const OutlineInputBorder(),
+                                            ),
+                                            onChanged:
+                                                _searchExistingTasksForNewTask,
+                                            onSubmitted: _showingDone
+                                                ? null
+                                                : _addToToday,
+                                            onTapOutside: (_) {
+                                              if (!Platform.isAndroid)
+                                                _requestInputFocusIfIdle();
+                                            },
+                                          ),
                                         ),
-                                        const SizedBox(height: 6),
-                                        Row(
+                                        const SizedBox(width: 8),
+                                        Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Tooltip(
-                                              message:
-                                                  _cloudSyncStatusTooltip(),
-                                              child: Container(
-                                                width: 10,
-                                                height: 10,
-                                                decoration: BoxDecoration(
-                                                  color: _cloudSyncStatusColor(
-                                                      Theme.of(context)
-                                                          .colorScheme),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
+                                            ElevatedButton(
+                                              onPressed: _showingDone
+                                                  ? null
+                                                  : () => _addToToday(
+                                                      _controller.text),
+                                              child: const Icon(Icons.add),
                                             ),
-                                            const SizedBox(width: 6),
-                                            Tooltip(
-                                              message: 'synchronize',
-                                              child: InkWell(
-                                                onTap: _cloudSyncBusy
-                                                    ? null
-                                                    : _manualSyncNow,
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8),
-                                                  child: Icon(
-                                                    Icons.sync,
-                                                    size: 18,
-                                                    color: _cloudSyncBusy
-                                                        ? Theme.of(context)
-                                                            .colorScheme
-                                                            .outline
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .primary,
+                                            const SizedBox(height: 6),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Tooltip(
+                                                  message:
+                                                      _cloudSyncStatusTooltip(),
+                                                  child: Container(
+                                                    width: 10,
+                                                    height: 10,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          _cloudSyncStatusColor(
+                                                              Theme.of(context)
+                                                                  .colorScheme),
+                                                      shape: BoxShape.circle,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
+                                                const SizedBox(width: 6),
+                                                Tooltip(
+                                                  message: 'synchronize',
+                                                  child: InkWell(
+                                                    onTap: _cloudSyncBusy
+                                                        ? null
+                                                        : _manualSyncNow,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              8),
+                                                      child: Icon(
+                                                        Icons.sync,
+                                                        size: 18,
+                                                        color: _cloudSyncBusy
+                                                            ? Theme.of(context)
+                                                                .colorScheme
+                                                                .outline
+                                                            : Theme.of(context)
+                                                                .colorScheme
+                                                                .primary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
