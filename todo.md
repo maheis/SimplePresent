@@ -16,7 +16,7 @@
 - [x] Aufklappen von Aufgabe soll ins Textfeld der Aufgabe springen.
 - [ ] Anzeigen wenn es Notes gibt?
 - [x] Notes
-- [ ] Checklisten
+- [x] Checklisten
 - [x] Unteraufgaben Tooltip wenn Text zu lang!
 - [ ] aufgaben fenster position und größe merken
 - [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
