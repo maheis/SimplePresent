@@ -1671,8 +1671,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _urgentFired = false;
   final MethodChannel _nativeWindowChannel =
       const MethodChannel('simple_present/window');
-  final MethodChannel _androidPermissionsChannel =
-      const MethodChannel('simple_present/permissions');
   Timer? _scheduledCheckTimer;
   Timer? _windowWatcherTimer;
   Timer? _autoSwitchTimer;
@@ -2143,8 +2141,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     unawaited(_resumeCloudSyncAfterStartup());
     await _promoteDueBacklogToToday(showToast: true);
     await _loadToday();
-    // Request Android 13+ notification permission on startup via native channel.
-    unawaited(_requestAndroidNotificationPermission());
+    unawaited(_syncAndroidScheduledReminders(_today));
     // Run cleanup of old Done tasks if enabled
     unawaited(_purgeOldDoneTasksIfEnabled());
     unawaited(_purgeOldTrashIfEnabled());
@@ -2396,11 +2393,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _requestAndroidNotificationPermission() async {
+  Future<void> _syncAndroidScheduledReminders(List<TaskItem> tasks) async {
     if (!Platform.isAndroid) return;
+    final now = DateTime.now();
+    final reminders = <Map<String, dynamic>>[];
+    for (final task in tasks) {
+      if (task.done || task.scheduledAt == null) continue;
+      final reminderAt = _effectiveReminderAt(task, now);
+      if (!reminderAt.isAfter(now)) continue;
+      final postponedLabel = _postponedSinceLabel(task.scheduledAt!);
+      reminders.add(<String, dynamic>{
+        'taskId': task.id,
+        'title': '',
+        'body': postponedLabel == null
+            ? task.text
+            : '${task.text}\n$postponedLabel',
+        'triggerAtMillis': reminderAt.millisecondsSinceEpoch,
+      });
+    }
     try {
-      await _androidPermissionsChannel
-          .invokeMethod<bool>('requestNotificationPermission');
+      await _nativeWindowChannel.invokeMethod(
+          'scheduleTaskReminders', reminders);
     } catch (_) {}
   }
 
@@ -3238,6 +3251,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
         unawaited(_debugLog('saveList completed: $filename'));
         if (_listDirBase(filename) == 'today') {
+          unawaited(_syncAndroidScheduledReminders(
+              source.where((task) => !task.done).toList()));
           unawaited(exportTodayAndRefresh(
             source.where((task) => !task.done).toList(),
             fontFamily: _fontFamily,

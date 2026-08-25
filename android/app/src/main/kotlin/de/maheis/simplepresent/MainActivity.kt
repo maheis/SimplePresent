@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.Manifest
+import android.app.AlarmManager
+import org.json.JSONArray
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
@@ -31,6 +33,22 @@ class MainActivity : FlutterActivity() {
 	private var windowChannel: MethodChannel? = null
 	private val pendingTaskActions = mutableListOf<Pair<String, String>>()
 	private val pendingOpenTaskIds = mutableListOf<String>()
+	private val reminderPreferences = "simple_present_reminders"
+	private val reminderPayloads = "payloads"
+
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+			ContextCompat.checkSelfPermission(
+				this,
+				Manifest.permission.POST_NOTIFICATIONS
+			) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+			requestPermissions(
+				arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+				PERMISSION_REQUEST_CODE
+			)
+		}
+	}
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
@@ -56,6 +74,10 @@ class MainActivity : FlutterActivity() {
 						refreshTodayWidget()
 						result.success(null)
 					}
+					"scheduleTaskReminders" -> {
+						scheduleTaskReminders(call.arguments as? List<*>)
+						result.success(null)
+					}
 					else -> result.notImplemented()
 				}
 			}
@@ -74,6 +96,57 @@ class MainActivity : FlutterActivity() {
 		flushPendingTaskActions()
 		flushPendingOpenTasks()
 		handleIntent(intent)
+	}
+
+	private fun scheduleTaskReminders(items: List<*>?) {
+		val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+		val preferences = getSharedPreferences(reminderPreferences, Context.MODE_PRIVATE)
+		val oldPayloads = try { JSONArray(preferences.getString(reminderPayloads, "[]")) } catch (_: Exception) { JSONArray() }
+		for (index in 0 until oldPayloads.length()) {
+			val old = oldPayloads.optJSONObject(index) ?: continue
+			cancelReminder(alarmManager, old.optString("id"))
+		}
+		val payloads = JSONArray()
+		for (item in items.orEmpty()) {
+			val data = item as? Map<*, *> ?: continue
+			val taskId = data["taskId"] as? String ?: continue
+			val triggerAt = (data["triggerAtMillis"] as? Number)?.toLong() ?: continue
+			if (triggerAt <= System.currentTimeMillis()) continue
+			val title = data["title"] as? String ?: ""
+			val body = data["body"] as? String ?: title
+			val payload = org.json.JSONObject().apply {
+				put("id", taskId)
+				put("title", title)
+				put("body", body)
+				put("triggerAtMillis", triggerAt)
+			}
+			payloads.put(payload)
+			val intent = Intent(this, ReminderReceiver::class.java).apply {
+				putExtra(ReminderReceiver.EXTRA_TASK_ID, taskId)
+				putExtra(ReminderReceiver.EXTRA_TITLE, title)
+				putExtra(ReminderReceiver.EXTRA_BODY, body)
+			}
+			val pending = PendingIntent.getBroadcast(
+				this, ReminderReceiver.requestCode(taskId), intent,
+				PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+			)
+			try {
+				alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+			} catch (_: SecurityException) {
+				alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+			}
+		}
+		preferences.edit().putString(reminderPayloads, payloads.toString()).apply()
+	}
+
+	private fun cancelReminder(alarmManager: AlarmManager, taskId: String) {
+		if (taskId.isBlank()) return
+		val intent = Intent(this, ReminderReceiver::class.java)
+		val pending = PendingIntent.getBroadcast(
+			this, ReminderReceiver.requestCode(taskId), intent,
+			PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_NO_CREATE
+		)
+		if (pending != null) alarmManager.cancel(pending)
 	}
 
 	private fun ensureChannel() {
