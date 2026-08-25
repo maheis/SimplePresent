@@ -11945,9 +11945,12 @@ class _SettingsPageState extends State<SettingsPage> {
         jsonEncode(subtaskTemplates) != _initialSubtaskTemplates;
   }
 
-  Future<void> _addSubtaskTemplate() async {
-    final nameController = TextEditingController();
-    final stepsController = TextEditingController();
+  Future<void> _editSubtaskTemplate([int? index]) async {
+    final template = index == null ? null : subtaskTemplates[index];
+    final nameController =
+        TextEditingController(text: template?['name']?.toString() ?? '');
+    final stepsController = TextEditingController(
+        text: template == null ? '' : (template['steps'] as List).join('\n'));
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => MediaQuery(
@@ -11955,7 +11958,8 @@ class _SettingsPageState extends State<SettingsPage> {
           textScaler: TextScaler.linear(textScaleFactor),
         ),
         child: AlertDialog(
-          title: const Text('new subtask template'),
+          title: Text(
+              index == null ? 'new subtask template' : 'edit subtask template'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -11978,7 +11982,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: const Text('cancel')),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('add'),
+              child: Text(index == null ? 'add' : 'save'),
             ),
           ],
         ),
@@ -11992,7 +11996,14 @@ class _SettingsPageState extends State<SettingsPage> {
           .where((step) => step.isNotEmpty)
           .toList();
       if (name.isNotEmpty && steps.isNotEmpty) {
-        setState(() => subtaskTemplates.add({'name': name, 'steps': steps}));
+        setState(() {
+          final updated = {'name': name, 'steps': steps};
+          if (index == null) {
+            subtaskTemplates.add(updated);
+          } else {
+            subtaskTemplates[index] = updated;
+          }
+        });
       }
     }
     nameController.dispose();
@@ -12011,14 +12022,24 @@ class _SettingsPageState extends State<SettingsPage> {
             contentPadding: EdgeInsets.zero,
             title: Text(subtaskTemplates[i]['name'].toString()),
             subtitle: Text((subtaskTemplates[i]['steps'] as List).join(' -> ')),
-            trailing: IconButton(
-              tooltip: 'delete template',
-              icon: const Icon(Icons.delete_outline),
-              onPressed: () => setState(() => subtaskTemplates.removeAt(i)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'edit template',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _editSubtaskTemplate(i),
+                ),
+                IconButton(
+                  tooltip: 'delete template',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => setState(() => subtaskTemplates.removeAt(i)),
+                ),
+              ],
             ),
           ),
         OutlinedButton.icon(
-          onPressed: _addSubtaskTemplate,
+          onPressed: _editSubtaskTemplate,
           icon: const Icon(Icons.add),
           label: const Text('new template'),
         ),

@@ -92,7 +92,7 @@
       über alle listen hinweg und jeweils unter einer überschrift-listennamen anzeigen. (ähnlich wie bei der Suche)
 - [x] Pin-Button entfernen
 - [x] Text-Größe in Subtask Template
-- [ ] Edit Subtask Template
+- [x] Edit Subtask Template
 
 ## notes
 
