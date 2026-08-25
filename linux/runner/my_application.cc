@@ -170,13 +170,6 @@ static void window_method_call(FlMethodChannel *channel,
   {
     if (g_main_window && args && fl_value_get_type(args) == FL_VALUE_TYPE_MAP)
     {
-      // Apply all supplied fields in one call. Geometry restore includes
-      // always_on_top, so returning after that flag would skip position/size.
-      FlValue *val_always = fl_value_lookup_string(args, "always_on_top");
-      if (val_always && fl_value_get_type(val_always) == FL_VALUE_TYPE_BOOL)
-      {
-        gtk_window_set_keep_above(g_main_window, fl_value_get_bool(val_always));
-      }
       FlValue *vmax = fl_value_lookup_string(args, "maximized");
       const gboolean maximized =
           vmax && fl_value_get_type(vmax) == FL_VALUE_TYPE_BOOL &&

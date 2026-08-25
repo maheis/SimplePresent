@@ -205,20 +205,6 @@ bool FlutterWindow::OnCreate()
             if (map)
             {
               HWND hwnd = GetHandle();
-              // Apply always_on_top without returning; the same call also
-              // carries the saved position and size.
-              auto itAot = map->find(flutter::EncodableValue("always_on_top"));
-              if (itAot != map->end() && !itAot->second.IsNull() && std::holds_alternative<bool>(itAot->second))
-              {
-                bool aot = std::get<bool>(itAot->second);
-                if (hwnd)
-                {
-                  if (aot)
-                    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                  else
-                    SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-                }
-              }
               auto getInt = [&](const std::string &k) -> int
               {
                 auto it = map->find(flutter::EncodableValue(k));
@@ -270,9 +256,6 @@ bool FlutterWindow::OnCreate()
               out[flutter::EncodableValue("y")] = flutter::EncodableValue(static_cast<int>(r.top));
               out[flutter::EncodableValue("width")] = flutter::EncodableValue(static_cast<int>(r.right - r.left));
               out[flutter::EncodableValue("height")] = flutter::EncodableValue(static_cast<int>(r.bottom - r.top));
-              // Report always-on-top state
-              bool isTopMost = (GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
-              out[flutter::EncodableValue("always_on_top")] = flutter::EncodableValue(isTopMost);
               // Report maximized state
               bool isMax = IsZoomed(hwnd) != 0;
               out[flutter::EncodableValue("maximized")] = flutter::EncodableValue(isMax);

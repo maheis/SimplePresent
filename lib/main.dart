@@ -971,7 +971,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final double _minUiTextScaleFactor = 0.5;
   final double _maxUiTextScaleFactor = 1.6;
   // gesture scale start values removed (pinch zoom disabled)
-  bool _alwaysOnTop = false;
   final String _appTitle = 'SimplePresent';
   String _cloudServerUrl = '';
   String _cloudAccountId = '';
@@ -1398,33 +1397,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           }
           final int width = 450;
           final int x = (sw > 0) ? math.max(0, sw - width) : 0;
-          await _nativeWindowChannel
-              .invokeMethod('setWindowGeometry', <String, dynamic>{
+          await _nativeWindowChannel.invokeMethod(
+              'setWindowGeometry', <String, dynamic>{
             'x': x,
             'y': 0,
             'width': width,
             'height': 700,
-            'maximized': 0,
-            'always_on_top': 0
+            'maximized': 0
           });
         } catch (_) {
           // fallback to center/normal sizing if screen query fails
-          await _nativeWindowChannel.invokeMethod(
-              'setWindowGeometry', <String, dynamic>{
-            'width': 450,
-            'height': 700,
-            'maximized': 0,
-            'always_on_top': 0
-          });
+          await _nativeWindowChannel.invokeMethod('setWindowGeometry',
+              <String, dynamic>{'width': 450, 'height': 700, 'maximized': 0});
         }
       } else {
-        await _nativeWindowChannel.invokeMethod(
-            'setWindowGeometry', <String, dynamic>{
-          'width': 450,
-          'height': 700,
-          'maximized': 0,
-          'always_on_top': 0
-        });
+        await _nativeWindowChannel.invokeMethod('setWindowGeometry',
+            <String, dynamic>{'width': 450, 'height': 700, 'maximized': 0});
       }
     } catch (_) {}
 
@@ -10093,61 +10081,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  if (Platform.isWindows)
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 220),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) =>
-                            ScaleTransition(
-                          scale: animation,
-                          child:
-                              FadeTransition(opacity: animation, child: child),
-                        ),
-                        child: Tooltip(
-                          key: ValueKey<bool>(_alwaysOnTop),
-                          message: _alwaysOnTop
-                              ? 'Unpin window'
-                              : 'Pin window on top',
-                          child: Material(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () async {
-                                final newVal = !_alwaysOnTop;
-                                try {
-                                  await _nativeWindowChannel.invokeMethod(
-                                      'setWindowGeometry', <String, dynamic>{
-                                    'always_on_top': newVal
-                                  });
-                                  setState(() => _alwaysOnTop = newVal);
-                                  await _saveSettings();
-                                  _showTopToast(newVal
-                                      ? 'Window pinned'
-                                      : 'Window unpinned');
-                                } catch (_) {}
-                              },
-                              child: SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: Icon(
-                                  _alwaysOnTop
-                                      ? Icons.push_pin
-                                      : Icons.push_pin_outlined,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                   // Minimal-mode toggle removed
                 ],
               ),
@@ -10376,7 +10309,6 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       'width': readInt('width', 760),
       'height': readInt('height', 760),
       'maximized': map['maximized'] == true,
-      'always_on_top': map['always_on_top'] == true,
     };
     return geom;
   }
@@ -10428,7 +10360,6 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       'width': width,
       'height': height,
       'maximized': data['maximized'] == true,
-      'always_on_top': data['always_on_top'] == true,
     };
   }
 
@@ -10439,7 +10370,6 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
       'width': geom['width'],
       'height': geom['height'],
       'maximized': geom['maximized'] == true,
-      'always_on_top': geom['always_on_top'] == true,
     });
   }
 
@@ -10455,7 +10385,6 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
         'width': result['width'],
         'height': result['height'],
         'maximized': result['maximized'] == true,
-        'always_on_top': result['always_on_top'] == true,
       };
       final sig = _geometrySignature(geom);
       if (sig == _lastWindowGeometrySignature) return;

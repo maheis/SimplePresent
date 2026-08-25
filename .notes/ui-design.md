@@ -140,7 +140,6 @@ Wichtige Icons und ihre Bedeutung in der App:
 | `Icons.task_alt` | Aufgabe erledigt |
 | `Icons.star` / `Icons.star_border` | Wichtig (Flag) |
 | `Icons.play_arrow` / `Icons.stop` | In Bearbeitung starten/stoppen |
-| `Icons.push_pin` / `Icons.push_pin_outlined` | Angeheftet |
 | `Icons.drag_handle` | Drag & Drop Handle |
 | `Icons.calendar_today` | Datum |
 | `Icons.timelapse` | Zeiterfassung |
