@@ -11950,32 +11950,38 @@ class _SettingsPageState extends State<SettingsPage> {
     final stepsController = TextEditingController();
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('new subtask template'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'name'),
-            ),
-            TextField(
-              controller: stepsController,
-              maxLines: 6,
-              decoration: const InputDecoration(
-                labelText: 'subtasks (one per line)',
+      builder: (ctx) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScaleFactor),
+        ),
+        child: AlertDialog(
+          title: const Text('new subtask template'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'name'),
               ),
+              TextField(
+                controller: stepsController,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'subtasks (one per line)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('cancel')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('add'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('add'),
-          ),
-        ],
       ),
     );
     if (result == true) {

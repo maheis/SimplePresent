@@ -91,7 +91,7 @@
 - [x] neue aufgabe tippen, soll vorhandene aufgaben durchsuchen und anzeigen. (ggf. gibt es ja schon eine)
       über alle listen hinweg und jeweils unter einer überschrift-listennamen anzeigen. (ähnlich wie bei der Suche)
 - [x] Pin-Button entfernen
-- [ ] Text-Größe in Subtask Template
+- [x] Text-Größe in Subtask Template
 - [ ] Edit Subtask Template
 
 ## notes
