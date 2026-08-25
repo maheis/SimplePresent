@@ -688,7 +688,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, FocusNode> _subtaskFocusNodes = {};
   final Map<String, TextEditingController> _workControllers = {};
   List<Map<String, dynamic>> _subtaskTemplates = <Map<String, dynamic>>[];
-  String? _selectedSubtaskTemplate;
 
   Future<void> _searchExistingTasksForNewTask(String value) async {
     final query = value.trim().toLowerCase();
@@ -6932,15 +6931,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         text: input,
         done: false,
         createdAt: DateTime.now(),
-        notes: '',
-        subtasks: _subtaskTemplates
-            .where((template) => template['name'] == _selectedSubtaskTemplate)
-            .expand((template) =>
-                (template['steps'] as List).map((step) => TaskStep(
-                      id: '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
-                      text: step.toString(),
-                    )))
-            .toList());
+        notes: '');
 
     // Run creation through the per-task queue so the spinner appears on the new task
     unawaited(_queueTaskAction(newId, () async {
@@ -9951,32 +9942,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildNewTaskSearchResults(),
-                                    if (_subtaskTemplates.isNotEmpty &&
-                                        !_showingDone)
-                                      Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: DropdownButton<String?>(
-                                          value: _selectedSubtaskTemplate,
-                                          hint: const Text('subtask template'),
-                                          items: [
-                                            const DropdownMenuItem<String?>(
-                                              value: null,
-                                              child: Text('no template'),
-                                            ),
-                                            for (final template
-                                                in _subtaskTemplates)
-                                              DropdownMenuItem<String?>(
-                                                value:
-                                                    template['name'] as String,
-                                                child: Text(
-                                                  template['name'] as String,
-                                                ),
-                                              ),
-                                          ],
-                                          onChanged: (value) => setState(() =>
-                                              _selectedSubtaskTemplate = value),
-                                        ),
-                                      ),
                                     Row(
                                       children: [
                                         Expanded(
