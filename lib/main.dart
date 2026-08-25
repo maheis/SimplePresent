@@ -687,6 +687,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, TextEditingController> _subtaskInputControllers = {};
   final Map<String, FocusNode> _subtaskFocusNodes = {};
   final Map<String, TextEditingController> _workControllers = {};
+  List<Map<String, dynamic>> _subtaskTemplates = <Map<String, dynamic>>[];
+  String? _selectedSubtaskTemplate;
 
   Future<void> _searchExistingTasksForNewTask(String value) async {
     final query = value.trim().toLowerCase();
@@ -4046,6 +4048,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _attentionMinutes = readInt('attentionMinutes', _attentionMinutes);
         _reminderMinutes = readInt('reminderMinutes', _reminderMinutes);
         _urgentMinutes = readInt('urgentMinutes', _urgentMinutes);
+        final rawTemplates = data['subtaskTemplates'];
+        if (rawTemplates is List) {
+          _subtaskTemplates = rawTemplates
+              .whereType<Map>()
+              .map((template) => Map<String, dynamic>.from(template))
+              .where((template) =>
+                  template['name'] is String && template['steps'] is List)
+              .toList();
+        }
         _idleSoundEnabled = readBool('idleSoundEnabled', _idleSoundEnabled);
         _idleFlashEnabled = readBool('idleFlashEnabled', _idleFlashEnabled);
         _idleNotifyEnabled = readBool('idleNotifyEnabled', _idleNotifyEnabled);
@@ -4289,6 +4300,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         'autoExportIntervalMinutes': _autoExportIntervalMinutes,
         'autoExportTimes': _autoExportTimes,
         'autoExportMaxBackups': _autoExportMaxBackups,
+        'subtaskTemplates': _subtaskTemplates,
         'lastAutoExportChecksum': _lastAutoExportChecksum,
         'lastRunDate': _lastRunDate ?? '',
         'useTrash': _useTrash,
@@ -5034,6 +5046,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             'doneRetentionDays': _doneRetentionDays,
             'maxTasksToday': _maxTasksToday,
             'maxTasksBacklog': _maxTasksBacklog,
+            'subtaskTemplates': _subtaskTemplates,
           },
           onCloudDeviceRegistered: (Map<String, dynamic> registeredData) {
             // Sync cloud registration data back to home state immediately
@@ -5144,6 +5157,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _cloudPIN = result['cloudPIN'] as String;
       }
       _cloudAllowInsecureTls = result['cloudAllowInsecureTls'] == true;
+      if (result['subtaskTemplates'] is List) {
+        _subtaskTemplates = (result['subtaskTemplates'] as List)
+            .whereType<Map>()
+            .map((template) => Map<String, dynamic>.from(template))
+            .toList();
+      }
       if (result['inactivityReminders'] is List) {
         try {
           final rawList = result['inactivityReminders'];
@@ -5434,6 +5453,50 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         if (!_stagedEditBefore.containsKey(task.id))
           unawaited(_appendRedoLog('subtask_add',
               taskId: task.id, details: {'subtask': step.toJson()}));
+      } catch (_) {}
+      _scheduleDelayedReorder();
+      _registerActivity();
+    });
+  }
+
+  Future<void> _addSubtaskTemplate(int taskIndex, String templateName) async {
+    if (taskIndex < 0 || taskIndex >= _today.length) return;
+    final template = _subtaskTemplates.cast<Map<String, dynamic>?>().firstWhere(
+          (entry) => entry?['name'] == templateName,
+          orElse: () => null,
+        );
+    final rawSteps = template?['steps'];
+    if (rawSteps is! List) return;
+    final steps = rawSteps
+        .map((step) => step.toString().trim())
+        .where((step) => step.isNotEmpty)
+        .map((step) => TaskStep(
+              id: '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
+              text: step,
+            ))
+        .toList();
+    if (steps.isEmpty) return;
+
+    final taskId = _today[taskIndex].id;
+    await _queueTaskAction(taskId, () async {
+      final idx = _today.indexWhere((task) => task.id == taskId);
+      if (idx == -1) return;
+      final task = _today[idx];
+      setState(() {
+        _today[idx] = task.copyWith(subtasks: [...task.subtasks, ...steps]);
+      });
+      await _saveToday();
+      try {
+        if (!_stagedEditBefore.containsKey(task.id)) {
+          unawaited(_appendRedoLog(
+            'subtask_template_add',
+            taskId: task.id,
+            details: {
+              'template': templateName,
+              'subtasks': steps.map((step) => step.toJson()).toList(),
+            },
+          ));
+        }
       } catch (_) {}
       _scheduleDelayedReorder();
       _registerActivity();
@@ -6881,7 +6944,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         text: input,
         done: false,
         createdAt: DateTime.now(),
-        notes: '');
+        notes: '',
+        subtasks: _subtaskTemplates
+            .where((template) => template['name'] == _selectedSubtaskTemplate)
+            .expand((template) =>
+                (template['steps'] as List).map((step) => TaskStep(
+                      id: '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32)}',
+                      text: step.toString(),
+                    )))
+            .toList());
 
     // Run creation through the per-task queue so the spinner appears on the new task
     unawaited(_queueTaskAction(newId, () async {
@@ -9439,6 +9510,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                         const Text(
                                                                             '+'),
                                                                   ),
+                                                                  const SizedBox(
+                                                                      width: 6),
+                                                                  PopupMenuButton<
+                                                                      String>(
+                                                                    tooltip:
+                                                                        'add subtask template',
+                                                                    icon: const Icon(
+                                                                        Icons
+                                                                            .playlist_add),
+                                                                    onSelected: (templateName) =>
+                                                                        _addSubtaskTemplate(
+                                                                            i,
+                                                                            templateName),
+                                                                    itemBuilder: (context) =>
+                                                                        _subtaskTemplates.isEmpty
+                                                                            ? [
+                                                                                const PopupMenuItem<String>(
+                                                                                  enabled: false,
+                                                                                  value: '',
+                                                                                  child: Text('no templates available'),
+                                                                                ),
+                                                                              ]
+                                                                            : [
+                                                                                for (final template in _subtaskTemplates)
+                                                                                  PopupMenuItem<String>(
+                                                                                    value: template['name'] as String,
+                                                                                    child: Text(template['name'] as String),
+                                                                                  ),
+                                                                              ],
+                                                                  ),
                                                                 ],
                                                               ),
                                                               if (task.subtasks
@@ -9862,6 +9963,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildNewTaskSearchResults(),
+                                    if (_subtaskTemplates.isNotEmpty &&
+                                        !_showingDone)
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: DropdownButton<String?>(
+                                          value: _selectedSubtaskTemplate,
+                                          hint: const Text('subtask template'),
+                                          items: [
+                                            const DropdownMenuItem<String?>(
+                                              value: null,
+                                              child: Text('no template'),
+                                            ),
+                                            for (final template
+                                                in _subtaskTemplates)
+                                              DropdownMenuItem<String?>(
+                                                value:
+                                                    template['name'] as String,
+                                                child: Text(
+                                                  template['name'] as String,
+                                                ),
+                                              ),
+                                          ],
+                                          onChanged: (value) => setState(() =>
+                                              _selectedSubtaskTemplate = value),
+                                        ),
+                                      ),
                                     Row(
                                       children: [
                                         Expanded(
@@ -10060,6 +10187,7 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
   late final TextEditingController _workMinutesController;
   late final TextEditingController _newSubtaskController;
   final Map<String, TextEditingController> _subtaskControllers = {};
+  List<Map<String, dynamic>> _subtaskTemplates = <Map<String, dynamic>>[];
   Timer? _ticker;
   Timer? _geometryTimer;
   TaskItem? _initialTask;
@@ -10183,6 +10311,17 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
   Future<void> _loadAppearanceSettings() async {
     try {
       final data = await _readSettingsMap();
+      final rawTemplates = data['subtaskTemplates'];
+      if (rawTemplates is List && mounted) {
+        setState(() {
+          _subtaskTemplates = rawTemplates
+              .whereType<Map>()
+              .map((template) => Map<String, dynamic>.from(template))
+              .where((template) =>
+                  template['name'] is String && template['steps'] is List)
+              .toList();
+        });
+      }
       if (data.isEmpty || !mounted) return;
       double readDouble(String key, double fallback) {
         final v = data[key];
@@ -10540,6 +10679,25 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
     _newSubtaskController.clear();
     _updateTask((current) => current.copyWith(
           subtasks: [...current.subtasks, step],
+        ));
+  }
+
+  Future<void> _addSubtaskTemplate(String templateName) async {
+    if (_task == null) return;
+    final template = _subtaskTemplates.firstWhere(
+      (entry) => entry['name'] == templateName,
+      orElse: () => <String, dynamic>{},
+    );
+    final rawSteps = template['steps'];
+    if (rawSteps is! List) return;
+    final steps = rawSteps
+        .map((step) => step.toString().trim())
+        .where((step) => step.isNotEmpty)
+        .map((step) => TaskStep(id: _nextSubtaskId(), text: step))
+        .toList();
+    if (steps.isEmpty) return;
+    _updateTask((current) => current.copyWith(
+          subtasks: [...current.subtasks, ...steps],
         ));
   }
 
@@ -10907,6 +11065,36 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
                                             onPressed: _addSubtask,
                                             child: const Text('+'),
                                           ),
+                                          const SizedBox(width: 6),
+                                          PopupMenuButton<String>(
+                                            tooltip: 'add subtask template',
+                                            icon:
+                                                const Icon(Icons.playlist_add),
+                                            onSelected: _addSubtaskTemplate,
+                                            itemBuilder: (context) =>
+                                                _subtaskTemplates.isEmpty
+                                                    ? [
+                                                        const PopupMenuItem<
+                                                            String>(
+                                                          enabled: false,
+                                                          value: '',
+                                                          child: Text(
+                                                              'no templates available'),
+                                                        ),
+                                                      ]
+                                                    : [
+                                                        for (final template
+                                                            in _subtaskTemplates)
+                                                          PopupMenuItem<String>(
+                                                            value:
+                                                                template['name']
+                                                                    as String,
+                                                            child: Text(
+                                                                template['name']
+                                                                    as String),
+                                                          ),
+                                                      ],
+                                          ),
                                         ],
                                       ),
                                       if (_task!.subtasks.isNotEmpty) ...[
@@ -11250,6 +11438,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late String autoExportTimesCsv;
   late int autoExportMaxBackups;
   late int trashRetentionDays;
+  late List<Map<String, dynamic>> subtaskTemplates;
+  late String _initialSubtaskTemplates;
   // local toast state for SettingsPage
   OverlayEntry? _toastEntryLocal;
   Timer? _toastTimerLocal;
@@ -11574,6 +11764,13 @@ class _SettingsPageState extends State<SettingsPage> {
     trashRetentionDays = readInt('trashRetentionDays', 90).clamp(1, 365);
     maxTasksToday = readInt('maxTasksToday', 25).clamp(1, 9999);
     maxTasksBacklog = readInt('maxTasksBacklog', 50).clamp(1, 9999);
+    final rawTemplates = widget.initial['subtaskTemplates'];
+    subtaskTemplates = rawTemplates is List
+        ? rawTemplates
+            .whereType<Map>()
+            .map((template) => Map<String, dynamic>.from(template))
+            .toList()
+        : <Map<String, dynamic>>[];
     cloudLastSyncSuccessAt = readInt('cloudLastSyncSuccessAt', 0);
     cloudSyncFailed = readBool('cloudSyncFailed', false);
     cloudSyncLastError = readString('cloudSyncLastError', '');
@@ -11625,6 +11822,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialAutoExportOnStart = autoExportOnStart;
     _initialAutoExportIntervalMinutes = autoExportIntervalMinutes;
     _initialAutoExportTimesCsv = autoExportTimesCsv;
+    _initialSubtaskTemplates = jsonEncode(subtaskTemplates);
     _fetchServerVersionInSettings();
     unawaited(_refreshCloudAccountStatus());
     // Initialize local inactivity reminders from parent-provided initial map
@@ -11785,6 +11983,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     .where((s) => s.isNotEmpty)
                     .toList(),
                 'autoExportMaxBackups': autoExportMaxBackups,
+                'subtaskTemplates': subtaskTemplates,
               });
             },
             child: const Text('save'),
@@ -11848,7 +12047,84 @@ class _SettingsPageState extends State<SettingsPage> {
         reminderWindowTo != _initialReminderWindowTo ||
         autoExportOnStart != _initialAutoExportOnStart ||
         autoExportIntervalMinutes != _initialAutoExportIntervalMinutes ||
-        autoExportTimesCsv != _initialAutoExportTimesCsv;
+        autoExportTimesCsv != _initialAutoExportTimesCsv ||
+        jsonEncode(subtaskTemplates) != _initialSubtaskTemplates;
+  }
+
+  Future<void> _addSubtaskTemplate() async {
+    final nameController = TextEditingController();
+    final stepsController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('new subtask template'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'name'),
+            ),
+            TextField(
+              controller: stepsController,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                labelText: 'subtasks (one per line)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('add'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      final name = nameController.text.trim();
+      final steps = stepsController.text
+          .split('\n')
+          .map((step) => step.trim())
+          .where((step) => step.isNotEmpty)
+          .toList();
+      if (name.isNotEmpty && steps.isNotEmpty) {
+        setState(() => subtaskTemplates.add({'name': name, 'steps': steps}));
+      }
+    }
+    nameController.dispose();
+    stepsController.dispose();
+  }
+
+  Widget _buildSubtaskTemplatesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('subtask templates',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        for (var i = 0; i < subtaskTemplates.length; i++)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(subtaskTemplates[i]['name'].toString()),
+            subtitle: Text((subtaskTemplates[i]['steps'] as List).join(' -> ')),
+            trailing: IconButton(
+              tooltip: 'delete template',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => setState(() => subtaskTemplates.removeAt(i)),
+            ),
+          ),
+        OutlinedButton.icon(
+          onPressed: _addSubtaskTemplate,
+          icon: const Icon(Icons.add),
+          label: const Text('new template'),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   String _normalizedServerUrl() {
@@ -12349,6 +12625,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           .where((s) => s.isNotEmpty)
                           .toList(),
                       'autoExportMaxBackups': autoExportMaxBackups,
+                      'subtaskTemplates': subtaskTemplates,
                     });
                   },
                   child: Text(
@@ -12365,6 +12642,8 @@ class _SettingsPageState extends State<SettingsPage> {
             body: ListView(
               padding: const EdgeInsets.all(12),
               children: [
+                _buildSubtaskTemplatesSection(),
+                const Divider(thickness: 1),
                 const Text('font',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

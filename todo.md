@@ -87,7 +87,7 @@
 - [x] Aufgaben in der Vergangenheit müssen today zu ihrer Uhrzeit erinnern! Mit dem Hinweis Text "Aufgeschoben seit n Tagen"
 - [x] highlight-color für icons, steuerelemente
 - [x] icons im burger menü auch in highlight-color
-- [ ] Subtasks als Templates anlegen (Checkliste)
+- [x] Subtasks als Templates anlegen (Checkliste)
 - [x] neue aufgabe tippen, soll vorhandene aufgaben durchsuchen und anzeigen. (ggf. gibt es ja schon eine)
       über alle listen hinweg und jeweils unter einer überschrift-listennamen anzeigen. (ähnlich wie bei der Suche) 
 
