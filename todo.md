@@ -3,6 +3,9 @@
 - [x] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - Geschlossener Test läuft... Hab nur keine Anwender!
 - [ ] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
 - [ ] Web Applikation ?
+      Wäre schwierig mit Cloud-Sync zu verbinden? 
+      Man sollte auf jeden Fall nen Server angeben können und nur als Frontend dienen!
+      Kann man eine Web-App so bauen, dass man sie in jedem Browser ohne Hosting ausführen könnte?
 - [ ] Worklog an Aufgaben...
 - [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
 - [ ] sync: self signed certs prüfen (ca-chain)
@@ -33,7 +36,11 @@
 - [x] Pin-Button entfernen
 - [x] Text-Größe in Subtask Template
 - [x] Edit Subtask Template
-- [ ] Hintergrundsynchronisierung, damit Benachrichtungen durch kommen, auch wenn die App nicht aktiv ist.
+- [x] Hintergrundsynchronisierung, damit Benachrichtungen durch kommen, auch wenn die App nicht aktiv ist.
+- [x] Suche bei Neuanlage
+  - [x] Datum und Uhrzeit anzeigen (Erledigungsdatum wenn fertig, sonst Termin, sonst Anlagedatum), sortiert nach Offen (Termin, Anlagedatum), Erledigungsdatum DESC
+  - [x] "Reaktivieren" auch bei Aufgaben in Heute anzeigen wenn sie fertig sind!
+  - [x] Bei Klick auf die Aufgabe soll sie Geöffnet werden und ins Sichtfeld gebracht werden.
 
 ## notes
 
