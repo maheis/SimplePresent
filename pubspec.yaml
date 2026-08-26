@@ -27,6 +27,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.10.0
+  msix: ^0.2.1-nullsafety.0
 
 flutter:
   uses-material-design: true
@@ -64,3 +65,14 @@ flutter_icons:
   image_path: assets/icons/color_transparent_icon.png
   adaptive_icon_background: assets/icons/color_transparent_icon.png
   adaptive_icon_foreground: assets/icons/color_transparent_icon.png
+
+msix_config:
+  display_name: Simple Present
+  publisher_display_name: Mani Heiser
+  identity_name: ManiHeiser.SimplePresent
+  msix_version: 0.9.23.923
+  publisher: CN=Mani Heiser, O=Mani Heiser, L=Heising, S=Bayern, C=DE
+  logo_path: assets/icons/color_transparent_icon.png
+  icons_background_color: transparent
+  architecture: x64
+  capabilities: internetClient

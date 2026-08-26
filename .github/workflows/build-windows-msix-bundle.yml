@@ -1,0 +1,78 @@
+name: CI - Build Windows MSIX Bundle
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  msix:
+    name: Build MSIX
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: Ensure CMake is up-to-date
+        run: |
+          choco install cmake --installargs '"ADD_CMAKE_TO_PATH=System"' -y
+          cmake --version
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Read app version and update MSIX version
+        id: version
+        shell: pwsh
+        run: |
+          $pubspec = Get-Content pubspec.yaml -Raw
+          if ($pubspec -notmatch '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$') {
+            throw "Could not read a four-part version from pubspec.yaml"
+          }
+          $msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
+          $pubspec = $pubspec -replace '(?m)^\s*msix_version:\s*.*$', "  msix_version: $msixVersion"
+          Set-Content -Path pubspec.yaml -Value $pubspec -NoNewline
+          "MSIX version: $msixVersion"
+          "version=$msixVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Build Windows release
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+        run: flutter build windows --release
+
+      - name: Create MSIX package
+        run: flutter pub run msix:create
+
+      - name: Package MSIX artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release_dist | Out-Null
+          $msix = Get-ChildItem -Path build/windows -Filter *.msix -Recurse -File | Select-Object -First 1
+          if (-not $msix) {
+            throw "MSIX output not found below build/windows"
+          }
+          Copy-Item $msix.FullName "release_dist/simplepresent-$env:MSIX_VERSION.msix"
+        env:
+          MSIX_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simplepresent-msix
+          path: release_dist/*.msix
+
+      - name: Upload MSIX artifact to Release
+        if: ${{ github.event_name == 'release' }}
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: release_dist/simplepresent-${{ steps.version.outputs.version }}.msix
+          asset_name: simplepresent-${{ steps.version.outputs.version }}.msix
+          asset_content_type: application/msix

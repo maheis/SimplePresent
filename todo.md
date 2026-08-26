@@ -6,6 +6,7 @@
       Wäre schwierig mit Cloud-Sync zu verbinden? 
       Man sollte auf jeden Fall nen Server angeben können und nur als Frontend dienen!
       Kann man eine Web-App so bauen, dass man sie in jedem Browser ohne Hosting ausführen könnte?
+      PWA eine Option?
 - [ ] Worklog an Aufgaben...
 - [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
 - [ ] sync: self signed certs prüfen (ca-chain)
