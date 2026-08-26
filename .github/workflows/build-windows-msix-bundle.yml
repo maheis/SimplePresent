@@ -45,6 +45,20 @@ jobs:
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: flutter build windows --release
 
+      - name: Prepare MSIX build directory
+        shell: pwsh
+        run: |
+          $expectedDir = Join-Path $PWD "build\windows\runner\Release"
+          $source = Get-ChildItem -Path "build\windows" -Directory -Recurse |
+                    Where-Object { $_.FullName -match "\\runner\\Release$" -and $_.FullName -ne $expectedDir } |
+                    Select-Object -First 1
+          if (-not $source) {
+            throw "Flutter Windows release directory not found below build/windows"
+          }
+          Write-Host "Copying MSIX input from $($source.FullName) to $expectedDir"
+          New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
+          Copy-Item -Path "$($source.FullName)\*" -Destination $expectedDir -Recurse -Force
+
       - name: Create MSIX package
         run: flutter pub run msix:create
 
