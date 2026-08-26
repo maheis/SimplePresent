@@ -1471,12 +1471,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         return task.text.toLowerCase().contains(query) ||
             (task.notes ?? '').toLowerCase().contains(query);
       }).toList();
+      matchingTasks.sort((a, b) {
+        if (a.done != b.done) return a.done ? 1 : -1;
+        final aDate = a.done ? a.completedAt : (a.scheduledAt ?? a.createdAt);
+        final bDate = b.done ? b.completedAt : (b.scheduledAt ?? b.createdAt);
+        if (aDate == null && bDate == null) return 0;
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        return bDate.compareTo(aDate);
+      });
       if (matchingTasks.isNotEmpty) matches[entry.key] = matchingTasks;
     }
     setState(() {
       _newTaskSearchQuery = query;
       _newTaskSearchResults = matches;
     });
+  }
+
+  DateTime? _newTaskSearchDate(TaskItem task) {
+    if (task.done && task.completedAt != null) return task.completedAt;
+    return task.scheduledAt ?? task.createdAt;
+  }
+
+  String _newTaskSearchDateLabel(TaskItem task) {
+    final date = _newTaskSearchDate(task);
+    return date == null ? '-' : DateFormat('dd.MM.yyyy HH:mm').format(date);
   }
 
   String _newTaskSearchListTitle(String listKey) {
@@ -1499,9 +1518,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     TaskItem task,
   ) async {
     final targetList = _showingBacklog ? 'backlog' : 'today';
-    if (sourceList == targetList) {
+    if (sourceList == targetList && !task.done) {
       _clearNewTaskSearch();
-      if (mounted) setState(() {});
+      await _openTaskInCurrentList(task.id);
       return;
     }
 
@@ -1524,7 +1543,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (_currentFile == sourceFile || _currentFile == targetFile) {
         await _loadToday();
       }
-      if (mounted) setState(() {});
+      await _openTaskInCurrentList(restored.id);
       _showTopToast('task reactivated in $targetList');
       unawaited(_appendRedoLog(
         'reopen',
@@ -1534,6 +1553,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } catch (_) {
       _showTopToast('failed to reactivate task');
     }
+  }
+
+  Future<void> _openTaskInCurrentList(String taskId) async {
+    if (!mounted) return;
+    final index = _today.indexWhere((candidate) => candidate.id == taskId);
+    if (index != -1) _toggleExpanded(index);
+  }
+
+  Future<void> _openExistingTask(String sourceList, TaskItem task) async {
+    switch (sourceList) {
+      case 'today':
+        await _switchFile(false);
+        break;
+      case 'backlog':
+        await _switchToBacklog();
+        break;
+      case 'done':
+        await _switchFile(true);
+        break;
+      case 'trash':
+        await _switchToTrash();
+        break;
+    }
+    if (!mounted) return;
+    final index = _today.indexWhere((candidate) => candidate.id == task.id);
+    if (index != -1) _toggleExpanded(index);
   }
 
   Widget _buildNewTaskSearchResults() {
@@ -1570,23 +1615,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: task.notes?.trim().isNotEmpty == true
-                      ? Text(
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_newTaskSearchDateLabel(task)),
+                      if (task.notes?.trim().isNotEmpty == true)
+                        Text(
                           task.notes!.trim(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                        )
-                      : null,
+                        ),
+                    ],
+                  ),
                   trailing: OutlinedButton.icon(
                     icon: const Icon(Icons.replay, size: 17),
                     label: Text(
-                      entry.key == (_showingBacklog ? 'backlog' : 'today')
+                      entry.key == (_showingBacklog ? 'backlog' : 'today') &&
+                              !task.done
                           ? 'use here'
                           : 'reactivate',
                     ),
                     onPressed: () => _reactivateExistingTask(entry.key, task),
                   ),
-                  onTap: () => _reactivateExistingTask(entry.key, task),
+                  onTap: () => _openExistingTask(entry.key, task),
                 ),
               ),
           ],
@@ -10032,6 +10084,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                                               ),
                                                                           ],
                                                                         ),
+                                                                      ),
+                                                                    if (!_showingBacklog &&
+                                                                        !_showingDone &&
+                                                                        task.done)
+                                                                      IconButton(
+                                                                        tooltip:
+                                                                            'Reaktivieren',
+                                                                        icon: const Icon(
+                                                                            Icons.replay),
+                                                                        onPressed:
+                                                                            () async {
+                                                                          await _queueSetDoneByTaskId(
+                                                                              task.id,
+                                                                              false);
+                                                                        },
                                                                       ),
                                                                     if (_currentFile ==
                                                                             _storage('simplepresent_backlog.json') ||
