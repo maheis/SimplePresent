@@ -68,10 +68,10 @@ flutter_icons:
 
 msix_config:
   display_name: Simple Present
-  publisher_display_name: Mani Heiser
-  identity_name: ManiHeiser.SimplePresent
-  msix_version: 0.9.23.923
-  publisher: CN=Mani Heiser, O=Mani Heiser, L=Heising, S=Bayern, C=DE
+  publisher_display_name: maheis
+  identity_name: maheis.SimplePresent
+  msix_version: 0.9.23.0
+  publisher: CN=Manfred Heister, O=maheis, L=Dietfurt, S=BY, C=DE
   logo_path: assets/icons/color_transparent_icon.png
   icons_background_color: transparent
   architecture: x64

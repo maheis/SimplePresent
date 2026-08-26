@@ -31,10 +31,10 @@ jobs:
         shell: pwsh
         run: |
           $pubspec = Get-Content pubspec.yaml -Raw
-          if ($pubspec -notmatch '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)\+(\d+)\s*$') {
-            throw "Could not read a four-part version from pubspec.yaml"
+          if ($pubspec -notmatch '(?m)^version:\s*(\d+)\.(\d+)\.(\d+)(?:\+\d+)?\s*$') {
+            throw "Could not read a valid semantic version from pubspec.yaml"
           }
-          $msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).$($Matches[4])"
+          $msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
           $pubspec = $pubspec -replace '(?m)^\s*msix_version:\s*.*$', "  msix_version: $msixVersion"
           Set-Content -Path pubspec.yaml -Value $pubspec -NoNewline
           "MSIX version: $msixVersion"
