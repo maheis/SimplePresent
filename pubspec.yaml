@@ -71,7 +71,7 @@ msix_config:
   publisher_display_name: maheis
   identity_name: maheis.SimplePresent
   msix_version: 0.9.23.0
-  publisher: CN=Manfred Heister, O=maheis, L=Dietfurt, S=BY, C=DE
+  publisher: CN=E0A07F93-8FA0-45A8-9F42-A5CA10AFDF6F
   logo_path: assets/icons/color_transparent_icon.png
   icons_background_color: transparent
   architecture: x64

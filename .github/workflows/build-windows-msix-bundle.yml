@@ -59,7 +59,41 @@ jobs:
           New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
           Copy-Item -Path "$($source.FullName)\*" -Destination $expectedDir -Recurse -Force
 
+      - name: Detect MSIX signing certificate
+        id: signing
+        shell: pwsh
+        env:
+          MSIX_CERTIFICATE_BASE64: ${{ secrets['MSIX_CERTIFICATE_BASE64'] }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:MSIX_CERTIFICATE_BASE64)) {
+            "enabled=false" >> $env:GITHUB_OUTPUT
+          } else {
+            "enabled=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Restore MSIX signing certificate
+        if: ${{ steps.signing.outputs.enabled == 'true' }}
+        shell: pwsh
+        env:
+          MSIX_CERTIFICATE_BASE64: ${{ secrets['MSIX_CERTIFICATE_BASE64'] }}
+        run: |
+          $certificatePath = Join-Path $env:RUNNER_TEMP "simplepresent-signing.pfx"
+          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:MSIX_CERTIFICATE_BASE64))
+          $pubspec = Get-Content pubspec.yaml -Raw
+          $pubspec = $pubspec -replace '(?m)^\s*certificate_path:\s*.*$', "  certificate_path: $certificatePath"
+          if ($pubspec -notmatch '(?m)^\s*certificate_path:') {
+            $pubspec = $pubspec -replace '(?m)^(\s*publisher:.*)$', "`$1`r`n  certificate_path: $certificatePath"
+          }
+          Set-Content -Path pubspec.yaml -Value $pubspec -NoNewline
+
       - name: Create MSIX package
+        if: ${{ steps.signing.outputs.enabled == 'true' }}
+        env:
+          MSIX_CERTIFICATE_PASSWORD: ${{ secrets['MSIX_CERTIFICATE_PASSWORD'] }}
+        run: flutter pub run msix:create --password "$env:MSIX_CERTIFICATE_PASSWORD"
+
+      - name: Create unsigned MSIX package for Microsoft Store
+        if: ${{ steps.signing.outputs.enabled != 'true' }}
         run: flutter pub run msix:create
 
       - name: Package MSIX artifact
