@@ -7,7 +7,7 @@ Publishing SimplePresent to the Microsoft Store provides several benefits:
 - ✅ **Automatic Updates:** Users get updates via Windows Update
 - ✅ **Trusted Distribution:** Appears in Windows 11/10 native app store
 - ✅ **Better UX:** No "Unknown Publisher" SmartScreen warnings
-- ❌ **Cost:** $19 USD one-time developer account fee
+- ❌ **Cost:** $19 USD one-time developer account fee <- Ich musste nichts bezahlen, Einzelaccount scheint jetzt kostenlos zu sein
 - ⏱️ **Timeline:** 1-3 months from submission to approval
 
 ## Prerequisites
