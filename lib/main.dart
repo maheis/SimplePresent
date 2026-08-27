@@ -346,16 +346,16 @@ class SimplePresentApp extends StatelessWidget {
           builder: (context, highlightColorValue, _) => MaterialApp(
             title: 'SimplePresent',
             // Default to English for broader settings readability
-            locale: const Locale('en', 'US'),
+            locale: const Locale('en', 'GB'),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
             supportedLocales: const [
-              Locale('en', 'US'),
+              // Locale('en', 'US'),
               Locale('en', 'GB'),
-              Locale('de', 'DE'),
+              // Locale('de', 'DE'),
             ],
             theme: _buildTheme(Brightness.light, Color(accentColorValue),
                 Color(highlightColorValue)),

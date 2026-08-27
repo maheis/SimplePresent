@@ -75,4 +75,5 @@ msix_config:
   logo_path: assets/icons/color_transparent_icon.png
   icons_background_color: transparent
   architecture: x64
+  languages: en-gb
   capabilities: internetClient
