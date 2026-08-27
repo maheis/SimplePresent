@@ -1,7 +1,7 @@
 # ToDo
 
 - [x] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - Geschlossener Test läuft... Hab nur keine Anwender!
-- [ ] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
+- [o] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
 - [ ] Web Applikation ?
       Wäre schwierig mit Cloud-Sync zu verbinden? 
       Man sollte auf jeden Fall nen Server angeben können und nur als Frontend dienen!
