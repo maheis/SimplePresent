@@ -15,7 +15,7 @@ Protecting your privacy and keeping control over your data are core goals of Sim
 Person responsible for data processing (project):
 
 - Name/Handle: maheis
-- Contact: [maheis](mailto:ma@heister.email)
+- Contact: [maheis](mailto:maheis@heister.be)
 
 ## What data is processed
 
