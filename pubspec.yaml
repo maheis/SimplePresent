@@ -70,7 +70,7 @@ msix_config:
   display_name: Simple Present
   publisher_display_name: maheis
   identity_name: maheis.SimplePresent
-  msix_version: 0.9.23.0
+  msix_version: 0.9.23.923
   publisher: CN=E0A07F93-8FA0-45A8-9F42-A5CA10AFDF6F
   logo_path: assets/icons/color_transparent_icon.png
   icons_background_color: transparent
