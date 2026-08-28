@@ -38,6 +38,9 @@ jobs:
           }
           $msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
           $pubspec = $pubspec -replace '(?m)^\s*msix_version:\s*.*$', "  msix_version: $msixVersion"
+                    if ($pubspec -notmatch '(?m)^\s*msix_version:') {
+            $pubspec = $pubspec -replace '(?m)^(\s*publisher:.*)$', "`$1`r`n  msix_version: $msixVersion"
+          }
           Set-Content -Path pubspec.yaml -Value $pubspec -NoNewline
           "MSIX version: $msixVersion"
           "version=$msixVersion" >> $env:GITHUB_OUTPUT
@@ -99,7 +102,7 @@ jobs:
       - name: Upload MSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: simplepresent-msix
+          name: simplepresent-msix-${{ steps.version.outputs.version }}
           path: release_dist/*.msix
 
       - name: Upload MSIX artifact to Release
