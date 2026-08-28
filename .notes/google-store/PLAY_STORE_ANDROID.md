@@ -3,17 +3,20 @@
 Kurz und präzise Anleitung, um eine Android-Version in den Google Play Store zu bringen.
 
 ## 0) Change Parameter
+
 - in `android/app/build.gradle.kts`
 
 ```bash
-namespace = "de.deinname.volleyace"
-applicationId = "de.deinname.volleyace"
+namespace = "be.heister.volleyace"
+applicationId = "be.heister.volleyace"
 ```
 
 ## 1) Versioning
+
 - Erhöhe die `version` in `pubspec.yaml`, z.B. `1.2.0+5` (`+5` = `versionCode`).
 
 ## 2) Keystore & Signing
+
 - Erstelle einen Keystore (einmalig):
 
 ```bash
@@ -22,32 +25,45 @@ keytool -genkeypair -v \
   -alias simplepresent_key \
   -keyalg RSA -keysize 2048 -validity 10000
 
-CN=Manfred Heister,OU=ALLSTAR,O=maheis,L=Dietfurt,ST=BY,C=DE
+#CN=Manfred Heister,OU=ALLSTAR,O=maheis,L=Dietfurt,ST=BY,C=DE
 ```
 
 ## 3) Play Console — Vorbereitung
-- Richte ein Google Play Developer Account ein (einmalige Gebühr).
+
+- [x] Richte ein Google Play Developer Account ein (einmalige Gebühr).
 - Erstelle eine App in der Play Console.
 - Fülle Store Listing aus: Titel, Kurz-/Langbeschreibung, Screenshots, High‑res Icon (512×512), Feature Graphic (1024×500), Kontakt‑Email, Datenschutzerklärung.
 - Content Rating, Ziel‑API (aktuell halten), Kategorien und Berechtigungen konfigurieren.
 
 ## 4) Upload & Testing
+
 - Im Release‑Bereich ein Release anlegen und das `.aab` hochladen.
 - Nutze Internal Testing (schnell) → Closed/Open Beta → Production.
 - Teste auf echten Geräten; prüfe Crash‑Reports und Berechtigungen.
 
 ## 5) Rollout
+
 - Starte mit kleinem Prozentsatz (z.B. 5%) und erhöhe schrittweise.
 
 ## 7) CI / GitHub Actions (kurzes Beispiel)
-- Speichere Keystore und Passwörter als GitHub Secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`).
+
+- Speichere Keystore und Passwörter als GitHub Secrets 
+
+```bash
+KEYSTORE_BASE64   = base64-encoded keystore file
+KEYSTORE_PASSWORD = storePassword
+KEY_PASSWORD      = storePassword
+KEY_ALIAS         = simplepresent_key
+```
 
 How to create KEYSTORE_BASE64 locally:
-```
+
+```bash
 base64 ~/.keystores/simplepresent.jks | tr -d '\n' > ~/.keystores/simplepresent_base64.txt
 ```
 
 - Beispiel-Snippet (Auszug):
+
 ```yaml
 - name: Restore keystore
   run: |
@@ -69,6 +85,7 @@ base64 ~/.keystores/simplepresent.jks | tr -d '\n' > ~/.keystores/simplepresent_
 ```
 
 ## 8) Checkliste vor Upload
+
 - `versionCode` erhöht
 - Keine Debug‑APIs/Secrets hardcodiert
 - Datenschutzerklärung bereit
@@ -76,10 +93,7 @@ base64 ~/.keystores/simplepresent.jks | tr -d '\n' > ~/.keystores/simplepresent_
 - Crash‑Reporting/Analytics (optional) konfiguriert
 
 ## 9) Troubleshooting / Tipps
+
 - Play verlangt aktuelle `targetSdkVersion` — prüfe `android/app/build.gradle`.
 - Wenn du Obfuscation nutzt: sichere `debug-info` für Deobfuskierung.
 - Bei CI auf Windows: falls MSVC-Fehler auftreten, setze notwendige CMake‑Defines oder CI‑env `CL` Flags.
-
----
-
-Speichere diese Datei als `docs/PLAY_STORE_ANDROID.md` im Repository. Wenn du möchtest, erstelle ich noch ein komplettes GitHub Actions Workflow‑Template, das das AAB baut und als Artefakt hochlädt oder direkt an die Play Console überträgt.
