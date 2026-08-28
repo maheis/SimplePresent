@@ -3,10 +3,27 @@
 - [x] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - Geschlossener Test läuft... Hab nur keine Anwender!
 - [o] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
 - [ ] Web Applikation ?
-      Wäre schwierig mit Cloud-Sync zu verbinden? 
-      Man sollte auf jeden Fall nen Server angeben können und nur als Frontend dienen!
-      Kann man eine Web-App so bauen, dass man sie in jedem Browser ohne Hosting ausführen könnte?
-      PWA eine Option?
+      Variante1: Die PWA kann lokal alle Aufgaben in IndexedDB speichern und zusätzlich eine beliebige API im Internet oder im eigenen Netzwerk verwenden.
+            -> Ja
+            PWA im Browser
+            ├─ lokale Daten: IndexedDB
+            └─ Synchronisation: https://mein-server/api
+      Variante 2: Web-App zentral hosten, während die eigentlichen Aufgaben ausschließlich lokal im Browser gespeichert werden.
+            https://simple-present.example
+                  |
+                  v
+            PWA/Web-Oberfläche
+                  |
+                  v
+            IndexedDB im Browser des Nutzers
+      Variante 3: Gehostet als Web-App mit Login und zentraler Speicherung der Aufgaben in einer Datenbank. (z.B. Firebase, Supabase, eigene API)
+            https://simple-present.example
+                  |
+                  v
+            PWA/Web-Oberfläche
+                  |
+                  v
+            Zentrale Datenbank (z.B. Firebase, Supabase, eigene API) 
 - [ ] Worklog an Aufgaben...
 - [ ] Reihenfolge auch über andere Gruppen hinaus und dann optisch einsortieren
 - [ ] sync: self signed certs prüfen (ca-chain)
