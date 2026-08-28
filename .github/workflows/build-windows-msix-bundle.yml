@@ -1,6 +1,8 @@
 name: CI - Build Windows MSIX Bundle
 
 on:
+  release:
+    types: [published]
   workflow_dispatch: {}
 
 permissions:
@@ -45,20 +47,6 @@ jobs:
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: flutter build windows --release
 
-      - name: Prepare MSIX build directory
-        shell: pwsh
-        run: |
-          $expectedDir = Join-Path $PWD "build\windows\runner\Release"
-          $source = Get-ChildItem -Path "build\windows" -Directory -Recurse |
-                    Where-Object { $_.FullName -match "\\runner\\Release$" -and $_.FullName -ne $expectedDir } |
-                    Select-Object -First 1
-          if (-not $source) {
-            throw "Flutter Windows release directory not found below build/windows"
-          }
-          Write-Host "Copying MSIX input from $($source.FullName) to $expectedDir"
-          New-Item -ItemType Directory -Force -Path $expectedDir | Out-Null
-          Copy-Item -Path "$($source.FullName)\*" -Destination $expectedDir -Recurse -Force
-
       - name: Detect MSIX signing certificate
         id: signing
         shell: pwsh
@@ -90,11 +78,11 @@ jobs:
         if: ${{ steps.signing.outputs.enabled == 'true' }}
         env:
           MSIX_CERTIFICATE_PASSWORD: ${{ secrets['MSIX_CERTIFICATE_PASSWORD'] }}
-        run: flutter pub run msix:create --password "$env:MSIX_CERTIFICATE_PASSWORD"
+        run: dart run msix:create --store --certificate-password "$env:MSIX_CERTIFICATE_PASSWORD"
 
       - name: Create unsigned MSIX package for Microsoft Store
         if: ${{ steps.signing.outputs.enabled != 'true' }}
-        run: flutter pub run msix:create
+        run: dart run msix:create --store
 
       - name: Package MSIX artifact
         shell: pwsh
