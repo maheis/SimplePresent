@@ -59,6 +59,8 @@
   - [x] Datum und Uhrzeit anzeigen (Erledigungsdatum wenn fertig, sonst Termin, sonst Anlagedatum), sortiert nach Offen (Termin, Anlagedatum), Erledigungsdatum DESC
   - [x] "Reaktivieren" auch bei Aufgaben in Heute anzeigen wenn sie fertig sind!
   - [x] Bei Klick auf die Aufgabe soll sie Geöffnet werden und ins Sichtfeld gebracht werden.
+- [x] Hintergrundfarbe Icon
+- [ ] Hintergrundfarbe Widget
 
 ## notes
 

@@ -14,7 +14,7 @@ SVG_FOREGROUND="$SVG_DIR/color_transparent_icon_android.svg"
 SVG_NOTIFICATION="$SVG_DIR/white_transparent_icon.svg"
 
 # Background color for adaptive launcher icon (user requested)
-LAUNCH_BG_COLOR="#00251aff"
+LAUNCH_BG_COLOR="#231919ff"
 
 # Density map and sizes (launcher: mdpi=48 ... xxxhdpi=192; notification: mdpi=24 ... xxxhdpi=96)
 declare -A LAUNCHER_SIZES=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
