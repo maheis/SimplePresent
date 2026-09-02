@@ -2,6 +2,18 @@
 
 Diese Richtlinie beschreibt das visuelle Design von SimplePresent als Referenz für neue Apps und als Anweisung zur konsistenten Umsetzung.
 
+## Implementierungsabgleich (2026-09)
+
+| Bereich | Status | Tatsächlicher Stand |
+|---|---|---|
+| Material 3 | umgesetzt | `ThemeData(useMaterial3: true)` |
+| Dark/Light-Theme | umgesetzt | Dark ist Standard; Light kann in den Einstellungen aktiviert werden |
+| Farben | umgesetzt | Akzent- und Highlightfarbe sind aus der definierten Palette auswählbar |
+| Typografie | umgesetzt | OpenDyslexic als Standard; NotoSans, CourierPrime, Ubuntu und Ubuntu Mono verfügbar |
+| Schriftgröße | umgesetzt | Global zwischen 50 % und 160 % skalierbar |
+| Hauptlayout | umgesetzt | Today, Backlog und Done; Aufgaben können neu sortiert werden |
+| Accessibility | teilweise | Schriftwahl, Skalierung und Tooltips vorhanden; vollständige Screenreader-/Tastaturprüfung offen |
+
 ---
 
 ## Leitbild
@@ -14,13 +26,13 @@ Minimalistisch, dunkel, zugänglich. Die App tritt visuell zurück — Inhalte (
 
 | Eigenschaft | Wert |
 |---|---|
-| Helligkeit | Dark only (`Brightness.dark`) |
+| Helligkeit | Dark standardmäßig, Light optional (`Brightness.dark` / `Brightness.light`) |
 | Primärfarbe | Rot (`#e57373`) |
 | Highlight-Akzent | Orange (`#ffb74d`) |
-| Erzeugung | `ColorScheme.fromSeed(seedColor: red, brightness: Brightness.dark)` mit Rot als `primary`, Orange als `secondary` und Mint als `tertiary` |
+| Erzeugung | `ColorScheme.fromSeed` mit konfigurierbarem Akzent, dynamischer Helligkeit, Orange als `secondary` und Mint als `tertiary` |
 | Flutter-Widget | `ThemeData` mit `colorScheme`, kein `primarySwatch` |
 
-Das Theme wird komplett über `ColorScheme.fromSeed` generiert — keine einzelnen Farb-Overrides. Die App hat keinen Light Mode.
+Das Theme basiert auf `ColorScheme.fromSeed` und ergänzt semantische sowie konfigurierbare Farben. Die App unterstützt Dark und Light.
 
 ---
 
@@ -70,7 +82,7 @@ Diese Farben haben eine feste Bedeutung und werden konsistent über die ganze Ap
 
 ### Schriftarten
 
-Die App bietet drei Fonts zur Auswahl — OpenDyslexic ist Standard (Barrierefreiheit first):
+Die App bietet fünf Fonts zur Auswahl — OpenDyslexic ist Standard (Barrierefreiheit first):
 
 | Font | Einsatz |
 |---|---|
@@ -78,7 +90,7 @@ Die App bietet drei Fonts zur Auswahl — OpenDyslexic ist Standard (Barrierefre
 | NotoSans | Saubere Alternative, System-nah |
 | CourierPrime | Monospace-Option |
 
-Alle Fonts werden über `pubspec.yaml` als Asset eingebunden (`assets/fonts/`). Der gewählte Font wird via `_fontFamily` State-Variable global durchgereicht und auf das `ThemeData.textTheme` angewendet.
+Alle Fonts werden über `pubspec.yaml` als Asset eingebunden (`assets/fonts/`). OpenDyslexic ist der Standard; der gewählte Font wird global auf das `ThemeData` angewendet.
 
 ```dart
 // Font auf das gesamte Theme anwenden
@@ -181,16 +193,22 @@ Wichtige Icons und ihre Bedeutung in der App:
 ## Layout
 
 - **3-Panel-Struktur:** Today | Backlog | Done (horizontal scrollbar / Navigation)
-- Kein AppBar im klassischen Sinne — Titel steht als Text im Panel
-- Kein Floating Action Button auf Hauptebene
+- AppBars werden in Bearbeitungs-, Notiz- und Detailansichten verwendet.
+- FloatingActionButtons werden dort verwendet, wo eine kontextbezogene Primäraktion gebraucht wird.
 - Statuszeile (Sync-Status, Uhrzeit) oben im Panel, klein (fontSize 11)
 
 ---
 
 ## Barrierefreiheit
 
-- **OpenDyslexic als Standard-Font** — aktiv als erstes Accessibility-Feature
+- **OpenDyslexic als Standard-Font** — aktiv als Accessibility-Feature
 - Schriftgröße benutzerkonfigurierbar (Settings)
 - Kontraste folgen dem generierten Dark ColorScheme (Material Design-konform)
 - Alle `IconButton`s haben `tooltip`
-- Keine reinen Farbsignale — Icons begleiten immer Farbänderungen
+- Keine reinen Farbsignale — Icons oder Text begleiten Farbänderungen
+
+## Noch zu prüfen
+
+- Vollständige Tastaturnavigation und Screenreader-Beschriftungen.
+- Kontrastprüfung beider Themes mit allen auswählbaren Farben.
+- Einheitliche Übersetzung aller fachlichen Texte, falls Deutsch als Produktsprache gewünscht ist.
