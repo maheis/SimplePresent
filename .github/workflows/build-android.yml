@@ -63,7 +63,7 @@ jobs:
           mkdir -p release_dist
           cp build/app/outputs/flutter-apk/app-release.apk release_dist/simplepresent-android.apk || true
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: simplepresent-android-apk
           path: release_dist/simplepresent-android.apk
