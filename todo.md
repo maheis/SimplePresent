@@ -1,7 +1,7 @@
 # ToDo
 
 - [x] Google Play Store Veröffentlichung (.notes/PLAY_STORE_ANDROID.md) - Geschlossener Test läuft... Hab nur keine Anwender!
-- [o] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
+- [x] Windows Store Veröffentlichung (.notes/WINDOWS_APP_STORE.md)
 - [ ] Web Applikation ?
       Variante1: Die PWA kann lokal alle Aufgaben in IndexedDB speichern und zusätzlich eine beliebige API im Internet oder im eigenen Netzwerk verwenden.
             -> Ja
@@ -60,7 +60,7 @@
   - [x] "Reaktivieren" auch bei Aufgaben in Heute anzeigen wenn sie fertig sind!
   - [x] Bei Klick auf die Aufgabe soll sie Geöffnet werden und ins Sichtfeld gebracht werden.
 - [x] Hintergrundfarbe Icon
-- [ ] Hintergrundfarbe Widget
+- [x] Hintergrundfarbe Widget
 
 ## notes
 
