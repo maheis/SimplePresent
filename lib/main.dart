@@ -811,8 +811,12 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/icons/color_transparent_notes.png',
-                    width: 28, height: 28),
+                SvgPicture.asset(
+                  'assets/icons/white_transparent_notes.svg',
+                  width: 28,
+                  height: 28,
+                  color: Color(_accentColorNotifier.value),
+                ),
                 const SizedBox(width: 8),
                 Text(widget.note == null ? 'new note' : 'edit note'),
               ],
@@ -1045,8 +1049,12 @@ class _NotesPageState extends State<NotesPage> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/icons/color_transparent_notes.png',
-                    width: 28, height: 28),
+                SvgPicture.asset(
+                  'assets/icons/white_transparent_notes.svg',
+                  width: 28,
+                  height: 28,
+                  color: Color(_accentColorNotifier.value),
+                ),
                 const SizedBox(width: 8),
                 const Text('notes'),
               ],
@@ -8244,8 +8252,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _menuSvgIcon(BuildContext context, String asset) {
-    final color = Theme.of(context).iconTheme.color ??
-        Theme.of(context).colorScheme.primary;
+    final color = Color(_accentColorNotifier.value);
     return SvgPicture.asset(
       asset,
       width: 18,
@@ -8958,16 +8965,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                               Padding(
                                                 padding: const EdgeInsets.only(
                                                     top: 0),
-                                                child: Image.asset(
+                                                child: SvgPicture.asset(
                                                   _showingBacklog
-                                                      ? 'assets/icons/color_transparent_backlog.png'
+                                                      ? 'assets/icons/white_transparent_backlog.svg'
                                                       : (_showingDone
-                                                          ? 'assets/icons/color_transparent_done.png'
+                                                          ? 'assets/icons/white_transparent_done.svg'
                                                           : (_showingTrash
-                                                              ? 'assets/icons/color_transparent_trash.png'
-                                                              : 'assets/icons/color_transparent_today.png')),
+                                                              ? 'assets/icons/white_transparent_trash.svg'
+                                                              : 'assets/icons/white_transparent_today.svg')),
                                                   width: 28,
                                                   height: 28,
+                                                  color: Color(
+                                                      _accentColorNotifier
+                                                          .value),
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
@@ -9131,7 +9141,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                     value: 'stats',
                                                     child: Row(children: [
                                                       _menuSvgIcon(ctx,
-                                                          'assets/icons/color_transparent_statistic.svg'),
+                                                          'assets/icons/white_transparent_statistic.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('statistics')
                                                     ])));
@@ -9139,7 +9149,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                     value: 'settings',
                                                     child: Row(children: [
                                                       _menuSvgIcon(ctx,
-                                                          'assets/icons/color_transparent_settings.svg'),
+                                                          'assets/icons/white_transparent_settings.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('settings')
                                                     ])));
@@ -9147,7 +9157,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                     value: 'notes',
                                                     child: Row(children: [
                                                       _menuSvgIcon(ctx,
-                                                          'assets/icons/color_transparent_notes.svg'),
+                                                          'assets/icons/white_transparent_notes.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('notes')
                                                     ])));
@@ -9155,7 +9165,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                     value: 'redo',
                                                     child: Row(children: [
                                                       _menuSvgIcon(ctx,
-                                                          'assets/icons/color_transparent_redo.svg'),
+                                                          'assets/icons/white_transparent_redo.svg'),
                                                       const SizedBox(width: 8),
                                                       const Text('redo log')
                                                     ])));
@@ -9182,7 +9192,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                       value: 'done',
                                                       child: Row(children: [
                                                         _menuSvgIcon(ctx,
-                                                            'assets/icons/color_transparent_done.svg'),
+                                                            'assets/icons/white_transparent_done.svg'),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text('done')
@@ -9193,7 +9203,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                       value: 'trash',
                                                       child: Row(children: [
                                                         _menuSvgIcon(ctx,
-                                                            'assets/icons/color_transparent_trash.svg'),
+                                                            'assets/icons/white_transparent_trash.svg'),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text('trash')
@@ -11677,10 +11687,11 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
                 leading: Padding(
                   padding: const EdgeInsets.only(left: 12),
                   child: Center(
-                    child: Image.asset(
-                      'assets/icons/color_transparent_icon.png',
+                    child: SvgPicture.asset(
+                      'assets/icons/white_transparent_icon.svg',
                       width: 24,
                       height: 24,
+                      color: Color(_accentColorNotifier.value),
                     ),
                   ),
                 ),
@@ -13288,10 +13299,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Image.asset(
-                        'assets/icons/color_transparent_settings.png',
-                        width: 28,
-                        height: 28),
+                    child: SvgPicture.asset(
+                      'assets/icons/white_transparent_settings.svg',
+                      width: 28,
+                      height: 28,
+                      color: Color(_accentColorNotifier.value),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text('settings',
@@ -14376,8 +14389,12 @@ class _StatsPageState extends State<StatsPage> {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Image.asset('assets/icons/color_transparent_statistic.png',
-                  width: 28, height: 28),
+              child: SvgPicture.asset(
+                'assets/icons/white_transparent_statistic.svg',
+                width: 28,
+                height: 28,
+                color: Color(_accentColorNotifier.value),
+              ),
             ),
             const SizedBox(width: 8),
             Text(
@@ -15264,8 +15281,12 @@ class _RedoLogPageState extends State<RedoLogPage> {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Image.asset('assets/icons/color_transparent_redo.png',
-                  width: 28, height: 28),
+              child: SvgPicture.asset(
+                'assets/icons/white_transparent_redo.svg',
+                width: 28,
+                height: 28,
+                color: Color(_accentColorNotifier.value),
+              ),
             ),
             const SizedBox(width: 8),
             Text('Redo Log',

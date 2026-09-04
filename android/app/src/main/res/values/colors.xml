@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App launcher icon background color (dark forest green) -->
-    <color name="ic_launcher_background">#231919</color>
-    <!-- Notification badge accent color (brighter green, visible on dark backgrounds) -->
-    <color name="ic_notification_color">#489d11</color>
+    <!-- App launcher icon background color, matching the default accent color. -->
+    <color name="ic_launcher_background">#E57373</color>
+    <!-- Notification badge accent color. -->
+    <color name="ic_notification_color">#E57373</color>
 </resources>
