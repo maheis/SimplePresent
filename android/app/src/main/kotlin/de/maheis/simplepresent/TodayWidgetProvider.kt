@@ -65,6 +65,11 @@ class TodayWidgetProvider : AppWidgetProvider() {
             }
 
             val views = RemoteViews(context.packageName, rootLayout)
+            views.setInt(
+                R.id.widget_root,
+                "setBackgroundColor",
+                readConfiguredHighlightColor(context),
+            )
             views.setImageViewBitmap(
                 R.id.widget_header_text,
                 WidgetTextRenderer.renderTextBitmap(
@@ -144,6 +149,20 @@ class TodayWidgetProvider : AppWidgetProvider() {
                 return wobj.optString("fontFamily", "Ubuntu")
             } catch (_: Exception) {
                 "Ubuntu"
+            }
+        }
+
+        private fun readConfiguredHighlightColor(context: Context): Int {
+            return try {
+                val appFlutter = java.io.File(context.filesDir.parentFile, "app_flutter")
+                val debugMode = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                val folderName = if (debugMode) "simplepresent-debug" else "simplepresent"
+                val widgetFile = java.io.File(java.io.File(appFlutter, folderName), "simplepresent_widget.json")
+                if (!widgetFile.exists()) return Color.parseColor("#FFFFB74D")
+                org.json.JSONObject(widgetFile.readText())
+                    .optInt("highlightColorValue", Color.parseColor("#FFFFB74D"))
+            } catch (_: Exception) {
+                Color.parseColor("#FFFFB74D")
             }
         }
 

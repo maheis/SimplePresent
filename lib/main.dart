@@ -287,7 +287,8 @@ Future<void> _debugLog(String msg) async {
 /// application documents directory under `simplepresent_widget/` and
 /// invokes an Android platform method `refresh` if available.
 Future<void> exportTodayAndRefresh(List<TaskItem> tasks,
-    {String fontFamily = 'Ubuntu'}) async {
+    {String fontFamily = 'Ubuntu',
+    int highlightColorValue = 0xFFFFB74D}) async {
   try {
     // Only Android needs these JSON exports for the native widget.
     // Prevent desktop (and other platforms) from creating these files.
@@ -312,6 +313,7 @@ Future<void> exportTodayAndRefresh(List<TaskItem> tasks,
       final agg = {
         'exportedAt': DateTime.now().toIso8601String(),
         'fontFamily': fontFamily,
+        'highlightColorValue': highlightColorValue,
         'tasks': tasks.map((t) => t.toJson()).toList(),
       };
       final aggFile = File('${aggDir.path}/simplepresent_widget.json');
@@ -3308,6 +3310,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           unawaited(exportTodayAndRefresh(
             source.where((task) => !task.done).toList(),
             fontFamily: _fontFamily,
+            highlightColorValue: _highlightColorNotifier.value,
           ));
         }
       } catch (e, st) {
@@ -3652,6 +3655,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       unawaited(exportTodayAndRefresh(
         _today.where((task) => !task.done).toList(),
         fontFamily: _fontFamily,
+        highlightColorValue: _highlightColorNotifier.value,
       ));
     }
   }
@@ -5991,6 +5995,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _startInactivityTimers();
     } catch (_) {}
     await _saveSettings();
+    unawaited(exportTodayAndRefresh(
+      _today.where((task) => !task.done).toList(),
+      fontFamily: _fontFamily,
+      highlightColorValue: _highlightColorNotifier.value,
+    ));
     unawaited(_purgeOldDoneTasksIfEnabled());
     _startCloudPullTimer();
     unawaited(_syncPullFromCloud());
@@ -14889,7 +14898,10 @@ class _RedoLogPageState extends State<RedoLogPage> {
                 .map((e) => TaskItem.fromJson(Map<String, dynamic>.from(e)))
                 .where((t) => !t.done)
                 .toList();
-            unawaited(exportTodayAndRefresh(tasks));
+            unawaited(exportTodayAndRefresh(
+              tasks,
+              highlightColorValue: _highlightColorNotifier.value,
+            ));
           }
         } catch (_) {}
         return;
