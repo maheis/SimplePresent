@@ -68,7 +68,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
             views.setInt(
                 R.id.widget_root,
                 "setBackgroundColor",
-                readConfiguredAccentColor(context),
+                readConfiguredBackgroundColor(context),
             )
             views.setImageViewBitmap(
                 R.id.widget_header_text,
@@ -152,17 +152,17 @@ class TodayWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun readConfiguredAccentColor(context: Context): Int {
+        private fun readConfiguredBackgroundColor(context: Context): Int {
             return try {
                 val appFlutter = java.io.File(context.filesDir.parentFile, "app_flutter")
                 val debugMode = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
                 val folderName = if (debugMode) "simplepresent-debug" else "simplepresent"
                 val widgetFile = java.io.File(java.io.File(appFlutter, folderName), "simplepresent_widget.json")
-                if (!widgetFile.exists()) return Color.parseColor("#FFE57373")
+                if (!widgetFile.exists()) return Color.parseColor("#FF201A1A")
                 org.json.JSONObject(widgetFile.readText())
-                    .optInt("accentColorValue", Color.parseColor("#FFE57373"))
+                    .optInt("backgroundColorValue", Color.parseColor("#FF201A1A"))
             } catch (_: Exception) {
-                Color.parseColor("#FFE57373")
+                Color.parseColor("#FF201A1A")
             }
         }
 

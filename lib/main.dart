@@ -287,7 +287,9 @@ Future<void> _debugLog(String msg) async {
 /// application documents directory under `simplepresent_widget/` and
 /// invokes an Android platform method `refresh` if available.
 Future<void> exportTodayAndRefresh(List<TaskItem> tasks,
-    {String fontFamily = 'Ubuntu', int accentColorValue = 0xFFE57373}) async {
+    {String fontFamily = 'Ubuntu',
+    int accentColorValue = 0xFFE57373,
+    int backgroundColorValue = 0xFF201A1A}) async {
   try {
     // Only Android needs these JSON exports for the native widget.
     // Prevent desktop (and other platforms) from creating these files.
@@ -313,6 +315,7 @@ Future<void> exportTodayAndRefresh(List<TaskItem> tasks,
         'exportedAt': DateTime.now().toIso8601String(),
         'fontFamily': fontFamily,
         'accentColorValue': accentColorValue,
+        'backgroundColorValue': backgroundColorValue,
         'tasks': tasks.map((t) => t.toJson()).toList(),
       };
       final aggFile = File('${aggDir.path}/simplepresent_widget.json');
@@ -3318,6 +3321,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             source.where((task) => !task.done).toList(),
             fontFamily: _fontFamily,
             accentColorValue: _accentColorNotifier.value,
+            backgroundColorValue:
+                Theme.of(context).colorScheme.surface.toARGB32(),
           ));
         }
       } catch (e, st) {
@@ -3663,6 +3668,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _today.where((task) => !task.done).toList(),
         fontFamily: _fontFamily,
         accentColorValue: _accentColorNotifier.value,
+        backgroundColorValue: Theme.of(context).colorScheme.surface.toARGB32(),
       ));
     }
   }
@@ -6006,6 +6012,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _today.where((task) => !task.done).toList(),
       fontFamily: _fontFamily,
       accentColorValue: _accentColorNotifier.value,
+      backgroundColorValue: Theme.of(context).colorScheme.surface.toARGB32(),
     ));
     unawaited(_purgeOldDoneTasksIfEnabled());
     _startCloudPullTimer();
@@ -14917,6 +14924,8 @@ class _RedoLogPageState extends State<RedoLogPage> {
             unawaited(exportTodayAndRefresh(
               tasks,
               accentColorValue: _accentColorNotifier.value,
+              backgroundColorValue:
+                  Theme.of(context).colorScheme.surface.toARGB32(),
             ));
           }
         } catch (_) {}
