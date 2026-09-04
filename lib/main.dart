@@ -287,7 +287,7 @@ Future<void> _debugLog(String msg) async {
 /// application documents directory under `simplepresent_widget/` and
 /// invokes an Android platform method `refresh` if available.
 Future<void> exportTodayAndRefresh(List<TaskItem> tasks,
-    {String fontFamily = 'OpenDyslexic'}) async {
+    {String fontFamily = 'Ubuntu'}) async {
   try {
     // Only Android needs these JSON exports for the native widget.
     // Prevent desktop (and other platforms) from creating these files.
@@ -377,7 +377,7 @@ class SimplePresentApp extends StatelessWidget {
   ThemeData _buildTheme(
       Brightness brightness, Color accentColor, Color highlightColor) {
     return ThemeData(
-      fontFamily: 'OpenDyslexic',
+      fontFamily: 'Ubuntu',
       brightness: brightness,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -1715,7 +1715,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // Reminder window (HH:MM) — only remind within this time window when enabled
   String _reminderWindowFrom = '09:00';
   String _reminderWindowTo = '17:00';
-  String _fontFamily = 'OpenDyslexic';
+  String _fontFamily = 'Ubuntu';
   // Fired flags to ensure each reminder type fires only once per inactivity period
   bool _idleFired = false;
   bool _attentionFired = false;
@@ -10901,7 +10901,7 @@ class _TaskWindowPageState extends State<TaskWindowPage> {
   bool _saving = false;
   String _status = '';
   double _uiTextScaleFactor = 1.0;
-  String _fontFamily = 'OpenDyslexic';
+  String _fontFamily = 'Ubuntu';
   bool _refreshSignalWritten = false;
   String? _lastWindowGeometrySignature;
   bool _windowGeometryRestoreScheduled = false;
@@ -12437,7 +12437,7 @@ class _SettingsPageState extends State<SettingsPage> {
     reminderWindowFrom = readString('reminderWindowFrom', '09:00');
     reminderWindowTo = readString('reminderWindowTo', '17:00');
     textScaleFactor = readDouble('uiTextScaleFactor', 1.0).clamp(0.5, 1.6);
-    fontFamily = readString('fontFamily', 'OpenDyslexic');
+    fontFamily = readString('fontFamily', 'Ubuntu');
     cloudServerUrl = readString('cloudServerUrl', '');
     _cloudServerUrlController = TextEditingController(text: cloudServerUrl);
     cloudAccountId = readString('cloudAccountId', '');

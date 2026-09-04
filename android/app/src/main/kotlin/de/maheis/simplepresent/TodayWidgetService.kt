@@ -34,7 +34,7 @@ private class TodayWidgetFactory(
 
     private val items = mutableListOf<WidgetTask>()
     private val itemLayoutRes = intent.getIntExtra(TodayWidgetProvider.EXTRA_ITEM_LAYOUT, R.layout.today_widget_item)
-    private var fontFamily = intent.getStringExtra(TodayWidgetProvider.EXTRA_WIDGET_FONT_FAMILY) ?: "OpenDyslexic"
+    private var fontFamily = intent.getStringExtra(TodayWidgetProvider.EXTRA_WIDGET_FONT_FAMILY) ?: "Ubuntu"
     private val textWidthPx = intent.getIntExtra(TodayWidgetProvider.EXTRA_WIDGET_TEXT_WIDTH_PX, 240)
 
     override fun onCreate() {

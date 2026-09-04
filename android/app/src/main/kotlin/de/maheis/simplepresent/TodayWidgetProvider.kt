@@ -138,12 +138,12 @@ class TodayWidgetProvider : AppWidgetProvider() {
                 val prefix = if (debugMode) "debug_" else ""
                 // Only use aggregated widget JSON for font configuration.
                 val widgetFile = java.io.File(java.io.File(appFlutter, folderName), "simplepresent_widget.json")
-                if (!widgetFile.exists()) return "OpenDyslexic"
+                if (!widgetFile.exists()) return "Ubuntu"
                 val wtext = widgetFile.readText()
                 val wobj = org.json.JSONObject(wtext)
-                return wobj.optString("fontFamily", "OpenDyslexic")
+                return wobj.optString("fontFamily", "Ubuntu")
             } catch (_: Exception) {
-                "OpenDyslexic"
+                "Ubuntu"
             }
         }
 
