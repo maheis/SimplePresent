@@ -3607,6 +3607,132 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _restoreAutomaticBackup(File backupFile) async {
+    final choice = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('restore backup'),
+        content: Text(
+            'Restore ${p.basename(backupFile.path)} as merge or replace the current lists?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop('cancel'),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop('merge'),
+              child: const Text('Merge')),
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop('replace'),
+              child: const Text('Replace')),
+        ],
+      ),
+    );
+    if (choice == null || choice == 'cancel') return;
+
+    await importAllListsFromJsonFile(backupFile.path, merge: choice == 'merge');
+  }
+
+  Future<void> _shareAutomaticBackup(File backupFile) async {
+    try {
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(backupFile.path, mimeType: 'application/json')],
+        subject: p.basename(backupFile.path),
+      ));
+    } catch (e, st) {
+      unawaited(_debugLog('shareAutomaticBackup failed: $e\n$st'));
+      _showTopToast('share failed');
+    }
+  }
+
+  Future<void> _showAutomaticBackups() async {
+    try {
+      final dir = await _appDir;
+      final backupDir = Directory(p.join(dir.path, 'simplepresent-exports'));
+      if (!await backupDir.exists()) {
+        _showTopToast('no automatic backups found');
+        return;
+      }
+      final backups = (await backupDir
+          .list()
+          .where((entry) =>
+              entry is File &&
+              p.basename(entry.path).startsWith('simplepresent-backup-') &&
+              entry.path.endsWith('.json'))
+          .cast<File>()
+          .toList())
+        ..sort((a, b) => b.path.compareTo(a.path));
+      if (!mounted) return;
+      if (backups.isEmpty) {
+        _showTopToast('no automatic backups found');
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('automatic backups'),
+          content: SizedBox(
+            width: 420,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 480),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: backups.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (ctx, index) {
+                  final backup = backups[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(p.basename(backup.path)),
+                    subtitle: FutureBuilder<FileStat>(
+                      future: backup.stat(),
+                      builder: (ctx, snapshot) {
+                        if (!snapshot.hasData) return const SizedBox.shrink();
+                        final stat = snapshot.data!;
+                        return Text(
+                            '${DateFormat('yyyy-MM-dd HH:mm').format(stat.modified)}  |  ${(stat.size / 1024).ceil()} KB');
+                      },
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'share backup',
+                          icon: const Icon(Icons.share_outlined),
+                          onPressed: () => _shareAutomaticBackup(backup),
+                        ),
+                        IconButton(
+                          tooltip: 'restore backup',
+                          icon: const Icon(Icons.restore),
+                          onPressed: () async {
+                            Navigator.of(ctx).pop();
+                            await _restoreAutomaticBackup(backup);
+                          },
+                        ),
+                      ],
+                    ),
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      await _restoreAutomaticBackup(backup);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close')),
+          ],
+        ),
+      );
+    } catch (e, st) {
+      unawaited(_debugLog('showAutomaticBackups failed: $e\n$st'));
+      _showTopToast('could not read backups');
+    }
+  }
+
   Future<void> _loadToday() async {
     await _loadList(_currentFile, _today);
     // If today is unexpectedly empty but a backup exists, restore it.
@@ -9102,6 +9228,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   await _openNotes();
                                                 else if (v == 'export')
                                                   await _exportViaChooser();
+                                                else if (v == 'backups')
+                                                  await _showAutomaticBackups();
                                                 else if (v == 'import')
                                                   await _importViaChooser();
                                                 else if (v == 'redo') {
@@ -9184,6 +9312,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                           size: 18),
                                                       const SizedBox(width: 8),
                                                       const Text('export')
+                                                    ])));
+                                                items.add(PopupMenuItem(
+                                                    value: 'backups',
+                                                    child: Row(children: [
+                                                      const Icon(Icons.restore,
+                                                          size: 18),
+                                                      const SizedBox(width: 8),
+                                                      const Text(
+                                                          'automatic backups')
                                                     ])));
                                                 items.add(PopupMenuItem(
                                                     value: 'import',
