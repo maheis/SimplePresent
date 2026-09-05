@@ -61,6 +61,7 @@
   - [x] Bei Klick auf die Aufgabe soll sie Geöffnet werden und ins Sichtfeld gebracht werden.
 - [x] Hintergrundfarbe Icon
 - [x] Hintergrundfarbe Widget
+- [ ] Server Geheimnis (optinal Rotierend) damit kein Client ohne Geheimnis auf den Server zugreifen bzw. registrieren kann!
 
 ## notes
 
