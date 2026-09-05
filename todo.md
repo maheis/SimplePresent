@@ -34,34 +34,9 @@
       - [ ] aufgaben doppeln sich, bei tages beginn. es kommt die konfliktabfrage.
       - [ ] was ist ein konflikt? konflikt sollte nur sein, wenn zwei clients unterschiedliche änderungen machen.
       - [ ] sync muss vor tagesmigration erfolgen?! (siehe punkt 1)
-- [x] Aufklappen von Aufgabe soll ins Textfeld der Aufgabe springen.
 - [ ] Anzeigen wenn es Notes gibt?
-- [x] Notes
-- [x] Checklisten
-- [x] Unteraufgaben Tooltip wenn Text zu lang!
 - [ ] aufgaben fenster position und größe merken
-- [x] kalendericon auf der karte neben die uhrzeit und in der schriftgröße der uhrzeit?
-  - [x] kalendericon unter android komiglisch
-- [x] icon für app in taskbar (linux) hat android maße angenommen, android-icon muss seperiert werden!
-- [x] sortierung springt ständig!
-- [x] android icon
-- [x] Aufgaben in der Vergangenheit müssen today zu ihrer Uhrzeit erinnern! Mit dem Hinweis Text "Aufgeschoben seit n Tagen"
-- [x] highlight-color für icons, steuerelemente
-- [x] icons im burger menü auch in highlight-color
-- [x] Subtasks als Templates anlegen (Checkliste)
-- [x] neue aufgabe tippen, soll vorhandene aufgaben durchsuchen und anzeigen. (ggf. gibt es ja schon eine)
-      über alle listen hinweg und jeweils unter einer überschrift-listennamen anzeigen. (ähnlich wie bei der Suche)
-- [x] Pin-Button entfernen
-- [x] Text-Größe in Subtask Template
-- [x] Edit Subtask Template
-- [x] Hintergrundsynchronisierung, damit Benachrichtungen durch kommen, auch wenn die App nicht aktiv ist.
-- [x] Suche bei Neuanlage
-  - [x] Datum und Uhrzeit anzeigen (Erledigungsdatum wenn fertig, sonst Termin, sonst Anlagedatum), sortiert nach Offen (Termin, Anlagedatum), Erledigungsdatum DESC
-  - [x] "Reaktivieren" auch bei Aufgaben in Heute anzeigen wenn sie fertig sind!
-  - [x] Bei Klick auf die Aufgabe soll sie Geöffnet werden und ins Sichtfeld gebracht werden.
-- [x] Hintergrundfarbe Icon
-- [x] Hintergrundfarbe Widget
-- [ ] Server Geheimnis (optinal Rotierend) damit kein Client ohne Geheimnis auf den Server zugreifen bzw. registrieren kann!
+- [ ] Server Geheimnis (optinal rotierend) damit kein Client ohne Geheimnis auf den Server zugreifen bzw. registrieren kann!
 
 ## notes
 
