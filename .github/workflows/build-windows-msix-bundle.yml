@@ -105,11 +105,6 @@ jobs:
 
       - name: Upload MSIX artifact to Release
         if: ${{ github.event_name == 'release' }}
-        uses: actions/upload-release-asset@v1
+        run: gh release upload "${{ github.event.release.tag_name }}" "release_dist/simplepresent-${{ steps.version.outputs.version }}.msix" --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: release_dist/simplepresent-${{ steps.version.outputs.version }}.msix
-          asset_name: simplepresent-${{ steps.version.outputs.version }}.msix
-          asset_content_type: application/msix
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

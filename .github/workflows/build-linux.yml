@@ -79,11 +79,7 @@ jobs:
           name: simplepresent-linux
           path: release_dist/simplepresent-linux.tar.gz
       - name: Upload Linux artifact to Release
-        uses: actions/upload-release-asset@v1
+        if: ${{ github.event_name == 'release' }}
+        run: gh release upload "${{ github.event.release.tag_name }}" release_dist/simplepresent-linux.tar.gz --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: release_dist/simplepresent-linux.tar.gz
-          asset_name: simplepresent-linux.tar.gz
-          asset_content_type: application/gzip
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
