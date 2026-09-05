@@ -1,8 +1,6 @@
 name: CI - Build Windows MSIX Bundle
 
 on:
-  release:
-    types: [published]
   workflow_dispatch: {}
 
 permissions:
