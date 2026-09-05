@@ -2107,6 +2107,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
+  Future<void> _shareDebugLog() async {
+    try {
+      final file = await _fileFor(_storage('simplepresent_debug.log'));
+      if (!await file.exists()) {
+        _showTopToast('debug log does not exist yet');
+        return;
+      }
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'text/plain')],
+        subject: 'SimplePresent debug log',
+      ));
+    } catch (e, st) {
+      unawaited(_debugLog('shareDebugLog failed: $e\n$st'));
+      _showTopToast('could not share debug log');
+    }
+  }
+
   Future<void> _ensureListFile(String filename) async {
     try {
       if (_useSembast) {
@@ -3895,6 +3912,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _suppressCloudPushes) return false;
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
+    unawaited(_debugLog(
+        'syncPushTimeEntryToCloud: start task=${task.id} date=${date ?? 'current'}'));
     try {
       final client = _cloudClientForSync();
       final entryDate = date ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -3936,8 +3955,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Note: do NOT update _cloudLastSyncModifiedAt here (see _syncPushToCloud).
       await _saveSettings();
       _onCloudSyncSuccess();
+      unawaited(_debugLog('syncPushTimeEntryToCloud: success task=${task.id}'));
       return true;
     } catch (e) {
+      unawaited(_debugLog(
+          'syncPushTimeEntryToCloud: error task=${task.id} error=$e'));
       _onCloudSyncError(e);
       return false;
     } finally {
@@ -3966,6 +3988,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _pendingCloudPushes[entry.key] = List<TaskItem>.from(entry.value);
       }
     }
+    unawaited(_debugLog(
+        'enqueuePushBatch: lists=${snapshots.keys.join(',')} pending=${_pendingCloudPushes.length}'));
     await Future.wait([
       _persistPendingCloudPushes(),
       _persistCloudConflicts(),
@@ -4039,6 +4063,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // Suppress toasts originating from sync operations.
     _suppressSyncToasts = true;
     _cloudSyncBusy = true;
+    unawaited(_debugLog(
+        'syncPushToCloud: start list=$listName tasks=${source.length} file=$filename'));
     var pullAfterConflict = false;
     var pushed = false;
     try {
@@ -4121,8 +4147,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // skip changes from other devices that happened before our push.
       await _saveSettings();
       _onCloudSyncSuccess();
+      unawaited(_debugLog(
+          'syncPushToCloud: success list=$listName items=${items.length} removed=${removedIds.length}'));
       pushed = true;
     } catch (e) {
+      unawaited(_debugLog('syncPushToCloud: error list=$listName error=$e'));
       pullAfterConflict = e is CloudSyncException && e.isConflict;
       if (pullAfterConflict) {
         _cloudConflictResolutionCount += 1;
@@ -4274,6 +4303,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     _cloudSyncBusy = true;
     var pushed = false;
+    unawaited(_debugLog('syncPushNotes: start length=${text.length}'));
     try {
       final client = _cloudClientForSync();
       final modifiedAt = DateTime.now().millisecondsSinceEpoch;
@@ -4311,8 +4341,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
       _cloudNotesRetryAttempt = 0;
       pushed = true;
+      unawaited(_debugLog('syncPushNotes: success'));
       return true;
     } catch (e) {
+      unawaited(_debugLog('syncPushNotes: error $e'));
       _cloudPendingNotesSync = text;
       await _persistPendingAuxiliarySync();
       _onCloudSyncError(e);
@@ -4601,6 +4633,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             : math.max(0, _cloudLastSyncModifiedAt - 1),
         idPrefix: '',
       );
+      unawaited(_debugLog(
+          'syncPullFromCloud: received items=${pulledItems.length} since=$_cloudLastSyncModifiedAt'));
       await _refreshCloudAccountStatus(showToastIfWarning: true);
       if (pulledItems.isEmpty) {
         // Nothing new from server — still counts as a successful contact.
@@ -5952,6 +5986,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             'cloudLastSyncSuccessAt': _cloudLastSyncSuccessAt,
             'cloudSyncFailed': _cloudSyncFailed,
             'cloudSyncLastError': _cloudSyncLastError,
+            'debugWriteLog': _debugWriteLog,
             'scheduledReminderSoundEnabled': _scheduledReminderSoundEnabled,
             'reminderWindowFrom': _reminderWindowFrom,
             'reminderWindowTo': _reminderWindowTo,
@@ -5987,6 +6022,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               _saveSettings();
             }
           },
+          onShareDebugLog: _shareDebugLog,
         ),
       ),
     );
@@ -6005,6 +6041,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return _clampUiTextScaleFactor(parsed);
     }
 
+    final wasDebugWriteLogEnabled = _debugWriteLog;
     setState(() {
       _useLightThemeNotifier.value = result['useLightTheme'] == true;
       _accentColorNotifier.value = result['accentColorValue'] as int;
@@ -6078,6 +6115,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _cloudPIN = result['cloudPIN'] as String;
       }
       _cloudAllowInsecureTls = result['cloudAllowInsecureTls'] == true;
+      _debugWriteLog = result['debugWriteLog'] == true;
       if (result['subtaskTemplates'] is List) {
         _subtaskTemplates = (result['subtaskTemplates'] as List)
             .whereType<Map>()
@@ -6134,6 +6172,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _startInactivityTimers();
     } catch (_) {}
     await _saveSettings();
+    if (_debugWriteLog && !wasDebugWriteLogEnabled) {
+      unawaited(_debugLog('debugWriteLog enabled'));
+    }
     unawaited(exportTodayAndRefresh(
       _today.where((task) => !task.done).toList(),
       fontFamily: _fontFamily,
@@ -12243,10 +12284,12 @@ class SettingsPage extends StatefulWidget {
     super.key,
     required this.initial,
     this.onCloudDeviceRegistered,
+    this.onShareDebugLog,
   });
 
   final Map<String, dynamic> initial;
   final Function(Map<String, dynamic>)? onCloudDeviceRegistered;
+  final Future<void> Function()? onShareDebugLog;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -12294,6 +12337,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late int cloudLastSyncSuccessAt;
   late bool cloudSyncFailed;
   late String cloudSyncLastError;
+  late bool debugWriteLog;
   late bool autoPurgeDoneEnabled;
   late bool autoPurgeTrashEnabled;
   late bool autoExportOnStart;
@@ -12498,6 +12542,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _initialSwipeEnabled;
   late bool _initialScheduledReminderSoundEnabled;
   late bool _initialOpenTasksInSeparateDesktopWindow;
+  late bool _initialDebugWriteLog;
   late String _initialReminderWindowFrom;
   late String _initialReminderWindowTo;
   late double _initialTextScaleFactor;
@@ -12637,6 +12682,7 @@ class _SettingsPageState extends State<SettingsPage> {
     cloudLastSyncSuccessAt = readInt('cloudLastSyncSuccessAt', 0);
     cloudSyncFailed = readBool('cloudSyncFailed', false);
     cloudSyncLastError = readString('cloudSyncLastError', '');
+    debugWriteLog = readBool('debugWriteLog', false);
     // Save initial values to detect changes
     _initialUseLightTheme = useLightTheme;
     _initialAccentColorValue = accentColorValue;
@@ -12664,6 +12710,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _initialSwipeEnabled = swipeEnabled;
     _initialScheduledReminderSoundEnabled = scheduledReminderSoundEnabled;
     _initialOpenTasksInSeparateDesktopWindow = openTasksInSeparateDesktopWindow;
+    _initialDebugWriteLog = debugWriteLog;
     _initialReminderWindowFrom = reminderWindowFrom;
     _initialReminderWindowTo = reminderWindowTo;
     _initialTextScaleFactor = textScaleFactor;
@@ -12827,6 +12874,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 'cloudLastSyncSuccessAt': null,
                 'cloudSyncFailed': false,
                 'cloudSyncLastError': null,
+                'debugWriteLog': debugWriteLog,
                 'scheduledReminderSoundEnabled': scheduledReminderSoundEnabled,
                 'reminderWindowFrom': reminderWindowFrom,
                 'reminderWindowTo': reminderWindowTo,
@@ -12886,6 +12934,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _initialScheduledReminderSoundEnabled ||
         openTasksInSeparateDesktopWindow !=
             _initialOpenTasksInSeparateDesktopWindow ||
+        debugWriteLog != _initialDebugWriteLog ||
         urgentFlashEnabled != _initialUrgentFlashEnabled ||
         urgentNotifyEnabled != _initialUrgentNotifyEnabled ||
         urgentBringToFrontEnabled != _initialUrgentBringToFrontEnabled ||
@@ -13900,6 +13949,18 @@ class _SettingsPageState extends State<SettingsPage> {
                       'on desktop, open a task in its own window instead of expanding it in the list.'),
                   onChanged: (v) =>
                       setState(() => openTasksInSeparateDesktopWindow = v),
+                ),
+                SwitchListTile(
+                  value: debugWriteLog,
+                  title: const Text('enable debug log'),
+                  subtitle: const Text(
+                      'write local storage and cloud-sync events to a log file.'),
+                  onChanged: (v) => setState(() => debugWriteLog = v),
+                ),
+                OutlinedButton.icon(
+                  onPressed: widget.onShareDebugLog,
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('share debug log'),
                 ),
                 const SizedBox(height: 8),
                 const Divider(),
