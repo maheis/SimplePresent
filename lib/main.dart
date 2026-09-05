@@ -9256,9 +9256,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                           children: [
                                             PopupMenuButton<String>(
                                               icon: Icon(Icons.more_vert,
-                                                  color: Theme.of(context)
-                                                      .iconTheme
-                                                      .color),
+                                                  color: Color(
+                                                      _accentColorNotifier
+                                                          .value)),
                                               onSelected: (v) async {
                                                 await _finalizeAllEdits();
                                                 if (v == 'stats')
@@ -9350,26 +9350,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                       Icon(
                                                           Icons
                                                               .download_rounded,
-                                                          size: 18),
+                                                          size: 18,
+                                                          color: Color(
+                                                              _accentColorNotifier
+                                                                  .value)),
                                                       const SizedBox(width: 8),
                                                       const Text('export')
-                                                    ])));
-                                                items.add(PopupMenuItem(
-                                                    value: 'backups',
-                                                    child: Row(children: [
-                                                      const Icon(Icons.restore,
-                                                          size: 18),
-                                                      const SizedBox(width: 8),
-                                                      const Text(
-                                                          'automatic backups')
                                                     ])));
                                                 items.add(PopupMenuItem(
                                                     value: 'import',
                                                     child: Row(children: [
                                                       Icon(Icons.upload_rounded,
-                                                          size: 18),
+                                                          size: 18,
+                                                          color: Color(
+                                                              _accentColorNotifier
+                                                                  .value)),
                                                       const SizedBox(width: 8),
                                                       const Text('import')
+                                                    ])));
+                                                items.add(PopupMenuItem(
+                                                    value: 'backups',
+                                                    child: Row(children: [
+                                                      Icon(Icons.restore,
+                                                          size: 18,
+                                                          color: Color(
+                                                              _accentColorNotifier
+                                                                  .value)),
+                                                      const SizedBox(width: 8),
+                                                      const Text(
+                                                          'automatic backups')
                                                     ])));
                                                 if (!_showingDone) {
                                                   items.add(PopupMenuItem(
@@ -9398,10 +9407,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   items.add(PopupMenuItem(
                                                       value: 'empty_done',
                                                       child: Row(children: [
-                                                        Image.asset(
-                                                            'assets/icons/red_transparent_done.png',
-                                                            width: 18,
-                                                            height: 18),
+                                                        Icon(
+                                                            Icons
+                                                                .delete_sweep_rounded,
+                                                            size: 18,
+                                                            color: Color(
+                                                                _accentColorNotifier
+                                                                    .value)),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text('empty done')
@@ -9411,10 +9423,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                                   items.add(PopupMenuItem(
                                                       value: 'empty_trash',
                                                       child: Row(children: [
-                                                        Image.asset(
-                                                            'assets/icons/red_transparent_trash.png',
-                                                            width: 18,
-                                                            height: 18),
+                                                        Icon(
+                                                            Icons
+                                                                .delete_sweep_rounded,
+                                                            size: 18,
+                                                            color: Color(
+                                                                _accentColorNotifier
+                                                                    .value)),
                                                         const SizedBox(
                                                             width: 8),
                                                         const Text(
