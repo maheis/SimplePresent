@@ -13549,6 +13549,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       'cloudDeviceName': cloudDeviceName,
                       'cloudPIN': cloudPIN,
                       'cloudAllowInsecureTls': cloudAllowInsecureTls,
+                      'debugWriteLog': debugWriteLog,
                       'inactivityReminders': _inactivityRemindersLocal,
                       'autoPurgeDoneEnabled': autoPurgeDoneEnabled,
                       'doneRetentionDays': doneRetentionDays,
