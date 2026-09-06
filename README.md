@@ -26,9 +26,10 @@ The app also includes a stopwatch, manual time tracking, reminders, swipe action
 
 ## Platforms
 
-- Android (Google Play Store + APK)
-- Desktop (Windows, Linux) via Flutter desktop
-- Web (Flutter web) via browser  - Coming soon (?)
+- Android -> Google Play Store
+- Windows -> microsoft Store
+- Linux -> Download on GitHub
+- Web (Flutter web) via browser - Coming soon (?)
 
 ## Cloud Sync
 
